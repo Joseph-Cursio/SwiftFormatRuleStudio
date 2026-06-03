@@ -13,6 +13,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     private let rules: String
     private let options: String
     private let ruleInfos: [String: String]
+    private let failWith: SwiftFormatError?
 
     public private(set) var versionCallCount = 0
     public private(set) var rulesCallCount = 0
@@ -23,12 +24,14 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         version: String = "0.61.1",
         rules: String = "",
         options: String = "",
-        ruleInfos: [String: String] = [:]
+        ruleInfos: [String: String] = [:],
+        failWith: SwiftFormatError? = nil
     ) {
         self.versionValue = version
         self.rules = rules
         self.options = options
         self.ruleInfos = ruleInfos
+        self.failWith = failWith
     }
 
     /// Changes the reported version (to exercise cache invalidation).
@@ -42,6 +45,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
 
     public func version() async throws -> String {
         versionCallCount += 1
+        if let failWith { throw failWith }
         return versionValue
     }
 
