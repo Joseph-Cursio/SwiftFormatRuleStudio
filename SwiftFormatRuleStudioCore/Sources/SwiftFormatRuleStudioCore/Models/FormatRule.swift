@@ -36,6 +36,9 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
     /// Whether the rule is currently enabled in the active configuration.
     public let isEnabled: Bool
 
+    /// Whether SwiftFormat marks this rule `(deprecated)`.
+    public let isDeprecated: Bool
+
     /// Global options that influence this rule, e.g. `["--self"]`.
     public let relatedOptions: [String]
 
@@ -50,6 +53,7 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
         category: FormatRuleCategory = .formatting,
         isOptIn: Bool = false,
         isEnabled: Bool? = nil,
+        isDeprecated: Bool = false,
         relatedOptions: [String] = [],
         example: String? = nil
     ) {
@@ -59,6 +63,7 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
         self.isOptIn = isOptIn
         // Default enablement mirrors SwiftFormat: opt-in rules start off.
         self.isEnabled = isEnabled ?? !isOptIn
+        self.isDeprecated = isDeprecated
         self.relatedOptions = relatedOptions
         self.example = example
     }

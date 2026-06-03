@@ -8,7 +8,8 @@ import Testing
 
 @Suite("RuleListParser")
 struct RuleListParserTests {
-    // Captured from `swiftformat --rules` (0.61.1), abridged.
+    // Captured from `swiftformat --rules` (0.61.1), abridged. Includes a
+    // (deprecated) entry, which must still be parsed.
     static let fixture = """
 
 
@@ -17,17 +18,19 @@ struct RuleListParserTests {
      anyObjectProtocol
      blankLineAfterImports
      blankLineAfterSwitchCase (disabled)
+     redundantProperty (deprecated)
      redundantSelf
     """
 
-    @Test("Parses names and opt-in markers")
+    @Test("Parses names and markers")
     func parsesEntries() {
         let entries = RuleListParser.parse(Self.fixture)
 
-        #expect(entries.count == 6)
+        #expect(entries.count == 7)
         #expect(entries.map(\.name) == [
             "acronyms", "andOperator", "anyObjectProtocol",
-            "blankLineAfterImports", "blankLineAfterSwitchCase", "redundantSelf"
+            "blankLineAfterImports", "blankLineAfterSwitchCase",
+            "redundantProperty", "redundantSelf"
         ])
     }
 
@@ -40,6 +43,15 @@ struct RuleListParserTests {
         #expect(byName["blankLineAfterSwitchCase"] == true)
         #expect(byName["andOperator"] == false)
         #expect(byName["redundantSelf"] == false)
+    }
+
+    @Test("Deprecated rules are flagged")
+    func deprecatedDetection() {
+        let entries = RuleListParser.parse(Self.fixture)
+        let byName = Dictionary(uniqueKeysWithValues: entries.map { ($0.name, $0.isDeprecated) })
+
+        #expect(byName["redundantProperty"] == true)
+        #expect(byName["andOperator"] == false)
     }
 
     @Test("Empty output yields no entries")
