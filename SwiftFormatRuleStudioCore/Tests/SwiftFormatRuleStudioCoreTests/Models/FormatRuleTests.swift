@@ -50,19 +50,17 @@ struct FormatRuleTests {
         #expect(rule.isEnabled)
     }
 
-    @Test("Related options and examples round-trip")
-    func relatedOptionsAndExamples() {
+    @Test("Related options and example round-trip")
+    func relatedOptionsAndExample() {
         let rule = FormatRule(
             name: "redundantSelf",
             ruleDescription: "Insert/remove explicit self where applicable.",
             relatedOptions: ["--self", "--self-required"],
-            exampleBefore: "self.baz = 42",
-            exampleAfter: "baz = 42"
+            example: "-   self.baz = 42\n+   baz = 42"
         )
 
         #expect(rule.relatedOptions == ["--self", "--self-required"])
-        #expect(rule.exampleBefore == "self.baz = 42")
-        #expect(rule.exampleAfter == "baz = 42")
+        #expect(rule.example == "-   self.baz = 42\n+   baz = 42")
     }
 
     @Test("FormatRule conforms to LintRule and is usable through the protocol")
@@ -84,8 +82,7 @@ struct FormatRuleTests {
             category: .redundancy,
             isOptIn: false,
             relatedOptions: ["--self"],
-            exampleBefore: "self.baz = 42",
-            exampleAfter: "baz = 42"
+            example: "-   self.baz = 42\n+   baz = 42"
         )
 
         let data = try JSONEncoder().encode(rule)

@@ -39,11 +39,10 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
     /// Global options that influence this rule, e.g. `["--self"]`.
     public let relatedOptions: [String]
 
-    /// Source snippet before formatting, parsed from the `--ruleinfo` example.
-    public let exampleBefore: String?
-
-    /// Source snippet after formatting, parsed from the `--ruleinfo` example.
-    public let exampleAfter: String?
+    /// The raw before/after example from `--ruleinfo`, in unified-diff form
+    /// (lines prefixed with `+`/`-`/space). Rendered directly — no
+    /// reconstruction needed, since SwiftFormat already emits diff markers.
+    public let example: String?
 
     public init(
         name: String,
@@ -52,8 +51,7 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
         isOptIn: Bool = false,
         isEnabled: Bool? = nil,
         relatedOptions: [String] = [],
-        exampleBefore: String? = nil,
-        exampleAfter: String? = nil
+        example: String? = nil
     ) {
         self.name = name
         self.ruleDescription = ruleDescription
@@ -62,8 +60,7 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
         // Default enablement mirrors SwiftFormat: opt-in rules start off.
         self.isEnabled = isEnabled ?? !isOptIn
         self.relatedOptions = relatedOptions
-        self.exampleBefore = exampleBefore
-        self.exampleAfter = exampleAfter
+        self.example = example
     }
 
     // MARK: - LintRule
