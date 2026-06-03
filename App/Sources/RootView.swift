@@ -17,6 +17,10 @@ struct RootView: View {
                 .tabItem {
                     Label("Live Preview", systemImage: "wand.and.stars")
                 }
+            ConfigView()
+                .tabItem {
+                    Label("Config", systemImage: "slider.horizontal.3")
+                }
         }
     }
 }
