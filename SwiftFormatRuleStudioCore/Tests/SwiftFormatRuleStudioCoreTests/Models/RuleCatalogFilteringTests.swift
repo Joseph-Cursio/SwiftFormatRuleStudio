@@ -15,7 +15,7 @@ struct RuleCatalogFilteringTests {
                 FormatRule(name: "redundantSelf", ruleDescription: "Insert/remove explicit self.", category: .redundancy),
                 FormatRule(name: "redundantParens", ruleDescription: "Remove redundant parentheses.", category: .redundancy),
                 FormatRule(name: "indent", ruleDescription: "Indent code by scope.", category: .spacing),
-                FormatRule(name: "acronyms", ruleDescription: "Capitalize acronyms.", category: .convention, isOptIn: true),
+                FormatRule(name: "acronyms", ruleDescription: "Capitalize acronyms.", category: .idiomatic, isOptIn: true),
                 FormatRule(name: "sortedImports", ruleDescription: "Sort import statements.", category: .organization, isDeprecated: true)
             ],
             options: []
@@ -69,10 +69,10 @@ struct RuleCatalogFilteringTests {
     func grouping() {
         let groups = makeCatalog().groupedRules(RuleFilter())
 
-        // allCases order is formatting, redundancy, organization, spacing,
-        // convention. .formatting has no rules and .organization's only rule is
-        // deprecated (hidden by default), so both are omitted.
-        #expect(groups.map(\.category) == [.redundancy, .spacing, .convention])
+        // allCases order is spacing, wrapping, redundancy, organization,
+        // imports, comments, testing, idiomatic. .organization's only rule is
+        // deprecated (hidden by default), so it is omitted.
+        #expect(groups.map(\.category) == [.spacing, .redundancy, .idiomatic])
 
         let redundancy = groups.first { $0.category == .redundancy }
         #expect(redundancy?.rules.map(\.name) == ["redundantParens", "redundantSelf"]) // sorted

@@ -23,7 +23,7 @@ struct FormatRuleTests {
         #expect(rule.isEnabled)
         #expect(rule.isOptIn == false)
         #expect(rule.supportsAutocorrection)
-        #expect(rule.category == .formatting)
+        #expect(rule.category == .idiomatic)
     }
 
     @Test("An opt-in rule defaults to disabled")

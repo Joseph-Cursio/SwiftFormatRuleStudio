@@ -50,7 +50,7 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
     public init(
         name: String,
         ruleDescription: String,
-        category: FormatRuleCategory = .formatting,
+        category: FormatRuleCategory = .idiomatic,
         isOptIn: Bool = false,
         isEnabled: Bool? = nil,
         isDeprecated: Bool = false,

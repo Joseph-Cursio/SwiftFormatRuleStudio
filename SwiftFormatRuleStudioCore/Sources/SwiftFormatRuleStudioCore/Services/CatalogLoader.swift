@@ -63,6 +63,7 @@ public final class CatalogLoader: CatalogLoading {
             FormatRule(
                 name: entry.name,
                 ruleDescription: "",
+                category: FormatRuleClassifier.category(for: entry.name),
                 isOptIn: entry.isOptIn,
                 isDeprecated: entry.isDeprecated
             )
