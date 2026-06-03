@@ -24,6 +24,9 @@ public protocol SwiftFormatCLIProtocol: Sendable {
     func ruleInfoOutput(ruleName: String) async throws -> String
     /// Raw stdout of `swiftformat --options`.
     func optionsOutput() async throws -> String
+    /// Formats `source` by piping it through `swiftformat <arguments>` (where
+    /// `arguments` should begin with `stdin`), returning the formatted result.
+    func format(source: String, arguments: [String]) async throws -> String
 }
 
 /// Errors surfaced while invoking the SwiftFormat CLI.
@@ -122,6 +125,11 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
         try await run(["--options"])
     }
 
+    public func format(source: String, arguments: [String]) async throws -> String {
+        let (stdout, _) = try await capture(arguments, stdin: Data(source.utf8))
+        return String(data: stdout, encoding: .utf8) ?? ""
+    }
+
     // MARK: - Execution
 
     /// Runs `swiftformat <arguments>` and returns stdout as a UTF-8 string.
@@ -132,7 +140,7 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
         return String(data: stdout, encoding: .utf8) ?? ""
     }
 
-    private func capture(_ arguments: [String]) async throws -> (Data, Data) {
+    private func capture(_ arguments: [String], stdin: Data? = nil) async throws -> (Data, Data) {
         if let commandRunner {
             return try await commandRunner(arguments)
         }
@@ -140,20 +148,22 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
         return try await Self.runProcess(
             executable: binary,
             arguments: arguments,
+            stdin: stdin,
             timeoutSeconds: timeoutSeconds
         )
     }
 
-    /// Launches a process, capturing stdout/stderr with a timeout. `nonisolated`
-    /// static so it does not capture actor state.
+    /// Launches a process, optionally writing `stdin`, capturing stdout/stderr
+    /// with a timeout. `nonisolated` static so it does not capture actor state.
     nonisolated static func runProcess(
         executable: URL,
         arguments: [String],
+        stdin: Data? = nil,
         timeoutSeconds: UInt64
     ) async throws -> (Data, Data) {
         try await withThrowingTaskGroup(of: (Data, Data).self) { group in
             group.addTask {
-                try runProcessBlocking(executable: executable, arguments: arguments)
+                try runProcessBlocking(executable: executable, arguments: arguments, stdin: stdin)
             }
             group.addTask {
                 try await Task.sleep(nanoseconds: timeoutSeconds * 1_000_000_000)
@@ -169,7 +179,8 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
 
     private nonisolated static func runProcessBlocking(
         executable: URL,
-        arguments: [String]
+        arguments: [String],
+        stdin: Data? = nil
     ) throws -> (Data, Data) {
         let process = Process()
         process.executableURL = executable
@@ -180,10 +191,22 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
+        let stdinPipe = stdin.map { _ in Pipe() }
+        if let stdinPipe {
+            process.standardInput = stdinPipe
+        }
+
         do {
             try process.run()
         } catch {
             throw SwiftFormatError.executionFailed(message: error.localizedDescription)
+        }
+
+        // Write stdin (if any) and close it so the tool sees EOF. Preview inputs
+        // are small, so a single write before reading won't deadlock.
+        if let stdinPipe, let stdin {
+            stdinPipe.fileHandleForWriting.write(stdin)
+            stdinPipe.fileHandleForWriting.closeFile()
         }
 
         // Read both pipes fully before waiting to avoid deadlock on large output.

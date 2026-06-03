@@ -14,24 +14,29 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     private let options: String
     private let ruleInfos: [String: String]
     private let failWith: SwiftFormatError?
+    private let formatOverride: String?
 
     public private(set) var versionCallCount = 0
     public private(set) var rulesCallCount = 0
     public private(set) var optionsCallCount = 0
     public private(set) var ruleInfoCallCount = 0
+    public private(set) var formatCallCount = 0
+    public private(set) var lastFormatArguments: [String] = []
 
     public init(
         version: String = "0.61.1",
         rules: String = "",
         options: String = "",
         ruleInfos: [String: String] = [:],
-        failWith: SwiftFormatError? = nil
+        failWith: SwiftFormatError? = nil,
+        formatOverride: String? = nil
     ) {
         self.versionValue = version
         self.rules = rules
         self.options = options
         self.ruleInfos = ruleInfos
         self.failWith = failWith
+        self.formatOverride = formatOverride
     }
 
     /// Changes the reported version (to exercise cache invalidation).
@@ -62,5 +67,15 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     public func optionsOutput() async throws -> String {
         optionsCallCount += 1
         return options
+    }
+
+    /// Returns `formatOverride` if set (simulating a formatting change),
+    /// otherwise echoes the source unchanged (a no-op format). Records the
+    /// arguments so callers can assert flags like `--swift-version`.
+    public func format(source: String, arguments: [String]) async throws -> String {
+        formatCallCount += 1
+        lastFormatArguments = arguments
+        if let failWith { throw failWith }
+        return formatOverride ?? source
     }
 }
