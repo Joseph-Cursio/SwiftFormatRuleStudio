@@ -1,9 +1,16 @@
 .DS_Store
 *.xcuserstate
 DerivedData/
-SwiftFormatRuleStudio.xcodeproj/project.xcworkspace/xcuserdata/
-SwiftFormatRuleStudio.xcodeproj/xcuserdata/
 *.xcresult
 SwiftFormatRuleStudioCore/.build/
 SwiftFormatRuleStudioCore/.swiftpm/
 .swiftformat.*.backup
+
+# Tuist — the Xcode project/workspace are generated; regenerate with `tuist generate`
+*.xcodeproj
+*.xcworkspace
+Derived/
+.build/
+Tuist/.build/
+Tuist/Dependencies/
+graph.png
