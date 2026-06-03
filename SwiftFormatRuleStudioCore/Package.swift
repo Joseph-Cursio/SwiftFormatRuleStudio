@@ -1,6 +1,8 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
+// Mirrors SwiftLintRuleStudioCore's settings for cross-project consistency:
+// Swift 6 language mode, MainActor default isolation, and MemberImportVisibility.
 let swiftSettings: [SwiftSetting] = [
     .swiftLanguageMode(.v6),
     .defaultIsolation(MainActor.self),
