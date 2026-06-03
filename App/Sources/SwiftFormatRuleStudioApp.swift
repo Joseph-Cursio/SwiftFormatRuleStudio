@@ -9,7 +9,7 @@ import SwiftUI
 struct SwiftFormatRuleStudioApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .frame(minWidth: 820, minHeight: 520)
         }
         .windowToolbarStyle(.unified)
