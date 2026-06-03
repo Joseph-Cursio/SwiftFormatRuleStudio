@@ -20,8 +20,8 @@ the shared-package refactor it builds on.
 | M-1 | Promote shared infra into LintStudioUI | ✅ Partial — `1.2.0` ships GitServiceActor / FileCache / FileTracker |
 | M0  | Scaffold Core SPM package on the LintStudioUI tag | ✅ `SwiftFormatRuleStudioCore` builds & tests green |
 | M1  | CLI actor + rule/option catalog | ✅ catalog loads/caches/enriches; 52 tests green |
-| M2  | Rule browser + detail (before/after examples) | ✅ Tuist app + SwiftUI browser/detail; `xcodebuild` → BUILD SUCCEEDED |
-| M3  | Live code preview (headline feature) | — |
+| M2  | Rule browser + detail (before/after examples) | ✅ Tuist app, category-sectioned browser + detail; `xcodebuild` → BUILD SUCCEEDED |
+| M3  | Live code preview (headline feature) | ✅ edit Swift → live `swiftformat stdin` diff; 64 Core tests green |
 | M4  | `.swiftformat` config engine + Options panel | — |
 | M5  | Impact audit across a workspace | — |
 | M6  | Polish: onboarding, presets, export | — |
