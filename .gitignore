@@ -1,0 +1,9 @@
+.DS_Store
+*.xcuserstate
+DerivedData/
+SwiftFormatRuleStudio.xcodeproj/project.xcworkspace/xcuserdata/
+SwiftFormatRuleStudio.xcodeproj/xcuserdata/
+*.xcresult
+SwiftFormatRuleStudioCore/.build/
+SwiftFormatRuleStudioCore/.swiftpm/
+.swiftformat.*.backup
