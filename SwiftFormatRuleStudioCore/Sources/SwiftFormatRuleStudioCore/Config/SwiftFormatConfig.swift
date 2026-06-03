@@ -126,6 +126,28 @@ public struct SwiftFormatConfig: Equatable, Sendable {
         return nil
     }
 
+    /// The config as `swiftformat` CLI arguments, e.g.
+    /// `["--indent", "4", "--disable", "redundantSelf"]`. Lets the live preview
+    /// run against the edited (unsaved) config without writing a temp file.
+    public var commandLineArguments: [String] {
+        var arguments: [String] = []
+        for line in lines {
+            switch line {
+            case .option(let key, let value, _):
+                arguments.append("--\(key)")
+                if !value.isEmpty {
+                    arguments.append(value)
+                }
+            case .ruleDirective(let kind, let rules, _) where !rules.isEmpty:
+                arguments.append("--\(kind.rawValue)")
+                arguments.append(rules.joined(separator: ","))
+            case .blank, .comment, .unknown, .ruleDirective:
+                break
+            }
+        }
+        return arguments
+    }
+
     private func rules(for kind: RuleDirectiveKind) -> Set<String> {
         var result: Set<String> = []
         for case let .ruleDirective(lineKind, rules, _) in lines where lineKind == kind {
