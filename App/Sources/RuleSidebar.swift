@@ -6,33 +6,50 @@
 import SwiftUI
 import SwiftFormatRuleStudioCore
 
-/// Searchable, filterable list of rules. Binds directly to `model.filter`.
+/// Searchable, filterable rule list, sectioned by category. Binds directly to
+/// `model.filter`.
 struct RuleSidebar: View {
     @Bindable var model: RuleStudioModel
     @Binding var selection: String?
 
     var body: some View {
         List(selection: $selection) {
-            ForEach(model.filteredRules) { rule in
-                RuleRow(rule: rule)
-                    .tag(rule.name)
+            ForEach(model.groupedRules) { group in
+                Section {
+                    ForEach(group.rules) { rule in
+                        RuleRow(rule: rule)
+                            .tag(rule.name)
+                    }
+                } header: {
+                    Text("\(group.category.displayName)  ·  \(group.rules.count)")
+                }
             }
         }
         .searchable(text: $model.filter.searchText, prompt: "Search rules")
         .overlay { overlay }
-        .safeAreaInset(edge: .top) { availabilityPicker }
+        .safeAreaInset(edge: .top) { filterBar }
         .navigationTitle("Rules")
     }
 
     @ViewBuilder
-    private var availabilityPicker: some View {
-        Picker("Show", selection: $model.filter.availability) {
-            ForEach(RuleAvailability.allCases) { availability in
-                Text(availability.displayName).tag(availability)
+    private var filterBar: some View {
+        VStack(spacing: 6) {
+            Picker("Show", selection: $model.filter.availability) {
+                ForEach(RuleAvailability.allCases) { availability in
+                    Text(availability.displayName).tag(availability)
+                }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            Picker("Category", selection: $model.filter.category) {
+                Text("All categories").tag(FormatRuleCategory?.none)
+                ForEach(FormatRuleCategory.allCases) { category in
+                    Text(category.displayName).tag(FormatRuleCategory?.some(category))
+                }
+            }
+            .labelsHidden()
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
         .padding(8)
         .background(.bar)
     }

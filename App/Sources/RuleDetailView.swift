@@ -60,6 +60,7 @@ struct RuleDetailView: View {
         HStack(spacing: 10) {
             Text(rule.name)
                 .font(.largeTitle.bold())
+            badge(rule.category.displayName, color: .blue)
             if rule.isOptIn {
                 badge("Opt-in", color: .orange)
             }
