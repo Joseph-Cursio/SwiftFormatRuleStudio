@@ -21,8 +21,8 @@ the shared-package refactor it builds on.
 | M0  | Scaffold Core SPM package on the LintStudioUI tag | ✅ `SwiftFormatRuleStudioCore` builds & tests green |
 | M1  | CLI actor + rule/option catalog | ✅ catalog loads/caches/enriches; 52 tests green |
 | M2  | Rule browser + detail (before/after examples) | ✅ Tuist app, category-sectioned browser + detail; `xcodebuild` → BUILD SUCCEEDED |
-| M3  | Live code preview (headline feature) | ✅ edit Swift → live `swiftformat stdin` diff; 64 Core tests green |
-| M4  | `.swiftformat` config engine + Options panel | — |
+| M3  | Live code preview (headline feature) | ✅ edit Swift → live `swiftformat stdin` diff |
+| M4  | `.swiftformat` config engine + Options panel | ✅ flat-args engine, Options panel, live diff, atomic save+backup; preview reflects config; 87 Core tests green |
 | M5  | Impact audit across a workspace | — |
 | M6  | Polish: onboarding, presets, export | — |
 
