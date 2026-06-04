@@ -27,6 +27,10 @@ struct RootView: View {
                 .tabItem {
                     Label("Config", systemImage: "slider.horizontal.3")
                 }
+            AuditView()
+                .tabItem {
+                    Label("Audit", systemImage: "chart.bar.doc.horizontal")
+                }
         }
         .environment(catalog)
         .environment(config)
