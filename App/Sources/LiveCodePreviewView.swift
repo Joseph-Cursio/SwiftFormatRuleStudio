@@ -9,6 +9,7 @@ import SwiftFormatRuleStudioCore
 /// The headline feature: edit Swift on the left, watch it reformat (as a colored
 /// diff) on the right, live. Thin wrapper over the tested `LivePreviewModel`.
 struct LiveCodePreviewView: View {
+    @Environment(ConfigModel.self) private var config
     @State private var model = LivePreviewModel(source: LiveCodePreviewView.sampleSource)
 
     var body: some View {
@@ -16,7 +17,14 @@ struct LiveCodePreviewView: View {
             editor
             result
         }
-        .task { await model.formatNow() }
+        .task {
+            model.extraArguments = config.commandLineArguments
+            await model.formatNow()
+        }
+        .onChange(of: config.commandLineArguments) { _, newArguments in
+            model.extraArguments = newArguments
+            model.scheduleFormat()
+        }
         .navigationTitle("Live Preview")
     }
 

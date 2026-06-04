@@ -4,9 +4,15 @@
 //
 
 import SwiftUI
+import SwiftFormatRuleStudioCore
 
-/// Top-level navigation: the rule browser and the live code preview.
+/// Top-level navigation. Owns the shared catalog and config models and injects
+/// them into the environment so all tabs work off the same state (e.g. the live
+/// preview reflects the edited config).
 struct RootView: View {
+    @State private var catalog = RuleStudioModel()
+    @State private var config = ConfigModel()
+
     var body: some View {
         TabView {
             ContentView()
@@ -21,6 +27,11 @@ struct RootView: View {
                 .tabItem {
                     Label("Config", systemImage: "slider.horizontal.3")
                 }
+        }
+        .environment(catalog)
+        .environment(config)
+        .task {
+            await catalog.load()
         }
     }
 }

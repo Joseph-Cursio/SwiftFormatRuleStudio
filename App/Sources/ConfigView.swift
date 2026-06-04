@@ -11,8 +11,8 @@ import SwiftFormatRuleStudioCore
 /// the pending diff, and save (atomic + backup). Thin bindings over the tested
 /// `ConfigModel` + the option catalog from `RuleStudioModel`.
 struct ConfigView: View {
-    @State private var catalog = RuleStudioModel()
-    @State private var config = ConfigModel()
+    @Environment(RuleStudioModel.self) private var catalog
+    @Environment(ConfigModel.self) private var config
     @State private var folderURL: URL?
     @State private var optionSearch = ""
     @State private var choosingFolder = false
@@ -30,7 +30,6 @@ struct ConfigView: View {
         }
         .navigationTitle("Config")
         .toolbar { toolbarContent }
-        .task { await catalog.load() }
         .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result {
                 _ = url.startAccessingSecurityScopedResource()
