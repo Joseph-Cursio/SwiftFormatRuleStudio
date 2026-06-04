@@ -4,8 +4,8 @@
 //
 
 import Foundation
-import Observation
 import LintStudioCore
+import Observation
 
 /// The observable model behind the live code preview (M3): holds editable
 /// source, runs `swiftformat stdin` (debounced), and exposes the before/after

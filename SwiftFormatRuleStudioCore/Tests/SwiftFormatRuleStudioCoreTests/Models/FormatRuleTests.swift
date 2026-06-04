@@ -3,10 +3,10 @@
 //  SwiftFormatRuleStudioCoreTests
 //
 
-import Testing
 import Foundation
 import LintStudioCore
 @testable import SwiftFormatRuleStudioCore
+import Testing
 
 @Suite("FormatRule")
 struct FormatRuleTests {

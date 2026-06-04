@@ -97,7 +97,7 @@ public enum OptionsParser {
         return .string
     }
 
-    private static func inferDefault(blurb: String, quoted: [String]) -> String? {
+    private static func inferDefault(blurb: String, quoted _: [String]) -> String? {
         if let marked = firstCapture(in: blurb, pattern: "\"([^\"]*)\"\\s*\\(default\\)") {
             return marked
         }

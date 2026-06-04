@@ -4,8 +4,8 @@
 //
 
 import Foundation
-import Observation
 import LintStudioCore
+import Observation
 
 /// Observable model for editing a `.swiftformat` file (M4): load, edit options
 /// and rule overrides, preview the diff, and save atomically with a backup.
@@ -19,7 +19,7 @@ public final class ConfigModel {
     /// The text last loaded from / saved to disk — the diff baseline.
     public private(set) var originalText: String = ""
     /// The working (possibly edited) config.
-    public private(set) var config: SwiftFormatConfig = SwiftFormatConfig()
+    public private(set) var config = SwiftFormatConfig()
     public private(set) var lastError: String?
 
     public init() {}

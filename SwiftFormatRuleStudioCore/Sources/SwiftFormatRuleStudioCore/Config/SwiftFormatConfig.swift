@@ -39,12 +39,12 @@ public struct SwiftFormatConfig: Equatable, Sendable {
             }
         }
 
-        static func makeOption(key: String, value: String) -> Line {
+        static func makeOption(key: String, value: String) -> Self {
             let raw = value.isEmpty ? "--\(key)" : "--\(key) \(value)"
             return .option(key: key, value: value, raw: raw)
         }
 
-        static func makeRuleDirective(kind: RuleDirectiveKind, rules: [String]) -> Line {
+        static func makeRuleDirective(kind: RuleDirectiveKind, rules: [String]) -> Self {
             let raw = rules.isEmpty ? "--\(kind.rawValue)" : "--\(kind.rawValue) \(rules.joined(separator: ","))"
             return .ruleDirective(kind: kind, rules: rules, raw: raw)
         }
@@ -58,9 +58,9 @@ public struct SwiftFormatConfig: Equatable, Sendable {
 
     // MARK: - Parsing
 
-    public static func parse(_ text: String) -> SwiftFormatConfig {
+    public static func parse(_ text: String) -> Self {
         let parsed = text.components(separatedBy: "\n").map(parseLine)
-        return SwiftFormatConfig(lines: parsed)
+        return Self(lines: parsed)
     }
 
     private static func parseLine(_ raw: String) -> Line {

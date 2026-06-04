@@ -3,8 +3,8 @@
 //  SwiftFormatRuleStudio
 //
 
-import SwiftUI
 import SwiftFormatRuleStudioCore
+import SwiftUI
 
 /// Top-level browser: a searchable rule sidebar and a detail pane. All state
 /// lives in the tested `RuleStudioModel`; these views are thin bindings.

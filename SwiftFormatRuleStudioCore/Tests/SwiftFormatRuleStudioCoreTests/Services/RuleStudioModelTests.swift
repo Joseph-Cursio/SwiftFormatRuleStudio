@@ -3,10 +3,10 @@
 //  SwiftFormatRuleStudioCoreTests
 //
 
-import Testing
 import Foundation
 @testable import SwiftFormatRuleStudioCore
 import SwiftFormatRuleStudioCoreTestSupport
+import Testing
 
 @Suite("RuleStudioModel")
 @MainActor

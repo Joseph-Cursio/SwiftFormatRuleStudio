@@ -3,14 +3,14 @@
 //  SwiftFormatRuleStudio
 //
 
-import SwiftUI
 import SwiftFormatRuleStudioCore
+import SwiftUI
 
 /// The headline feature: edit Swift on the left, watch it reformat (as a colored
 /// diff) on the right, live. Thin wrapper over the tested `LivePreviewModel`.
 struct LiveCodePreviewView: View {
     @Environment(ConfigModel.self) private var config
-    @State private var model = LivePreviewModel(source: LiveCodePreviewView.sampleSource)
+    @State private var model = LivePreviewModel(source: Self.sampleSource)
 
     var body: some View {
         HSplitView {

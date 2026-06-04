@@ -3,8 +3,8 @@
 //  SwiftFormatRuleStudio
 //
 
-import SwiftUI
 import SwiftFormatRuleStudioCore
+import SwiftUI
 
 /// Top-level navigation. Owns the shared catalog and config models and injects
 /// them into the environment so all tabs work off the same state (e.g. the live

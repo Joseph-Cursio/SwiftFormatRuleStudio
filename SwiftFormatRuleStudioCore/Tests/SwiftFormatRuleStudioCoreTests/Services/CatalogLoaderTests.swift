@@ -3,11 +3,11 @@
 //  SwiftFormatRuleStudioCoreTests
 //
 
-import Testing
 import Foundation
 import LintStudioCore
 @testable import SwiftFormatRuleStudioCore
 import SwiftFormatRuleStudioCoreTestSupport
+import Testing
 
 @Suite("CatalogLoader")
 struct CatalogLoaderTests {

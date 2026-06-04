@@ -3,8 +3,8 @@
 //  SwiftFormatRuleStudio
 //
 
-import SwiftUI
 import SwiftFormatRuleStudioCore
+import SwiftUI
 
 /// Shows the selected rule's description, related options, and before/after
 /// example. Reads `model.selectedRuleDetail`, which the model lazily enriches.

@@ -3,8 +3,8 @@
 //  SwiftFormatRuleStudio
 //
 
-import SwiftUI
 import SwiftFormatRuleStudioCore
+import SwiftUI
 
 /// Searchable, filterable rule list, sectioned by category. Binds directly to
 /// `model.filter`.

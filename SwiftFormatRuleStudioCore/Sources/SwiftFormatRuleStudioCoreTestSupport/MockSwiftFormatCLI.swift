@@ -44,27 +44,27 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         versionValue = newValue
     }
 
-    public func detectPath() async throws -> URL {
+    public func detectPath() -> URL {
         URL(fileURLWithPath: "/mock/swiftformat")
     }
 
-    public func version() async throws -> String {
+    public func version() throws -> String {
         versionCallCount += 1
         if let failWith { throw failWith }
         return versionValue
     }
 
-    public func rulesOutput() async throws -> String {
+    public func rulesOutput() -> String {
         rulesCallCount += 1
         return rules
     }
 
-    public func ruleInfoOutput(ruleName: String) async throws -> String {
+    public func ruleInfoOutput(ruleName: String) -> String {
         ruleInfoCallCount += 1
         return ruleInfos[ruleName] ?? ""
     }
 
-    public func optionsOutput() async throws -> String {
+    public func optionsOutput() -> String {
         optionsCallCount += 1
         return options
     }
@@ -72,7 +72,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     /// Returns `formatOverride` if set (simulating a formatting change),
     /// otherwise echoes the source unchanged (a no-op format). Records the
     /// arguments so callers can assert flags like `--swift-version`.
-    public func format(source: String, arguments: [String]) async throws -> String {
+    public func format(source: String, arguments: [String]) throws -> String {
         formatCallCount += 1
         lastFormatArguments = arguments
         if let failWith { throw failWith }

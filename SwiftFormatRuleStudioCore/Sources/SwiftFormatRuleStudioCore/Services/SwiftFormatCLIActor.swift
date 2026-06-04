@@ -77,7 +77,7 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
     private let timeoutSeconds: UInt64
 
     /// Standard install locations, most common first.
-    private nonisolated static let candidatePaths = [
+    nonisolated private static let candidatePaths = [
         "/opt/homebrew/bin/swiftformat", // Apple Silicon Homebrew
         "/usr/local/bin/swiftformat",    // Intel Homebrew
         "/usr/bin/swiftformat"           // System
@@ -177,7 +177,7 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
         }
     }
 
-    private nonisolated static func runProcessBlocking(
+    nonisolated private static func runProcessBlocking(
         executable: URL,
         arguments: [String],
         stdin: Data? = nil

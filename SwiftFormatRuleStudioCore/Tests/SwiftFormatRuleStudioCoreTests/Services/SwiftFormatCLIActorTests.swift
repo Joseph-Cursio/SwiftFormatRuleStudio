@@ -3,9 +3,9 @@
 //  SwiftFormatRuleStudioCoreTests
 //
 
-import Testing
 import Foundation
 @testable import SwiftFormatRuleStudioCore
+import Testing
 
 @Suite("SwiftFormatCLIActor")
 struct SwiftFormatCLIActorTests {

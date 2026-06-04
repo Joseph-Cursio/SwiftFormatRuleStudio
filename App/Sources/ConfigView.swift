@@ -3,9 +3,9 @@
 //  SwiftFormatRuleStudio
 //
 
+import SwiftFormatRuleStudioCore
 import SwiftUI
 import UniformTypeIdentifiers
-import SwiftFormatRuleStudioCore
 
 /// The `.swiftformat` editor (M4): pick a project folder, edit options, preview
 /// the pending diff, and save (atomic + backup). Thin bindings over the tested

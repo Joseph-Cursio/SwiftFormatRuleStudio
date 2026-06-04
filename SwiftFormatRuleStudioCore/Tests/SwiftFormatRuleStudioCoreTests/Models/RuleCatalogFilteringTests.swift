@@ -3,8 +3,8 @@
 //  SwiftFormatRuleStudioCoreTests
 //
 
-import Testing
 @testable import SwiftFormatRuleStudioCore
+import Testing
 
 @Suite("RuleCatalog filtering")
 struct RuleCatalogFilteringTests {

@@ -3,9 +3,9 @@
 //  SwiftFormatRuleStudioCoreTests
 //
 
-import Testing
 import Foundation
 @testable import SwiftFormatRuleStudioCore
+import Testing
 
 @Suite("ConfigModel")
 @MainActor
@@ -101,7 +101,7 @@ struct ConfigModelTests {
     }
 
     @Test("setRuleEnabled keeps the config minimal")
-    func ruleEnablementMinimal() throws {
+    func ruleEnablementMinimal() {
         let model = ConfigModel()
         model.load(from: nil)
 
@@ -122,7 +122,7 @@ struct ConfigModelTests {
     }
 
     @Test("commandLineArguments reflect edits")
-    func argumentsReflectEdits() throws {
+    func argumentsReflectEdits() {
         let model = ConfigModel()
         model.load(from: nil)
         model.setOption(key: "indent", value: "4")
