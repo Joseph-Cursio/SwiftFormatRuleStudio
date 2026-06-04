@@ -15,13 +15,16 @@ import Observation
 @MainActor
 @Observable
 public final class ConfigModel {
+    /// The `.swiftformat` file being edited, if one is loaded.
     public private(set) var configPath: URL?
     /// The text last loaded from / saved to disk — the diff baseline.
     public private(set) var originalText: String = ""
     /// The working (possibly edited) config.
     public private(set) var config = SwiftFormatConfig()
+    /// The most recent error message, if a load/save failed.
     public private(set) var lastError: String?
 
+    /// Creates an empty config model.
     public init() {}
 
     // MARK: - Load / save
@@ -68,10 +71,12 @@ public final class ConfigModel {
 
     // MARK: - Derived state
 
+    /// Whether the working config differs from the on-disk baseline.
     public var isDirty: Bool {
         config.serialized() != originalText
     }
 
+    /// Whether there's a file location and unsaved changes to write.
     public var canSave: Bool {
         configPath != nil && isDirty
     }
@@ -88,10 +93,12 @@ public final class ConfigModel {
 
     // MARK: - Editing
 
+    /// Sets a `.swiftformat` option value.
     public func setOption(key: String, value: String) {
         config.setOption(key: key, value: value)
     }
 
+    /// Removes a `.swiftformat` option override.
     public func removeOption(key: String) {
         config.removeOption(key: key)
     }

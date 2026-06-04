@@ -17,6 +17,7 @@ import Foundation
 /// The value `kind`, `allowedValues`, and `defaultValue` are inferred from the
 /// blurb on a best-effort basis (refined later in the Options panel work).
 public enum OptionsParser {
+    /// Parses `swiftformat --options` output into `FormatOption` values.
     public static func parse(_ output: String) -> [FormatOption] {
         var options: [FormatOption] = []
         var currentName: String?

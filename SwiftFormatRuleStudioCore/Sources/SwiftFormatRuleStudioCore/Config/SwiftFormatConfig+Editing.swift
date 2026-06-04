@@ -5,12 +5,12 @@
 
 import Foundation
 
-public extension SwiftFormatConfig {
+extension SwiftFormatConfig {
     // MARK: - Options
 
     /// Sets an option value, updating the existing line in place (preserving its
     /// position) or appending a new one. Removes any duplicate lines for the key.
-    mutating func setOption(key: String, value: String) {
+    public mutating func setOption(key: String, value: String) {
         var didSet = false
         var result: [Line] = []
         for line in lines {
@@ -31,7 +31,7 @@ public extension SwiftFormatConfig {
     }
 
     /// Removes all lines setting the given option.
-    mutating func removeOption(key: String) {
+    public mutating func removeOption(key: String) {
         lines.removeAll { line in
             if case .option(let lineKey, _, _) = line, lineKey == key { return true }
             return false
@@ -41,19 +41,19 @@ public extension SwiftFormatConfig {
     // MARK: - Rules
 
     /// Disables a rule: removes it from any `--enable`, adds it to `--disable`.
-    mutating func disableRule(_ name: String) {
+    public mutating func disableRule(_ name: String) {
         removeRule(name, from: .enable)
         addRule(name, to: .disable)
     }
 
     /// Enables an (opt-in) rule: removes it from any `--disable`, adds to `--enable`.
-    mutating func enableRule(_ name: String) {
+    public mutating func enableRule(_ name: String) {
         removeRule(name, from: .disable)
         addRule(name, to: .enable)
     }
 
     /// Removes any explicit enable/disable override for a rule (back to default).
-    mutating func clearRuleOverride(_ name: String) {
+    public mutating func clearRuleOverride(_ name: String) {
         removeRule(name, from: .enable)
         removeRule(name, from: .disable)
     }

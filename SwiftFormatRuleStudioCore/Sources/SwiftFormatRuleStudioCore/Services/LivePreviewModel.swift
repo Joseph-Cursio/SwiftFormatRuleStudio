@@ -33,14 +33,18 @@ public final class LivePreviewModel {
     /// edited settings rather than SwiftFormat's defaults.
     public var extraArguments: [String] = []
 
+    /// The most recent formatted output.
     public private(set) var formattedSource: String = ""
+    /// The before/after diff between `source` and `formattedSource`.
     public private(set) var diff: [PreviewDiffLine] = []
+    /// The current state of the format operation.
     public private(set) var state: PreviewState = .idle
 
     private let cli: any SwiftFormatCLIProtocol
     private let debounceNanoseconds: UInt64
     private var pendingFormat: Task<Void, Never>?
 
+    /// Creates a live-preview model with optional injected CLI and settings.
     public init(
         cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(),
         source: String = "",

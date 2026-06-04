@@ -91,6 +91,7 @@ private struct RuleRow: View {
                 Image(systemName: "circle.dashed")
                     .foregroundStyle(.secondary)
                     .help("Opt-in (off by default)")
+                    .accessibilityLabel("Opt-in, off by default")
             }
         }
     }

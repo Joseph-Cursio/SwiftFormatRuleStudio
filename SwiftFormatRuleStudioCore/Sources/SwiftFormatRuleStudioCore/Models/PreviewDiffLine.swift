@@ -14,6 +14,15 @@ public struct PreviewDiffLine: Identifiable, Sendable, Equatable {
         case added
         case removed
         case unchanged
+
+        /// Maps a shared `DiffLine.Kind` into the app-facing change kind.
+        init(_ kind: DiffLine.Kind) {
+            switch kind {
+            case .added: self = .added
+            case .removed: self = .removed
+            case .unchanged: self = .unchanged
+            }
+        }
     }
 
     public let id: Int
@@ -25,24 +34,11 @@ public struct PreviewDiffLine: Identifiable, Sendable, Equatable {
         self.text = text
         self.change = change
     }
-}
 
-extension PreviewDiffLine.Change {
-    /// Maps a shared `DiffLine.Kind` into the app-facing change kind.
-    init(_ kind: DiffLine.Kind) {
-        switch kind {
-        case .added: self = .added
-        case .removed: self = .removed
-        case .unchanged: self = .unchanged
-        }
-    }
-}
-
-public extension PreviewDiffLine {
     /// Builds preview lines from the shared diff engine's output.
-    static func lines(from diffLines: [DiffLine]) -> [PreviewDiffLine] {
+    public static func lines(from diffLines: [DiffLine]) -> [Self] {
         diffLines.enumerated().map { index, line in
-            PreviewDiffLine(id: index, text: line.text, change: Change(line.kind))
+            Self(id: index, text: line.text, change: Change(line.kind))
         }
     }
 }

@@ -133,12 +133,12 @@ public struct SwiftFormatConfig: Equatable, Sendable {
         var arguments: [String] = []
         for line in lines {
             switch line {
-            case .option(let key, let value, _):
+            case let .option(key, value, _):
                 arguments.append("--\(key)")
                 if !value.isEmpty {
                     arguments.append(value)
                 }
-            case .ruleDirective(let kind, let rules, _) where !rules.isEmpty:
+            case let .ruleDirective(kind, rules, _) where !rules.isEmpty:
                 arguments.append("--\(kind.rawValue)")
                 arguments.append(rules.joined(separator: ","))
             case .blank, .comment, .unknown, .ruleDirective:

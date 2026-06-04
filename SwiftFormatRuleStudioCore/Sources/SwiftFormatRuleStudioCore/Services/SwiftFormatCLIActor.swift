@@ -148,8 +148,8 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
         return try await Self.runProcess(
             executable: binary,
             arguments: arguments,
-            stdin: stdin,
-            timeoutSeconds: timeoutSeconds
+            timeoutSeconds: timeoutSeconds,
+            stdin: stdin
         )
     }
 
@@ -158,8 +158,8 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
     nonisolated static func runProcess(
         executable: URL,
         arguments: [String],
-        stdin: Data? = nil,
-        timeoutSeconds: UInt64
+        timeoutSeconds: UInt64,
+        stdin: Data? = nil
     ) async throws -> (Data, Data) {
         try await withThrowingTaskGroup(of: (Data, Data).self) { group in
             group.addTask {

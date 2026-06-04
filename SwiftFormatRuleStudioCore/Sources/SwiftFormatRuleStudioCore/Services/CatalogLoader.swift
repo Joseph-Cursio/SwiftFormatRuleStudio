@@ -21,12 +21,6 @@ public protocol CatalogLoading: Sendable {
     func enrichedRule(named ruleName: String) async throws -> FormatRule?
 }
 
-public extension CatalogLoading {
-    func loadCatalog() async throws -> RuleCatalog {
-        try await loadCatalog(forceRefresh: false)
-    }
-}
-
 /// Default `CatalogLoading` implementation backed by `SwiftFormatCLIActor` and
 /// the shared `FileCache` from `LintStudioCore`.
 ///
@@ -114,5 +108,12 @@ public final class CatalogLoader: CatalogLoading {
     private func store(_ catalog: RuleCatalog) {
         memoryCache = catalog
         try? cache?.saveCodable(catalog, to: catalogFileName)
+    }
+}
+
+extension CatalogLoading {
+    /// Loads the catalog from cache when valid, otherwise re-fetches.
+    public func loadCatalog() async throws -> RuleCatalog {
+        try await loadCatalog(forceRefresh: false)
     }
 }

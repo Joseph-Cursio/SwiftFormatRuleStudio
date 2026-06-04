@@ -17,14 +17,16 @@ struct SwiftFormatCLIActorTests {
 
     @Test("detectPath returns the first existing candidate")
     func detectsPath() async throws {
-        let actor = SwiftFormatCLIActor(fileExists: { $0 == "/usr/local/bin/swiftformat" })
+        let fileExists: SwiftFormatFileExists = { $0 == "/usr/local/bin/swiftformat" }
+        let actor = SwiftFormatCLIActor(fileExists: fileExists)
         let url = try await actor.detectPath()
         #expect(url.path == "/usr/local/bin/swiftformat")
     }
 
     @Test("detectPath throws notFound when no binary exists")
     func notFound() async {
-        let actor = SwiftFormatCLIActor(fileExists: { _ in false })
+        let fileExists: SwiftFormatFileExists = { _ in false }
+        let actor = SwiftFormatCLIActor(fileExists: fileExists)
         await #expect(throws: SwiftFormatError.notFound) {
             try await actor.detectPath()
         }
@@ -50,7 +52,8 @@ struct SwiftFormatCLIActorTests {
 
     @Test("version trims surrounding whitespace")
     func versionTrims() async throws {
-        let actor = SwiftFormatCLIActor(commandRunner: { _ in (Data("0.61.1\n".utf8), Data()) })
+        let runner: SwiftFormatCommandRunner = { _ in (Data("0.61.1\n".utf8), Data()) }
+        let actor = SwiftFormatCLIActor(commandRunner: runner)
         #expect(try await actor.version() == "0.61.1")
     }
 }

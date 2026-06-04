@@ -12,6 +12,7 @@ import Foundation
 /// rule not in the table (e.g. ones added in a newer SwiftFormat). The curated
 /// table is the source of truth; the heuristic only fires for unknowns.
 public enum FormatRuleClassifier {
+    /// The category for a rule, from the curated table or the heuristic fallback.
     nonisolated public static func category(for ruleName: String) -> FormatRuleCategory {
         curatedCategory(for: ruleName) ?? heuristicCategory(for: ruleName)
     }

@@ -27,6 +27,7 @@ public struct ParsedRuleEntry: Equatable, Sendable {
 /// `(disabled)` means the rule is opt-in (off unless explicitly enabled);
 /// `(deprecated)` marks a rule kept only for backwards compatibility.
 public enum RuleListParser {
+    /// Parses `swiftformat --rules` output into `ParsedRuleEntry` values.
     public static func parse(_ output: String) -> [ParsedRuleEntry] {
         output.split(separator: "\n", omittingEmptySubsequences: false).compactMap { rawLine in
             let trimmed = rawLine.trimmingCharacters(in: .whitespaces)

@@ -45,6 +45,7 @@ public enum RuleInfoParser {
     private static let optionsHeader = "Options:"
     private static let examplesHeader = "Examples:"
 
+    /// Parses `swiftformat --ruleinfo <name>` output into a `ParsedRuleInfo`.
     public static func parse(_ output: String) -> ParsedRuleInfo {
         let lines = output.components(separatedBy: "\n")
 

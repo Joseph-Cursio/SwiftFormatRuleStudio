@@ -5,10 +5,10 @@
 
 import Foundation
 
-public extension RuleCatalog {
+extension RuleCatalog {
     /// Rules matching the filter, in catalog order. Search matches the rule
     /// name and description, case-insensitively.
-    func filteredRules(_ filter: RuleFilter) -> [FormatRule] {
+    public func filteredRules(_ filter: RuleFilter) -> [FormatRule] {
         let query = filter.searchText
             .trimmingCharacters(in: .whitespaces)
             .lowercased()
@@ -42,7 +42,7 @@ public extension RuleCatalog {
 
     /// Filtered rules grouped by category, each group's rules sorted by name,
     /// groups ordered by `FormatRuleCategory.allCases`. Empty groups are omitted.
-    func groupedRules(_ filter: RuleFilter) -> [RuleGroup] {
+    public func groupedRules(_ filter: RuleFilter) -> [RuleGroup] {
         let grouped = Dictionary(grouping: filteredRules(filter), by: \.category)
         return FormatRuleCategory.allCases.compactMap { category in
             guard let group = grouped[category], !group.isEmpty else { return nil }

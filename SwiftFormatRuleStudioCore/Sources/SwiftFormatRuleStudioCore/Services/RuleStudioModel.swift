@@ -24,18 +24,24 @@ public final class RuleStudioModel {
         case failed(String)
     }
 
+    /// The current state of the catalog load.
     public private(set) var loadState: LoadState = .idle
+    /// The loaded catalog, or `nil` until `load()` succeeds.
     public private(set) var catalog: RuleCatalog?
 
     /// The active browser filter. Mutating it re-derives the rule lists.
     public var filter = RuleFilter()
 
+    /// The name of the currently selected rule, if any.
     public private(set) var selectedRuleName: String?
+    /// The selected rule enriched with its `--ruleinfo` detail, if loaded.
     public private(set) var selectedRuleDetail: FormatRule?
+    /// Whether the selected rule's detail is currently loading.
     public private(set) var isLoadingDetail = false
 
     private let loader: any CatalogLoading
 
+    /// Creates a model backed by the given catalog loader.
     public init(loader: any CatalogLoading = CatalogLoader()) {
         self.loader = loader
     }
