@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import LintStudioCore
 
 /// Runs a `swiftformat` invocation with the given arguments, returning
 /// `(stdout, stderr)`. Injected in tests to return canned fixtures.
@@ -69,47 +70,43 @@ public enum SwiftFormatError: LocalizedError, Sendable, Equatable {
 
 /// Executes `swiftformat` CLI commands.
 ///
-/// App-local for now. The generic process-running mechanics (path detection,
-/// run + capture + timeout) are a future promotion candidate to
-/// `LintStudioCore`'s `CLIToolActor` once the shared shape settles; the
-/// SwiftFormat-specific argument building and stream selection stay here.
+/// A thin wrapper over `LintStudioCore.CLIToolActor`: the shared actor owns the
+/// path-detection / run / capture / timeout mechanics and the SwiftLint-modeled
+/// exit-code policy, while this type keeps the SwiftFormat-specific argument
+/// building, stdout selection, and `SwiftFormatError` surface. SwiftFormat's
+/// `--lint` mode exits `1` when it finds issues, so `successExitCodes` is
+/// `[0, 1]` rather than the SwiftLint default.
 public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
-    private var cachedPath: URL?
-    private let commandRunner: SwiftFormatCommandRunner?
-    private let fileExists: SwiftFormatFileExists
-    private let timeoutSeconds: UInt64
-
-    /// Standard install locations, most common first.
-    nonisolated private static let candidatePaths = [
-        "/opt/homebrew/bin/swiftformat", // Apple Silicon Homebrew
-        "/usr/local/bin/swiftformat",    // Intel Homebrew
-        "/usr/bin/swiftformat"           // System
-    ]
+    private let tool: CLIToolActor
 
     public init(
         commandRunner: SwiftFormatCommandRunner? = nil,
         fileExists: SwiftFormatFileExists? = nil,
         timeoutSeconds: UInt64 = 30
     ) {
-        self.commandRunner = commandRunner
-        self.fileExists = fileExists ?? { FileManager.default.fileExists(atPath: $0) }
-        self.timeoutSeconds = timeoutSeconds
+        // Bridge the app-local seams to CLIToolActor's. The injected runner has
+        // no stdin/exit-code channel, so treat its output as a successful run.
+        var bridgedRunner: CLIToolCommandRunner?
+        if let commandRunner {
+            bridgedRunner = { arguments, _ in
+                let (stdout, stderr) = try await commandRunner(arguments)
+                return (stdout, stderr, 0)
+            }
+        }
+        self.tool = CLIToolActor(
+            toolName: "swiftformat",
+            installMessage: SwiftFormatError.notFound.errorDescription,
+            timeoutSeconds: timeoutSeconds,
+            successExitCodes: [0, 1],
+            fileExists: fileExists,
+            commandRunner: bridgedRunner
+        )
     }
 
     // MARK: - SwiftFormatCLIProtocol
 
     public func detectPath() async throws -> URL {
-        if let cachedPath, await fileExists(cachedPath.path) {
-            return cachedPath
-        }
-        cachedPath = nil
-
-        for path in Self.candidatePaths where await fileExists(path) {
-            let url = URL(fileURLWithPath: path)
-            cachedPath = url
-            return url
-        }
-        throw SwiftFormatError.notFound
+        try await mapping { try await tool.detectPath() }
     }
 
     public func version() async throws -> String {
@@ -129,99 +126,38 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
     }
 
     public func format(source: String, arguments: [String]) async throws -> String {
-        let (stdout, _) = try await capture(arguments, stdin: Data(source.utf8))
-        return String(data: stdout, encoding: .utf8) ?? ""
+        try await mapping {
+            try await tool.run(arguments: arguments, stdin: Data(source.utf8)).stdoutString
+        }
     }
 
     public func lint(path: String, arguments: [String]) async throws -> String {
-        let (stdout, _) = try await capture([path] + arguments)
-        return String(data: stdout, encoding: .utf8) ?? ""
+        try await run([path] + arguments)
     }
 
     // MARK: - Execution
 
-    /// Runs `swiftformat <arguments>` and returns stdout as a UTF-8 string.
-    /// `--rules`, `--ruleinfo`, and `--options` all write their payload to
-    /// stdout (stderr carries only blank lines / warnings).
+    /// Runs `swiftformat <arguments>` and returns stdout. `--rules`,
+    /// `--ruleinfo`, and `--options` all write their payload to stdout (stderr
+    /// carries only blank lines / warnings).
     private func run(_ arguments: [String]) async throws -> String {
-        let (stdout, _) = try await capture(arguments)
-        return String(data: stdout, encoding: .utf8) ?? ""
+        try await mapping { try await tool.run(arguments: arguments).stdoutString }
     }
 
-    private func capture(_ arguments: [String], stdin: Data? = nil) async throws -> (Data, Data) {
-        if let commandRunner {
-            return try await commandRunner(arguments)
-        }
-        let binary = try await detectPath()
-        return try await Self.runProcess(
-            executable: binary,
-            arguments: arguments,
-            timeoutSeconds: timeoutSeconds,
-            stdin: stdin
-        )
-    }
-
-    /// Launches a process, optionally writing `stdin`, capturing stdout/stderr
-    /// with a timeout. `nonisolated` static so it does not capture actor state.
-    nonisolated static func runProcess(
-        executable: URL,
-        arguments: [String],
-        timeoutSeconds: UInt64,
-        stdin: Data? = nil
-    ) async throws -> (Data, Data) {
-        try await withThrowingTaskGroup(of: (Data, Data).self) { group in
-            group.addTask {
-                try runProcessBlocking(executable: executable, arguments: arguments, stdin: stdin)
-            }
-            group.addTask {
-                try await Task.sleep(nanoseconds: timeoutSeconds * 1_000_000_000)
-                throw SwiftFormatError.timedOut(seconds: timeoutSeconds)
-            }
-            guard let result = try await group.next() else {
-                throw SwiftFormatError.executionFailed(message: "No output produced.")
-            }
-            group.cancelAll()
-            return result
-        }
-    }
-
-    nonisolated private static func runProcessBlocking(
-        executable: URL,
-        arguments: [String],
-        stdin: Data? = nil
-    ) throws -> (Data, Data) {
-        let process = Process()
-        process.executableURL = executable
-        process.arguments = arguments
-
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        let stdinPipe = stdin.map { _ in Pipe() }
-        if let stdinPipe {
-            process.standardInput = stdinPipe
-        }
-
+    /// Translates `CLIToolError` into the `SwiftFormatError` surface callers
+    /// (and existing tests) expect.
+    private func mapping<T>(_ body: () async throws -> T) async throws -> T {
         do {
-            try process.run()
-        } catch {
-            throw SwiftFormatError.executionFailed(message: error.localizedDescription)
+            return try await body()
+        } catch let error as CLIToolError {
+            switch error {
+            case .notFound:
+                throw SwiftFormatError.notFound
+            case .timedOut(_, let seconds):
+                throw SwiftFormatError.timedOut(seconds: seconds)
+            case .executionFailed(let message):
+                throw SwiftFormatError.executionFailed(message: message)
+            }
         }
-
-        // Write stdin (if any) and close it so the tool sees EOF. Preview inputs
-        // are small, so a single write before reading won't deadlock.
-        if let stdinPipe, let stdin {
-            stdinPipe.fileHandleForWriting.write(stdin)
-            stdinPipe.fileHandleForWriting.closeFile()
-        }
-
-        // Read both pipes fully before waiting to avoid deadlock on large output.
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-
-        return (stdoutData, stderrData)
     }
 }
