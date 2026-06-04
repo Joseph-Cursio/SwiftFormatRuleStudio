@@ -51,6 +51,20 @@ struct ConfigView: View {
             }
         }
         ToolbarItemGroup {
+            Menu {
+                ForEach(BuiltInPresets.all) { preset in
+                    Button {
+                        config.apply(preset)
+                    } label: {
+                        Text(preset.name)
+                        Text(preset.summary)
+                    }
+                }
+            } label: {
+                Label("Presets", systemImage: "wand.and.stars")
+            }
+            .disabled(folderURL == nil)
+
             Button("Revert") { config.revert() }
                 .disabled(config.isDirty == false)
             Button("Save") { config.save() }

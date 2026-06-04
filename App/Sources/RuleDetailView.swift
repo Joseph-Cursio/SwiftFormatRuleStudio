@@ -10,6 +10,7 @@ import SwiftUI
 /// example. Reads `model.selectedRuleDetail`, which the model lazily enriches.
 struct RuleDetailView: View {
     let model: RuleStudioModel
+    @Environment(ConfigModel.self) private var config
 
     var body: some View {
         if let rule = model.selectedRuleDetail {
@@ -25,10 +26,20 @@ struct RuleDetailView: View {
         }
     }
 
+    private func enabledBinding(for rule: FormatRule) -> Binding<Bool> {
+        Binding(
+            get: { config.isRuleEnabled(rule.name, isOptIn: rule.isOptIn) },
+            set: { config.setRuleEnabled(rule.name, enabled: $0, isOptIn: rule.isOptIn) }
+        )
+    }
+
     private func detail(for rule: FormatRule) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header(for: rule)
+
+                Toggle("Enabled in config", isOn: enabledBinding(for: rule))
+                    .toggleStyle(.switch)
 
                 if !rule.ruleDescription.isEmpty {
                     Text(rule.ruleDescription)

@@ -20,6 +20,9 @@ excluded:
   # Test mock must be `async throws` to conform to SwiftFormatCLIProtocol, so
   # async_without_await / unneeded_throws_rethrows are unavoidable false positives.
   - SwiftFormatRuleStudioCore/Sources/SwiftFormatRuleStudioCoreTestSupport/MockSwiftFormatCLI.swift
+  # SwiftUI FileDocument requires throwing init/fileWrapper, tripping
+  # unneeded_throws_rethrows even with non-throwing bodies.
+  - App/Sources/TextExportDocument.swift
 # Opt-in rules (enable specific rules that are valuable)
 opt_in_rules:
   - empty_count

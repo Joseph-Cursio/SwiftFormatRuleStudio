@@ -16,6 +16,9 @@ struct AuditView: View {
     @State private var model = ImpactAuditModel()
     @State private var folderURL: URL?
     @State private var choosingFolder = false
+    @State private var exportDocument: TextExportDocument?
+    @State private var exportFormat: AuditExportFormat = .csv
+    @State private var showingExporter = false
 
     var body: some View {
         content
@@ -28,6 +31,26 @@ struct AuditView: View {
                     Task { await runAudit(url) }
                 }
             }
+            .fileExporter(
+                isPresented: $showingExporter,
+                document: exportDocument,
+                contentType: exportFormat == .csv ? .commaSeparatedText : .html,
+                defaultFilename: "swiftformat-impact"
+            ) { _ in }
+    }
+
+    private func export(as format: AuditExportFormat) {
+        guard let report = model.report else { return }
+        let stamp = Date.now.formatted(date: .abbreviated, time: .shortened)
+        let text = ImpactReportExporter.export(
+            report,
+            as: format,
+            workspaceName: folderURL?.lastPathComponent ?? "Project",
+            timestamp: stamp
+        )
+        exportFormat = format
+        exportDocument = TextExportDocument(text: text)
+        showingExporter = true
     }
 
     @ViewBuilder
@@ -65,7 +88,16 @@ struct AuditView: View {
                 Label(folderURL?.lastPathComponent ?? "Choose Folder…", systemImage: "folder")
             }
         }
-        ToolbarItem {
+        ToolbarItemGroup {
+            Menu {
+                ForEach(AuditExportFormat.allCases) { format in
+                    Button("Export \(format.displayName)…") { export(as: format) }
+                }
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .disabled(model.report?.isClean ?? true)
+
             Button("Re-run") {
                 if let folderURL {
                     Task { await runAudit(folderURL) }
