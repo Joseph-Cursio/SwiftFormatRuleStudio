@@ -113,7 +113,7 @@ struct ConfigModelTests {
         // Re-enable it (back to default) → override cleared, nothing written.
         model.setRuleEnabled("redundantSelf", enabled: true, isOptIn: false)
         #expect(model.config.disabledRules.isEmpty)
-        #expect(model.config.serialized() == "")
+        #expect(model.config.serialized().isEmpty)
 
         // Enable an opt-in rule → recorded in --enable.
         model.setRuleEnabled("isEmpty", enabled: true, isOptIn: true)

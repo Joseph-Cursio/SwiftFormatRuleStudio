@@ -53,62 +53,72 @@ public enum RuleInfoParser {
         }
         let name = lines[nameIndex].trimmingCharacters(in: .whitespaces)
 
+        var accumulator = SectionAccumulator()
+        for line in lines[(nameIndex + 1)...] {
+            accumulator.consume(line)
+        }
+
+        let example = trimBlankEdges(accumulator.exampleLines)
+        return ParsedRuleInfo(
+            name: name,
+            ruleDescription: accumulator.descriptionLines.joined(separator: " "),
+            relatedOptions: accumulator.relatedOptions,
+            example: example.isEmpty ? nil : example
+        )
+    }
+
+    /// Walks the lines after the rule name, routing each to the active section.
+    private struct SectionAccumulator {
+        enum Section { case description, options, examples, done }
+
+        var section: Section = .description
+        var exampleStarted = false
         var descriptionLines: [String] = []
         var relatedOptions: [String] = []
         var exampleLines: [String] = []
 
-        enum Section { case description, options, examples, done }
-        var section: Section = .description
-        var exampleStarted = false
-
-        for line in lines[(nameIndex + 1)...] {
+        mutating func consume(_ line: String) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-
-            if trimmed == optionsHeader {
+            if trimmed == RuleInfoParser.optionsHeader {
                 section = .options
-                continue
+                return
             }
-            if trimmed == examplesHeader {
+            if trimmed == RuleInfoParser.examplesHeader {
                 section = .examples
-                continue
+                return
             }
-
             switch section {
-            case .description:
-                if !trimmed.isEmpty {
-                    descriptionLines.append(trimmed)
-                }
-
-            case .options:
-                if trimmed.hasPrefix("--"), let flag = trimmed.split(separator: " ").first {
-                    relatedOptions.append(String(flag))
-                }
-
-            case .examples:
-                if exampleEnded(at: line, trimmed: trimmed, started: exampleStarted) {
-                    section = .done // stop collecting; ignore trailing prose/blocks
-                    continue
-                }
-                if !trimmed.isEmpty {
-                    exampleStarted = true
-                }
-                if exampleStarted {
-                    exampleLines.append(line)
-                }
-
-            case .done:
-                continue
+            case .description: appendDescription(trimmed)
+            case .options: appendOption(trimmed)
+            case .examples: appendExample(line, trimmed: trimmed)
+            case .done: break
             }
         }
 
-        let example = trimBlankEdges(exampleLines)
+        private mutating func appendDescription(_ trimmed: String) {
+            if !trimmed.isEmpty {
+                descriptionLines.append(trimmed)
+            }
+        }
 
-        return ParsedRuleInfo(
-            name: name,
-            ruleDescription: descriptionLines.joined(separator: " "),
-            relatedOptions: relatedOptions,
-            example: example.isEmpty ? nil : example
-        )
+        private mutating func appendOption(_ trimmed: String) {
+            if trimmed.hasPrefix("--"), let flag = trimmed.split(separator: " ").first {
+                relatedOptions.append(String(flag))
+            }
+        }
+
+        private mutating func appendExample(_ line: String, trimmed: String) {
+            if RuleInfoParser.exampleEnded(at: line, trimmed: trimmed, started: exampleStarted) {
+                section = .done // stop collecting; ignore trailing prose/blocks
+                return
+            }
+            if !trimmed.isEmpty {
+                exampleStarted = true
+            }
+            if exampleStarted {
+                exampleLines.append(line)
+            }
+        }
     }
 
     /// An example block ends at the first non-blank line that is neither a diff

@@ -21,8 +21,8 @@ struct OptionsParserTests {
     --class-threshold  Minimum line count to organize class body. Defaults to 0
     """
 
-    private func option(_ name: String, in options: [FormatOption]) -> FormatOption {
-        options.first { $0.name == name }!
+    private func option(_ name: String, in options: [FormatOption]) throws -> FormatOption {
+        try #require(options.first { $0.name == name })
     }
 
     @Test("Parses every option flag in the slice")
@@ -35,38 +35,38 @@ struct OptionsParserTests {
     }
 
     @Test("Infers boolean options")
-    func booleanOption() {
-        let allman = option("--allman", in: OptionsParser.parse(Self.fixture))
+    func booleanOption() throws {
+        let allman = try option("--allman", in: OptionsParser.parse(Self.fixture))
         #expect(allman.kind == .boolean)
         #expect(allman.allowedValues == ["true", "false"])
         #expect(allman.defaultValue == "false")
     }
 
     @Test("Infers enumeration options with their default")
-    func enumerationOption() {
-        let explicitSelf = option("--self", in: OptionsParser.parse(Self.fixture))
+    func enumerationOption() throws {
+        let explicitSelf = try option("--self", in: OptionsParser.parse(Self.fixture))
         #expect(explicitSelf.kind == .enumeration)
         #expect(explicitSelf.allowedValues == ["insert", "remove", "init-only"])
         #expect(explicitSelf.defaultValue == "remove")
     }
 
     @Test("Infers list options from a comma-containing default")
-    func listOption() {
-        let acronyms = option("--acronyms", in: OptionsParser.parse(Self.fixture))
+    func listOption() throws {
+        let acronyms = try option("--acronyms", in: OptionsParser.parse(Self.fixture))
         #expect(acronyms.kind == .list)
         #expect(acronyms.defaultValue == "ID,URL,UUID")
     }
 
     @Test("Infers integer options")
-    func integerOption() {
-        let threshold = option("--class-threshold", in: OptionsParser.parse(Self.fixture))
+    func integerOption() throws {
+        let threshold = try option("--class-threshold", in: OptionsParser.parse(Self.fixture))
         #expect(threshold.kind == .integer)
         #expect(threshold.defaultValue == "0")
     }
 
     @Test("Joins a wrapped option's blurb from its continuation line")
-    func wrappedOptionBlurb() {
-        let wrapping = option("--allow-partial-wrapping", in: OptionsParser.parse(Self.fixture))
+    func wrappedOptionBlurb() throws {
+        let wrapping = try option("--allow-partial-wrapping", in: OptionsParser.parse(Self.fixture))
         #expect(wrapping.summary == "Allow partial argument wrapping: \"true\" (default) or \"false\"")
         #expect(wrapping.kind == .boolean)
         #expect(wrapping.defaultValue == "true")

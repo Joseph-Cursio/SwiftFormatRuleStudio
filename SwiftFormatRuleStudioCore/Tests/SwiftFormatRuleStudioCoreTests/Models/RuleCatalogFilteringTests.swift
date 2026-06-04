@@ -12,11 +12,33 @@ struct RuleCatalogFilteringTests {
         RuleCatalog(
             swiftFormatVersion: "0.61.1",
             rules: [
-                FormatRule(name: "redundantSelf", ruleDescription: "Insert/remove explicit self.", category: .redundancy),
-                FormatRule(name: "redundantParens", ruleDescription: "Remove redundant parentheses.", category: .redundancy),
-                FormatRule(name: "indent", ruleDescription: "Indent code by scope.", category: .spacing),
-                FormatRule(name: "acronyms", ruleDescription: "Capitalize acronyms.", category: .idiomatic, isOptIn: true),
-                FormatRule(name: "sortedImports", ruleDescription: "Sort import statements.", category: .organization, isDeprecated: true)
+                FormatRule(
+                    name: "redundantSelf",
+                    ruleDescription: "Insert/remove explicit self.",
+                    category: .redundancy
+                ),
+                FormatRule(
+                    name: "redundantParens",
+                    ruleDescription: "Remove redundant parentheses.",
+                    category: .redundancy
+                ),
+                FormatRule(
+                    name: "indent",
+                    ruleDescription: "Indent code by scope.",
+                    category: .spacing
+                ),
+                FormatRule(
+                    name: "acronyms",
+                    ruleDescription: "Capitalize acronyms.",
+                    category: .idiomatic,
+                    isOptIn: true
+                ),
+                FormatRule(
+                    name: "sortedImports",
+                    ruleDescription: "Sort import statements.",
+                    category: .organization,
+                    isDeprecated: true
+                )
             ],
             options: []
         )

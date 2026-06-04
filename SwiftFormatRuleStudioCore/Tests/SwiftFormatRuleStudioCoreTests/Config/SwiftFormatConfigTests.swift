@@ -126,7 +126,7 @@ struct SwiftFormatConfigTests {
         #expect(config.disabledRules.isEmpty)
         #expect(config.enabledRules.isEmpty)
         // Both emptied directives are dropped.
-        #expect(config.serialized() == "")
+        #expect(config.serialized().isEmpty)
     }
 
     @Test("Disabling is idempotent")

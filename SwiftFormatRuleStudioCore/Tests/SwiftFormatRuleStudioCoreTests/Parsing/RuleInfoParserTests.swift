@@ -110,7 +110,7 @@ struct RuleInfoParserTests {
     @Test("Empty output is handled gracefully")
     func emptyOutput() {
         let info = RuleInfoParser.parse("")
-        #expect(info.name == "")
+        #expect(info.name.isEmpty)
         #expect(info.example == nil)
         #expect(info.relatedOptions.isEmpty)
     }
