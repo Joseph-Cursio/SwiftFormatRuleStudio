@@ -145,12 +145,16 @@ Confirmed by the coupling audit (file:line citations below are in SwiftLintRuleS
 - **The SwiftLint JSON field mapping** (`file`/`rule_id`/`reason`/`character`) in
   `WorkspaceAnalyzer+Helpers.parseViolations()` (`:184–230`) — see `LintOutputParser` below.
 
-## New seam the audit surfaced: `LintOutputParser`
+## New seam the audit surfaced: `LintOutputParser` — ❌ NOT NEEDED (Step 6 closed)
+
+> **Resolved:** this seam was only required if `WorkspaceAnalyzer` were promoted. Step 6
+> is closed as won't-promote (SwiftFormat has no analyzer orchestrator — it parses its
+> own CLI output app-local via `LintReportParser`). So no shared `LintOutputParser`
+> protocol is needed; each app keeps its own parser. Kept below for the design record.
 
 `WorkspaceAnalyzer` currently hardcodes SwiftLint's JSON keys when turning CLI output
-into violations. SwiftFormat's `--reporter json` shape differs. So the promotion of
-`WorkspaceAnalyzer` (**Step 6**, the deferred orchestrator) **requires** extracting a
-small protocol:
+into violations. SwiftFormat's `--reporter json` shape differs. So promoting
+`WorkspaceAnalyzer` (**Step 6**) **would have required** extracting a small protocol:
 
 ```swift
 public protocol LintOutputParser {
@@ -180,26 +184,31 @@ near-zero-coupling and prove out the shared-module workflow before the harder,
 protocol-touching ones. Audit "% promotable" and difficulty noted per step. Each step
 is its own commit and leaves both the package tests and the SwiftLint app green.
 
-> **Violation-protocol conformance lands just before Step 4 (Storage).** Make SwiftLint's
-> concrete `Violation` conform to `LintViolation` and `Severity` to `LintSeverity`
-> (`Models/Violation.swift`) — a pure additive bridge (`identifier`→`id`,
-> `ruleIdentifier`→`ruleID`; `displayName`/`isError` on `Severity`). Steps 4 and 6 need it;
-> Step 3 (FileTracker + WorkspaceManager) does **not** touch `Violation`, so it's deferred
-> to its first real consumer rather than done up front.
+> **Violation-protocol conformance — NOT NEEDED (its only consumers, Steps 4 & 6, are
+> closed).** This was to make SwiftLint's concrete `Violation` conform to `LintViolation`
+> and `Severity` to `LintSeverity` (`Models/Violation.swift`) just before Step 4, since
+> Steps 4 and 6 needed it. Both are now won't-promote, so the shared violation protocols
+> never get a second consumer and SwiftLint's `Violation` stays as-is. Kept for the record.
 
-> ## ⏹ M-1 STATUS: paused at the pure-mechanics milestone (2026-06)
-> **Done & shipped in LintStudioUI `1.2.0`** (tag `8ceccb7`): Steps 1–2 + 3a —
-> `GitServiceActor`, `FileCache`, `FileTracker`. All three are tool-agnostic mechanics,
-> fully verified via `swift test`. Consumers flipped onto the tag and green:
-> SwiftLintRuleStudio (`9e26240`, 477 tests) and SwiftProjectLint (`594c6a6`, 2410 tests).
+> ## ✅ M-1 STATUS: complete (2026-06-04)
+> **Shipped in LintStudioUI `1.2.0`** (tag `8ceccb7`): Steps 1–2 + 3a —
+> `GitServiceActor`, `FileCache`, `FileTracker`. All tool-agnostic mechanics, verified
+> via `swift test`. Consumers flipped onto the tag and green: SwiftLintRuleStudio
+> (`9e26240`, 477 tests) and SwiftProjectLint (`594c6a6`, 2410 tests).
 >
-> **Deferred to the SwiftFormat-build phase:** Steps 3b/4/5/6 — `WorkspaceManager`,
-> `ViolationStorageActor`, `CLIToolActor`, `WorkspaceAnalyzer`. Two reasons, both decisive:
-> (1) all are UI-referenced, and the **Xcode App target can't be built/verified in the agent
-> environment** (xcodebuild fails headless), so their App-side edits can't be checked here;
-> (2) all are SwiftLint-coupled with **zero current value** until the SwiftFormat app exists
-> to be the second consumer — which is also when their seams should be designed against a real
-> second shape. Resume these when building SwiftFormat, co-verifying the App side in Xcode.app.
+> **Shipped in LintStudioUI `1.3.0`** (2026-06-04): Step 5 — `CLIToolActor`, the
+> tool-agnostic CLI runner (path detection, run/capture, timeout, exit-code policy).
+> Both `SwiftLintCLIActor` (`b2364bd`, 472 tests) and `SwiftFormatCLIActor` (`2d92911`,
+> 105 tests) are now thin wrappers over it — the first shared mechanic with two real
+> consumers. SwiftProjectLint pin-bumped to `1.3.0` (`c3b996d`, 2410 tests).
+>
+> **Closed as won't-promote:** Steps 3b/4/6 — `WorkspaceManager`, `ViolationStorageActor`,
+> `WorkspaceAnalyzer`. The SwiftFormat app deliberately uses **none** of these shapes: no
+> SQLite violation store, no analyzer orchestrator, no recent-workspace manager (its impact
+> audit runs straight off CLI output via `ImpactAuditModel` + `LintReportParser`). So there
+> is no second consumer, and the "two consumers in hand or don't promote" rule says they
+> stay app-local in SwiftLintRuleStudio. This is a decision, not a deferral — don't reopen
+> unless a future consumer genuinely needs persistent storage or the analyzer loop.
 *Audit: ~95% promotable, difficulty **low** — the proof-of-concept step.*
 
 > **Status:** landed. LintStudioUI `da597eb` (adds `Git/GitServiceActor.swift` +
@@ -245,8 +254,8 @@ is its own commit and leaves both the package tests and the SwiftLint app green.
   stays app-local.
 - **Risk:** low.
 
-### Step 3 — `FileTracker` ✅ DONE · `WorkspaceManager*` ⏸ DEFERRED
-*Difficulty **low–medium**. **Rescoped** twice (see notes) — `WorkspaceAnalyzer` → Step 6; `WorkspaceManager` deferred.*
+### Step 3 — `FileTracker` ✅ DONE · `WorkspaceManager*` ❌ WON'T PROMOTE
+*Difficulty **low–medium**. **Rescoped** twice (see notes) — `WorkspaceAnalyzer` → Step 6; `WorkspaceManager` closed as won't-promote (SwiftFormat has no recent-workspace manager — no second consumer).*
 
 > **Step 3a (FileTracker): landed.** LintStudioUI `8ceccb7` adds `FileIO/FileTracker.swift`
 > (3 tests). SwiftLintRuleStudio `2714f67` consumes it; full suite green (477 tests).
@@ -254,17 +263,16 @@ is its own commit and leaves both the package tests and the SwiftLint app green.
 > that touches a member**, not just the one declaring the property (caught
 > `WorkspaceAnalyzer+Helpers.swift` calling `fileTracker.getChangedFiles`).
 >
-> **Step 3b (WorkspaceManager): DEFERRED to the SwiftFormat-build phase.** Reading the
+> **Step 3b (WorkspaceManager): CLOSED — won't promote.** Reading the
 > code showed the `WorkspaceManager`/`Workspace` cluster is pervasively SwiftLint-coupled,
 > not incidentally: `.swiftlint.yml` is baked into `Workspace.init` (`Configuration.swift:58`),
 > `checkConfigFileExists` (`+Config:19`), and `createDefaultConfigFile` (`+Config:34`); the
 > persistence key `"SwiftLintRuleStudio.recentWorkspaces"` holds real user data so it can't
 > change. Promoting forces an init-signature change rippling to **7 construction sites, 3 in
-> the App/UI layer** — which **can't be built/verified in this environment** (xcodebuild's
-> build system fails headless: `Internal inconsistency error` + `DVTBuildVersion`). And it has
-> **zero current value** — no second consumer exists yet. Trips our own "second consumer in
-> hand" rule. Resume when the SwiftFormat app exists, parameterizing against a real second
-> shape and co-verifying the App side.
+> the App/UI layer**. Decisively, the SwiftFormat app shipped (M0–M6) **without** any
+> recent-workspace manager, so the second consumer that would justify the work never
+> materialized — it trips our own "second consumer in hand" rule. Stays app-local in
+> SwiftLintRuleStudio.
 
 > **Rescoped after reading the code.** The audit lumped `WorkspaceAnalyzer` in here by
 > theme, but by **dependency order** it's an orchestrator that *stores*
@@ -284,8 +292,10 @@ is its own commit and leaves both the package tests and the SwiftLint app green.
   app-local** (or are injected) — SwiftFormat ships its own.
 - **Risk:** low–medium — config-filename + app-identifier injection is the only real work.
 
-### Step 4 — `ViolationStorageActor*` (+ SQLite) → `LintStudioCore`
-*Audit: ~70% promotable, difficulty **medium–high**.*
+### Step 4 — `ViolationStorageActor*` (+ SQLite) → `LintStudioCore` ❌ WON'T PROMOTE
+*Audit: ~70% promotable, difficulty **medium–high** — but closed: SwiftFormat has no
+SQLite violation store (its impact audit runs off CLI output via `ImpactAuditModel` +
+`LintReportParser`), so there's no second consumer. Stays app-local in SwiftLintRuleStudio.*
 - **Clean:** the SQLite layer — binding, transactions, dedup, batch insert, filter-query
   building — is generic.
 - **Coupling:** returns concrete `Violation` (`+Queries.swift:9/:183–195`), `Severity(rawValue:)`
@@ -297,9 +307,18 @@ is its own commit and leaves both the package tests and the SwiftLint app green.
   right once.
 - **Risk:** medium–high — schema/row-mapping is the compatibility surface.
 
-### Step 5 — `CLIToolActor` (extracted from `SwiftLintCLIActor*`) → `LintStudioCore`
+### Step 5 — `CLIToolActor` (extracted from `SwiftLintCLIActor*`) → `LintStudioCore` ✅ DONE
 *Audit: ~60% promotable, difficulty **low–medium**; saved for last because it touches the
 most call sites.*
+
+> **Status:** landed in LintStudioUI **`1.3.0`** (2026-06-04). `CLIToolActor` owns path
+> detection (Homebrew/Intel/system), run/capture with `/bin/zsh` shell fallback, the
+> timeout wrapper, and the mockable closure-injection seam. Success/error follows a
+> uniform exit-code policy (0 succeeds; per-tool `successExitCodes` override — SwiftLint
+> `[0, 2]`, SwiftFormat `[0, 1]`; 127 → `notFound`; any other nonzero → `executionFailed`).
+> Both `SwiftLintCLIActor` (`b2364bd`, 472 tests) and `SwiftFormatCLIActor` (`2d92911`,
+> 105 tests) are now thin wrappers; each keeps its own binary name, arg construction, and
+> output parsing. `generate-docs` stayed app-local in SwiftLint as planned.
 - **Why shared:** the **mechanics** — path detection across Homebrew/Intel/system
   (`SwiftLintCLIActor.swift:106–108`), direct-exec with `/bin/zsh` shell fallback
   (`+Execution.swift:6–128`), timeout wrapper (`readWithTimeout`), the protocol +
@@ -317,8 +336,12 @@ most call sites.*
 - **Risk:** low–medium mechanically, but highest call-site churn — do the rename pass
   carefully; no `swiftlint` literal may leak upward.
 
-### Step 6 — `WorkspaceAnalyzer*` → `LintStudioCore` (the orchestrator, promoted last)
-*Difficulty **medium**. Depends on Steps 4 (storage) + 5 (CLI) being done first.*
+### Step 6 — `WorkspaceAnalyzer*` → `LintStudioCore` (the orchestrator) ❌ WON'T PROMOTE
+*Difficulty **medium**. Was to depend on Steps 4 + 5. Closed: SwiftFormat has no
+`WorkspaceAnalyzer` orchestrator — it drives catalog/audit directly (`CatalogLoader`,
+`ImpactAuditModel`) — so the "open question" below resolves to **keep app-local**. The
+`LintOutputParser` seam is likewise unneeded across the package; each app parses its own
+CLI output. Stays app-local in SwiftLintRuleStudio.*
 - **Why last:** it glues together CLI + parser + storage + `FileTracker` + `Workspace` +
   progress/cancellation. Only once the CLI runner and storage protocols live in
   `LintStudioCore` can the analyzer promote without inventing seams out of order.
@@ -381,25 +404,27 @@ For every promotion commit:
 
 ## Release & versioning
 
-- LintStudioUI is at **1.1.0**. These promotions are **additive** → release **1.2.0**
-  (minor bump). Reserve a major bump only if a public signature changes
-  incompatibly (avoid that — use default implementations / sub-protocols instead).
-- Tag `1.2.0` once all promotion commits land and **all three consumers** are green.
-- Update SwiftLintRuleStudio's `Package.swift` to `from: "1.2.0"`.
-- **SwiftProjectLint:** per the **Choice A** decision, it gets pinned to `1.1.0` in the
-  M-1 pre-flight (away from its current `path:` dependency), then bumped to `1.2.0`
-  alongside the others at the deliberate flip. It is insulated for the whole extraction.
-- SwiftFormatRuleStudio's `Package.swift` depends on `from: "1.2.0"` from day one.
-- Keep the local clone (`~/xcode_projects/LintStudioUI`) and the GitHub remote in
-  sync; tag-pinned consumers resolve against the tag, the path consumer against the
-  clone.
+- These promotions are **additive** → minor bumps. Shipped as two tags:
+  - **`1.2.0`** — Steps 1–2 + 3a (`GitServiceActor`, `FileCache`, `FileTracker`).
+  - **`1.3.0`** — Step 5 (`CLIToolActor`), 2026-06-04.
+- Reserve a major bump only if a public signature changes incompatibly (avoided — used
+  default implementations / sub-protocols / additive seams throughout).
+- All three consumers pin `from: "1.3.0"` and are green: SwiftLintRuleStudio,
+  SwiftProjectLint (Choice A: pinned `1.1.0` → bumped alongside the others), and
+  SwiftFormatRuleStudio.
+- During each promotion the app being refactored switched to a local `path:` link for the
+  duration, reverting to the `from:` tag at the flip. Keep the local clone
+  (`~/xcode_projects/LintStudioUI`) and the GitHub remote in sync.
 
-## Definition of done
+## Definition of done ✅
 
-- All §3.0 "promote now" components live in `LintStudioCore`, public + tested.
-- SwiftLintRuleStudio builds and passes its full suite against LintStudioUI `1.2.0`,
+- All shared mechanics with **two real consumers** live in `LintStudioCore`, public +
+  tested: `GitServiceActor`, `FileCache`, `FileTracker`, `CLIToolActor`.
+- SwiftLintRuleStudio builds and passes its full suite against LintStudioUI `1.3.0`,
   with **no behavior change** (pure refactor).
-- **SwiftProjectLint builds and passes** against `1.2.0` (its protocol conformances in
+- **SwiftProjectLint builds and passes** against `1.3.0` (its protocol conformances in
   `Sources/App/Models/` compile untouched).
 - No SwiftLint-specific literal leaked into the shared package.
-- LintStudioUI `1.2.0` tagged and pushed. SwiftFormat work (M0+) can begin.
+- LintStudioUI `1.2.0` and `1.3.0` tagged and pushed.
+- Single-consumer targets (`WorkspaceManager`, `ViolationStorageActor`,
+  `WorkspaceAnalyzer`) closed as won't-promote — see the status block above.

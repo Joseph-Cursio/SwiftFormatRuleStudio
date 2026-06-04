@@ -222,15 +222,16 @@ Full sequencing in [`shared-package-extraction.md`](shared-package-extraction.md
 
 ## 4. Suggested build order (milestones)
 
-0. **M-1 — Promote shared infra (in SwiftLintRuleStudio).** ✅ **Partially complete —
-   paused at the pure-mechanics milestone.** Pinned SwiftProjectLint to a tag (Choice A),
-   then promoted the three tool-agnostic mechanics — `GitServiceActor`, `FileCache`,
-   `FileTracker` — shipped in LintStudioUI **`1.2.0`**, with all three consumers flipped
-   onto the tag and green. The UI-entangled, SwiftLint-coupled targets
-   (`WorkspaceManager`, `ViolationStorageActor`, `CLIToolActor`, `WorkspaceAnalyzer`)
-   are **deferred to the SwiftFormat-build phase** — they can't be App-side-verified in
-   the agent environment and have no second consumer yet. Full detail + status in
-   [`shared-package-extraction.md`](shared-package-extraction.md).
+0. **M-1 — Promote shared infra (in SwiftLintRuleStudio).** ✅ **Complete.** Pinned
+   SwiftProjectLint to a tag (Choice A), then promoted the tool-agnostic mechanics —
+   `GitServiceActor`, `FileCache`, `FileTracker` (shipped in LintStudioUI **`1.2.0`**),
+   then `CLIToolActor` (shipped in **`1.3.0`**, 2026-06-04), with all three consumers
+   flipped onto each tag and green. The remaining SwiftLint targets
+   (`WorkspaceManager`, `ViolationStorageActor`, `WorkspaceAnalyzer`) are **closed as
+   won't-promote**: SwiftFormat deliberately uses none of those shapes (no SQLite
+   violation store, no analyzer orchestrator, no recent-workspace manager), so there is
+   no second consumer — promoting would violate the "two consumers in hand" rule. Full
+   detail + status in [`shared-package-extraction.md`](shared-package-extraction.md).
 1. **M0 — Scaffold.** New Xcode app + `SwiftFormatRuleStudioCore` SPM package
    depending on the new LintStudioUI tag (mirror the existing layout; **no Yams,
    keep SQLite link if storage isn't promoted yet**). Swift 6, `@MainActor` default
