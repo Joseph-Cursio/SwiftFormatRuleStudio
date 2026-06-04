@@ -22,6 +22,9 @@ struct RuleSidebar: View {
                     }
                 } header: {
                     Text("\(group.category.displayName)  ·  \(group.rules.count)")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .textCase(nil)
                 }
             }
         }
