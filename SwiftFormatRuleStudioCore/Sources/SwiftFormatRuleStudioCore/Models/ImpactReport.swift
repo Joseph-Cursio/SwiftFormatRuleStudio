@@ -1,0 +1,88 @@
+//
+//  ImpactReport.swift
+//  SwiftFormatRuleStudio
+//
+
+import Foundation
+
+/// A single finding from `swiftformat --lint --reporter json`: a place where one
+/// rule would change the code.
+public struct LintFinding: Equatable, Sendable {
+    /// Absolute path of the file the finding is in.
+    public let filePath: String
+    /// 1-based line number.
+    public let line: Int
+    /// The rule that produced the finding, e.g. `"indent"`.
+    public let ruleID: String
+    /// SwiftFormat's human-readable reason.
+    public let reason: String
+
+    public init(filePath: String, line: Int, ruleID: String, reason: String) {
+        self.filePath = filePath
+        self.line = line
+        self.ruleID = ruleID
+        self.reason = reason
+    }
+}
+
+/// How much a single rule would change the audited workspace.
+public struct RuleImpact: Identifiable, Equatable, Sendable {
+    /// The rule's name, e.g. `"indent"`.
+    public let ruleID: String
+    /// Number of distinct files this rule would change.
+    public let fileCount: Int
+    /// Total findings this rule produced across the workspace.
+    public let findingCount: Int
+
+    public init(ruleID: String, fileCount: Int, findingCount: Int) {
+        self.ruleID = ruleID
+        self.fileCount = fileCount
+        self.findingCount = findingCount
+    }
+
+    public var id: String { ruleID }
+}
+
+/// The result of auditing a workspace: which rules would change the most code.
+public struct ImpactReport: Equatable, Sendable {
+    /// Distinct files with at least one finding.
+    public let filesAffected: Int
+    /// Total findings across all rules.
+    public let totalFindings: Int
+    /// Per-rule impact, ranked by file count (then finding count, then name).
+    public let ruleImpacts: [RuleImpact]
+
+    public init(filesAffected: Int, totalFindings: Int, ruleImpacts: [RuleImpact]) {
+        self.filesAffected = filesAffected
+        self.totalFindings = totalFindings
+        self.ruleImpacts = ruleImpacts
+    }
+
+    /// Whether the audit found nothing to change.
+    public var isClean: Bool {
+        totalFindings == 0
+    }
+
+    /// Aggregates raw findings into a ranked per-rule report.
+    public static func from(findings: [LintFinding]) -> Self {
+        let byRule = Dictionary(grouping: findings, by: \.ruleID)
+        let impacts = byRule.map { ruleID, group in
+            RuleImpact(
+                ruleID: ruleID,
+                fileCount: Set(group.map(\.filePath)).count,
+                findingCount: group.count
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.fileCount != rhs.fileCount { return lhs.fileCount > rhs.fileCount }
+            if lhs.findingCount != rhs.findingCount { return lhs.findingCount > rhs.findingCount }
+            return lhs.ruleID < rhs.ruleID
+        }
+
+        return Self(
+            filesAffected: Set(findings.map(\.filePath)).count,
+            totalFindings: findings.count,
+            ruleImpacts: impacts
+        )
+    }
+}

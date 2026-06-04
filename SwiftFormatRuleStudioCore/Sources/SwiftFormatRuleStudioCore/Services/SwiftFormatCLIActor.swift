@@ -27,6 +27,9 @@ public protocol SwiftFormatCLIProtocol: Sendable {
     /// Formats `source` by piping it through `swiftformat <arguments>` (where
     /// `arguments` should begin with `stdin`), returning the formatted result.
     func format(source: String, arguments: [String]) async throws -> String
+    /// Runs `swiftformat <path> <arguments>` (for `--lint --reporter json`),
+    /// returning stdout.
+    func lint(path: String, arguments: [String]) async throws -> String
 }
 
 /// Errors surfaced while invoking the SwiftFormat CLI.
@@ -127,6 +130,11 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
 
     public func format(source: String, arguments: [String]) async throws -> String {
         let (stdout, _) = try await capture(arguments, stdin: Data(source.utf8))
+        return String(data: stdout, encoding: .utf8) ?? ""
+    }
+
+    public func lint(path: String, arguments: [String]) async throws -> String {
+        let (stdout, _) = try await capture([path] + arguments)
         return String(data: stdout, encoding: .utf8) ?? ""
     }
 
