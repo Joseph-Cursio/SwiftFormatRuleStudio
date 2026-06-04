@@ -22,9 +22,14 @@ struct ConfigView: View {
             if folderURL == nil {
                 chooseFolderPrompt
             } else {
-                HSplitView {
-                    optionsPanel
-                    diffPanel
+                VStack(spacing: 0) {
+                    folderHeader
+                    Divider()
+                    HSplitView {
+                        optionsPanel
+                        diffPanel
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }
@@ -73,6 +78,29 @@ struct ConfigView: View {
         }
     }
 
+    // MARK: - Folder header
+
+    private var folderHeader: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "folder.fill")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text(folderURL?.lastPathComponent ?? "")
+                .font(.headline)
+            Text(".swiftformat")
+                .font(.system(.body, design: .monospaced))
+                .foregroundStyle(.secondary)
+            if config.isDirty {
+                Text("• Unsaved")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+    }
+
     // MARK: - Empty state
 
     private var chooseFolderPrompt: some View {
@@ -94,7 +122,7 @@ struct ConfigView: View {
             }
         }
         .searchable(text: $optionSearch, prompt: "Search options")
-        .frame(minWidth: 360)
+        .frame(minWidth: 360, maxHeight: .infinity)
     }
 
     private var filteredOptions: [FormatOption] {
@@ -121,17 +149,20 @@ struct ConfigView: View {
             }
             .padding(8)
             Divider()
-            if config.isDirty {
-                PreviewDiffView(lines: config.diff)
-            } else {
-                ContentUnavailableView(
-                    "No pending changes",
-                    systemImage: "checkmark.seal",
-                    description: Text("Edit an option to see the .swiftformat diff here.")
-                )
+            Group {
+                if config.isDirty {
+                    PreviewDiffView(lines: config.diff)
+                } else {
+                    ContentUnavailableView(
+                        "No pending changes",
+                        systemImage: "checkmark.seal",
+                        description: Text("Edit an option to see the .swiftformat diff here.")
+                    )
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 320)
+        .frame(minWidth: 320, maxHeight: .infinity)
     }
 }
 
