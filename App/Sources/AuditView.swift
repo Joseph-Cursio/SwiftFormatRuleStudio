@@ -157,7 +157,7 @@ struct AuditView: View {
 }
 
 /// One rule's impact row: name, category, an impact bar, and counts.
-private struct ImpactRow: View {
+struct ImpactRow: View {
     let impact: RuleImpact
     let maxFileCount: Int
     let rule: FormatRule?

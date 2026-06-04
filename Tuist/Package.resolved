@@ -1,13 +1,22 @@
 {
-  "originHash" : "715747e848b2e0c01f541e719caafaffdd73790e0273bace73707eac54b90b21",
+  "originHash" : "bd9668180c6328de2733aac0ecf9ffd4d17dc596f82a21f138f5889be9fb8b0b",
   "pins" : [
     {
       "identity" : "lintstudioui",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Joseph-Cursio/LintStudioUI.git",
       "state" : {
-        "revision" : "8ceccb7abf3355849b428f34410aa11919b93480",
-        "version" : "1.2.0"
+        "revision" : "b730ace1b1210d2d42dc4788bc07a24d39abb553",
+        "version" : "1.3.0"
+      }
+    },
+    {
+      "identity" : "viewinspector",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/nalexn/ViewInspector.git",
+      "state" : {
+        "revision" : "e9a06346499a3a889165647e3f23f8a7b2609a1c",
+        "version" : "0.10.3"
       }
     }
   ],

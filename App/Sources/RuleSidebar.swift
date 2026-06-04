@@ -74,7 +74,7 @@ struct RuleSidebar: View {
 }
 
 /// A single rule row: name plus opt-in / deprecated markers.
-private struct RuleRow: View {
+struct RuleRow: View {
     let rule: FormatRule
 
     var body: some View {

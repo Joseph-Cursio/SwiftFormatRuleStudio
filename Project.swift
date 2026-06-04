@@ -28,6 +28,21 @@ let project = Project(
                 .external(name: "SwiftFormatRuleStudioCore")
             ],
             settings: .settings(base: appSettings)
+        ),
+        .target(
+            name: "SwiftFormatRuleStudioTests",
+            destinations: .macOS,
+            product: .unitTests,
+            bundleId: "com.josephcursio.SwiftFormatRuleStudioTests",
+            deploymentTargets: .macOS("14.0"),
+            sources: ["App/Tests/**"],
+            dependencies: [
+                .target(name: "SwiftFormatRuleStudio"),
+                .external(name: "ViewInspector"),
+                .external(name: "SwiftFormatRuleStudioCore"),
+                .external(name: "SwiftFormatRuleStudioCoreTestSupport")
+            ],
+            settings: .settings(base: appSettings)
         )
     ]
 )

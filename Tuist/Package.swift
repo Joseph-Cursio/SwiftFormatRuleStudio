@@ -13,6 +13,8 @@ let package = Package(
     name: "SwiftFormatRuleStudioDependencies",
     dependencies: [
         // The local Core SPM package (which transitively pulls LintStudioUI 1.2.0).
-        .package(path: "../SwiftFormatRuleStudioCore")
+        .package(path: "../SwiftFormatRuleStudioCore"),
+        // SwiftUI view testing for the App target.
+        .package(url: "https://github.com/nalexn/ViewInspector.git", from: "0.9.5")
     ]
 )

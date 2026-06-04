@@ -136,7 +136,7 @@ struct ConfigView: View {
 }
 
 /// One option, rendered with the right control for its inferred kind.
-private struct OptionRow: View {
+struct OptionRow: View {
     let option: FormatOption
     @Bindable var config: ConfigModel
 
