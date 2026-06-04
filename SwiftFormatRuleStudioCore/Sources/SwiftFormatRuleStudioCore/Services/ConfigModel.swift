@@ -69,6 +69,11 @@ public final class ConfigModel {
         lastError = nil
     }
 
+    /// Replaces the working config with a starter preset (not yet saved).
+    public func apply(_ preset: SwiftFormatPreset) {
+        config = SwiftFormatConfig.parse(preset.configText)
+    }
+
     // MARK: - Derived state
 
     /// Whether the working config differs from the on-disk baseline.
