@@ -15,16 +15,15 @@ struct RuleSidebar: View {
     var body: some View {
         List(selection: $selection) {
             ForEach(model.groupedRules) { group in
-                Section {
-                    ForEach(group.rules) { rule in
-                        RuleRow(rule: rule)
-                            .tag(rule.name)
-                    }
-                } header: {
-                    Text("\(group.category.displayName)  ·  \(group.rules.count)")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .textCase(nil)
+                Text("\(group.category.displayName)  ·  \(group.rules.count)")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .padding(.top, 8)
+                    .listRowSeparator(.hidden)
+                    .selectionDisabled()
+                ForEach(group.rules) { rule in
+                    RuleRow(rule: rule)
+                        .tag(rule.name)
                 }
             }
         }

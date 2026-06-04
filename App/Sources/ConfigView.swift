@@ -230,8 +230,21 @@ struct OptionRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
+            if let usedByText {
+                Text(usedByText)
+                    .font(.caption2)
+                    .foregroundStyle(.tint)
+            }
         }
         .padding(.vertical, 2)
+    }
+
+    /// "Used by <rule(s)>" — the rules this option tunes (an option is a no-op
+    /// unless its rule is enabled).
+    private var usedByText: String? {
+        let rules = OptionRuleUsage.rules(forOptionKey: option.key)
+        guard !rules.isEmpty else { return nil }
+        return "Used by \(rules.joined(separator: ", "))"
     }
 
     @ViewBuilder
@@ -246,7 +259,7 @@ struct OptionRow: View {
                 }
             }
             .labelsHidden()
-            .frame(maxWidth: 160)
+            .frame(maxWidth: 160, alignment: .trailing)
         case .integer, .list, .string:
             // Show the set value, or an empty field with the default as a dimmed
             // placeholder — so unset options read as "not set (default: X)".
