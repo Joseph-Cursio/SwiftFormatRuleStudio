@@ -11,18 +11,6 @@ excluded:
   - '**/.swiftpm'
   - '**/xcuserdata'
   - '**/.xcode'
-  # SwiftPM/Tuist manifests: `let package`/`project`/`tuist` are tool-mandated
-  # names, so prefixed_toplevel_constant can't be satisfied here.
-  - Project.swift
-  - Tuist.swift
-  - Tuist/Package.swift
-  - SwiftFormatRuleStudioCore/Package.swift
-  # Test mock must be `async throws` to conform to SwiftFormatCLIProtocol, so
-  # async_without_await / unneeded_throws_rethrows are unavoidable false positives.
-  - SwiftFormatRuleStudioCore/Sources/SwiftFormatRuleStudioCoreTestSupport/MockSwiftFormatCLI.swift
-  # SwiftUI FileDocument requires throwing init/fileWrapper, tripping
-  # unneeded_throws_rethrows even with non-throwing bodies.
-  - App/Sources/TextExportDocument.swift
 # Opt-in rules (enable specific rules that are valuable)
 opt_in_rules:
   - empty_count
@@ -143,10 +131,15 @@ opt_in_rules:
   - pattern_matching_keywords
   - prefer_self_in_static_references
   - async_without_await
-  - unneeded_throws_rethrows
-  - prefixed_toplevel_constant
   - sorted_imports
   - missing_docs
+# Intentionally NOT enabled — these rules can't be satisfied by valid code, so
+# they're disabled globally instead of excluding files. See
+# docs/swiftlint-rules-that-cannot-be-satisfied.md.
+#   - unneeded_throws_rethrows  → SwiftUI FileDocument requires throwing
+#       init(configuration:)/fileWrapper(configuration:) with non-throwing bodies.
+#   - prefixed_toplevel_constant → SwiftPM/Tuist manifests require the top-level
+#       names `package`, `project`, `tuist` (can't be `kPackage`).
 # Rule configurations
 line_length:
   error: 150

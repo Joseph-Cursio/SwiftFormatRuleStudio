@@ -84,7 +84,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         return formatOverride ?? source
     }
 
-    public func lint(path: String, arguments: [String]) throws -> String {
+    public func lint(path _: String, arguments: [String]) throws -> String {
         lintCallCount += 1
         lastLintArguments = arguments
         if let failWith { throw failWith }
