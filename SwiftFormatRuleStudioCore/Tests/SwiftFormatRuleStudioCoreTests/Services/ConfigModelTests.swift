@@ -130,4 +130,24 @@ struct ConfigModelTests {
 
         #expect(model.commandLineArguments == ["--indent", "4", "--disable", "redundantSelf"])
     }
+
+    @Test("save() with no config path fails with an error")
+    func saveWithoutPath() {
+        let model = ConfigModel()
+        model.setOption(key: "indent", value: "4")
+
+        #expect(model.save() == false)
+        #expect(model.lastError != nil)
+    }
+
+    @Test("save() to an unwritable location fails with an error")
+    func saveFailure() {
+        let badURL = URL(fileURLWithPath: "/does-not-exist-\(UUID().uuidString)/.swiftformat")
+        let model = ConfigModel()
+        model.load(from: badURL)
+        model.setOption(key: "indent", value: "4")
+
+        #expect(model.save() == false)
+        #expect(model.lastError != nil)
+    }
 }

@@ -129,4 +129,23 @@ struct RuleStudioModelTests {
         #expect(model.selectedRuleName == nil)
         #expect(model.selectedRuleDetail == nil)
     }
+
+    @Test("Derived options and groupedRules reflect the loaded catalog")
+    func derivedLists() async {
+        let model = makeModel()
+        await model.load()
+
+        #expect(model.options.map(\.name) == ["--self"])
+        // redundantSelf/redundantParens → redundancy; acronyms → idiomatic.
+        #expect(model.groupedRules.map(\.category) == [.redundancy, .idiomatic])
+        #expect(model.groupedRules.first?.rules.allSatisfy { $0.category == .redundancy } == true)
+    }
+
+    @Test("Derived lists are empty before loading")
+    func derivedListsEmptyBeforeLoad() {
+        let model = makeModel()
+        #expect(model.options.isEmpty)
+        #expect(model.groupedRules.isEmpty)
+        #expect(model.filteredRules.isEmpty)
+    }
 }

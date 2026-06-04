@@ -203,11 +203,21 @@ struct FormatRuleClassifierTests {
         #expect(FormatRuleClassifier.category(for: "wrapSingleLineComments") == .comments)
     }
 
-    @Test("Unknown rules fall back via the name heuristic")
+    @Test("Unknown rules fall back via the name heuristic, covering every branch")
     func heuristicFallback() {
         #expect(FormatRuleClassifier.curatedCategory(for: "redundantFutureThing") == nil)
         #expect(FormatRuleClassifier.category(for: "redundantFutureThing") == .redundancy)
-        #expect(FormatRuleClassifier.category(for: "wrapFutureThing") == .wrapping)
+        #expect(FormatRuleClassifier.category(for: "unusedFutureThing") == .redundancy)
+        #expect(FormatRuleClassifier.category(for: "futureImportSorter") == .imports)
+        #expect(FormatRuleClassifier.category(for: "futureTestHelper") == .testing)
+        #expect(FormatRuleClassifier.category(for: "futureDocComment") == .comments)
+        #expect(FormatRuleClassifier.category(for: "futureHeaderTweak") == .comments)
+        #expect(FormatRuleClassifier.category(for: "futureSortThing") == .organization)
+        #expect(FormatRuleClassifier.category(for: "futureHoistThing") == .organization)
+        #expect(FormatRuleClassifier.category(for: "futureWrapThing") == .wrapping)
+        #expect(FormatRuleClassifier.category(for: "futureBraceThing") == .wrapping)
+        #expect(FormatRuleClassifier.category(for: "futureSpaceThing") == .spacing)
+        #expect(FormatRuleClassifier.category(for: "futureBlankThing") == .spacing)
         #expect(FormatRuleClassifier.category(for: "totallyNovelRule") == .idiomatic)
     }
 }
