@@ -24,7 +24,7 @@ the shared-package refactor it builds on.
 | M3  | Live code preview (headline feature) | ✅ edit Swift → live `swiftformat stdin` diff |
 | M4  | `.swiftformat` config engine + Options panel | ✅ flat-args engine, Options panel, live diff, atomic save+backup; preview reflects config; 87 Core tests green |
 | M5  | Impact audit across a workspace | ✅ per-rule "N files would change" via the JSON lint reporter; 98 Core tests green |
-| M6  | Polish: onboarding, presets, export | — |
+| M6  | Polish: detection, presets, export, rule toggle | ✅ mostly — version/detection status bar, config presets, audit CSV/HTML export, rule-toggle in detail (app icon deferred) |
 
 ## Layout
 
