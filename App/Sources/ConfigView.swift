@@ -16,6 +16,7 @@ struct ConfigView: View {
     @State private var folderURL: URL?
     @State private var optionSearch = ""
     @State private var choosingFolder = false
+    @State private var showOnlySet = false
 
     var body: some View {
         Group {
@@ -116,20 +117,45 @@ struct ConfigView: View {
     // MARK: - Options panel
 
     private var optionsPanel: some View {
-        List {
-            ForEach(filteredOptions) { option in
-                OptionRow(option: option, config: config)
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text("Options")
+                    .font(.headline)
+                Text("\(setCount) set · \(catalog.options.count) total")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Toggle("Only set", isOn: $showOnlySet)
+                    .toggleStyle(.checkbox)
+                    .controlSize(.small)
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            Divider()
+            List {
+                ForEach(filteredOptions) { option in
+                    OptionRow(option: option, config: config)
+                }
+            }
+            .searchable(text: $optionSearch, prompt: "Search options")
         }
-        .searchable(text: $optionSearch, prompt: "Search options")
         .frame(minWidth: 360, maxHeight: .infinity)
+    }
+
+    private func isSet(_ option: FormatOption) -> Bool {
+        config.config.options[option.key] != nil
+    }
+
+    private var setCount: Int {
+        catalog.options.count { isSet($0) }
     }
 
     private var filteredOptions: [FormatOption] {
         let query = optionSearch.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !query.isEmpty else { return catalog.options }
-        return catalog.options.filter {
-            ($0.name + " " + $0.summary).lowercased().contains(query)
+        return catalog.options.filter { option in
+            if showOnlySet, !isSet(option) { return false }
+            guard !query.isEmpty else { return true }
+            return (option.name + " " + option.summary).lowercased().contains(query)
         }
     }
 
@@ -166,17 +192,38 @@ struct ConfigView: View {
     }
 }
 
-/// One option, rendered with the right control for its inferred kind.
+/// One option, rendered with the right control for its inferred kind. Options
+/// you've explicitly set are marked (accent dot + name) and offer a reset;
+/// unset options show their default dimmed (as a placeholder where possible).
 struct OptionRow: View {
     let option: FormatOption
     @Bindable var config: ConfigModel
 
+    private var isSet: Bool {
+        config.config.options[option.key] != nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(isSet ? Color.accentColor : Color.clear)
+                    .frame(width: 6, height: 6)
                 Text(option.name)
                     .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(isSet ? Color.accentColor : Color.primary)
                 Spacer()
+                if isSet {
+                    Button {
+                        config.removeOption(key: option.key)
+                    } label: {
+                        Image(systemName: "arrow.uturn.backward")
+                            .accessibilityLabel("Reset to default")
+                    }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                    .help("Reset to default")
+                }
                 editor
             }
             Text(option.summary)
@@ -201,41 +248,49 @@ struct OptionRow: View {
             .labelsHidden()
             .frame(maxWidth: 160)
         case .integer, .list, .string:
-            TextField(option.defaultValue ?? "", text: stringBinding)
+            // Show the set value, or an empty field with the default as a dimmed
+            // placeholder — so unset options read as "not set (default: X)".
+            TextField(option.defaultValue ?? "", text: textBinding)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 160)
         }
     }
 
-    private var currentValue: String {
+    /// Effective value (set value, else default) — used by controls that always
+    /// show a value (toggle, picker).
+    private var effectiveValue: String {
         config.config.options[option.key] ?? option.defaultValue ?? ""
+    }
+
+    /// Text-field binding: shows the set value, or empty (so the default shows
+    /// as placeholder). Writing the default or empty clears the override.
+    private var textBinding: Binding<String> {
+        Binding(
+            get: { config.config.options[option.key] ?? "" },
+            set: { writeValue($0) }
+        )
     }
 
     private var stringBinding: Binding<String> {
         Binding(
-            get: { currentValue },
-            set: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespaces)
-                if trimmed.isEmpty || trimmed == option.defaultValue {
-                    config.removeOption(key: option.key) // back to default → keep config minimal
-                } else {
-                    config.setOption(key: option.key, value: trimmed)
-                }
-            }
+            get: { effectiveValue },
+            set: { writeValue($0) }
         )
+    }
+
+    private func writeValue(_ newValue: String) {
+        let trimmed = newValue.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty || trimmed == option.defaultValue {
+            config.removeOption(key: option.key) // back to default → keep config minimal
+        } else {
+            config.setOption(key: option.key, value: trimmed)
+        }
     }
 
     private var boolBinding: Binding<Bool> {
         Binding(
-            get: { currentValue == "true" },
-            set: { isOn in
-                let value = isOn ? "true" : "false"
-                if value == option.defaultValue {
-                    config.removeOption(key: option.key)
-                } else {
-                    config.setOption(key: option.key, value: value)
-                }
-            }
+            get: { effectiveValue == "true" },
+            set: { writeValue($0 ? "true" : "false") }
         )
     }
 }
