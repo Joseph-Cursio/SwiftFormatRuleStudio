@@ -102,7 +102,6 @@ opt_in_rules:
   - quick_discouraged_call
   - unneeded_escaping
   - non_overridable_class_declaration
-  - extension_access_modifier
   - multiline_parameters_brackets
   - xct_specific_matcher
   - sorted_first_last
@@ -143,7 +142,6 @@ opt_in_rules:
   - async_without_await
   - unneeded_throws_rethrows
   - prefixed_toplevel_constant
-  - file_types_order
   - sorted_imports
   - missing_docs
 # Rule configurations

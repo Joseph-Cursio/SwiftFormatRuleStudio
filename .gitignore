@@ -5,6 +5,7 @@ DerivedData/
 SwiftFormatRuleStudioCore/.build/
 SwiftFormatRuleStudioCore/.swiftpm/
 .swiftformat.*.backup
+.swiftlint.yml.*.backup
 
 # Tuist — the Xcode project/workspace are generated; regenerate with `tuist generate`
 *.xcodeproj
