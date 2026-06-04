@@ -75,6 +75,26 @@ struct LivePreviewModelTests {
         let args = await cli.lastFormatArguments
         #expect(args == ["stdin"])
     }
+
+    @Test("extraArguments (the active config) are appended")
+    func appendsExtraArguments() async {
+        let (model, cli) = makeModel(source: "x", swiftVersion: "5.10")
+        model.extraArguments = ["--indent", "4", "--disable", "redundantSelf"]
+        await model.formatNow()
+
+        let args = await cli.lastFormatArguments
+        #expect(args == ["stdin", "--swift-version", "5.10", "--indent", "4", "--disable", "redundantSelf"])
+    }
+
+    @Test("Config-provided --swift-version is not duplicated")
+    func swiftVersionNotDuplicated() async {
+        let (model, cli) = makeModel(source: "x", swiftVersion: "5.10")
+        model.extraArguments = ["--swift-version", "6.0", "--indent", "4"]
+        await model.formatNow()
+
+        let args = await cli.lastFormatArguments
+        #expect(args == ["stdin", "--swift-version", "6.0", "--indent", "4"])
+    }
 }
 
 /// Exercises real `swiftformat stdin` formatting end-to-end. Skips when

@@ -28,6 +28,11 @@ public final class LivePreviewModel {
     /// rules without it, so it's worth always supplying.
     public var swiftVersion: String?
 
+    /// Extra `swiftformat` arguments — typically the active `.swiftformat`
+    /// config's `commandLineArguments`, so the preview reflects the user's
+    /// edited settings rather than SwiftFormat's defaults.
+    public var extraArguments: [String] = []
+
     public private(set) var formattedSource: String = ""
     public private(set) var diff: [PreviewDiffLine] = []
     public private(set) var state: PreviewState = .idle
@@ -56,9 +61,11 @@ public final class LivePreviewModel {
     /// The arguments passed to `swiftformat` for the current settings.
     var formatArguments: [String] {
         var arguments = ["stdin"]
-        if let swiftVersion, !swiftVersion.isEmpty {
+        // Don't double-set the Swift version if the config already provides it.
+        if let swiftVersion, !swiftVersion.isEmpty, !extraArguments.contains("--swift-version") {
             arguments += ["--swift-version", swiftVersion]
         }
+        arguments += extraArguments
         return arguments
     }
 
