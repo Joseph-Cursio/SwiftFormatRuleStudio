@@ -198,6 +198,10 @@ struct ConfigView: View {
 struct OptionRow: View {
     let option: FormatOption
     @Bindable var config: ConfigModel
+    /// When this row is shown *under a specific rule* (the by-rule view), pass
+    /// that rule's name. The caption then reads "Shared — also drives X" listing
+    /// only the *other* rules, instead of the redundant "Used by <this rule>".
+    var currentRuleName: String?
 
     private var isSet: Bool {
         config.config.options[option.key] != nil
@@ -239,12 +243,18 @@ struct OptionRow: View {
         .padding(.vertical, 2)
     }
 
-    /// "Used by <rule(s)>" — the rules this option tunes (an option is a no-op
-    /// unless its rule is enabled).
+    /// The rules this option tunes (an option is a no-op unless its rule is
+    /// enabled). In the by-option view this reads "Used by <rules>"; in the
+    /// by-rule view it shows only the *other* rules a shared option also drives.
     private var usedByText: String? {
         let rules = OptionRuleUsage.rules(forOptionKey: option.key)
         guard !rules.isEmpty else { return nil }
-        return "Used by \(rules.joined(separator: ", "))"
+        guard let currentRuleName else {
+            return "Used by \(rules.joined(separator: ", "))"
+        }
+        let others = rules.filter { $0 != currentRuleName }
+        guard !others.isEmpty else { return nil }
+        return "🔗 Shared — also drives \(others.joined(separator: ", "))"
     }
 
     @ViewBuilder

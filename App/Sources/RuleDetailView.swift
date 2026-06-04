@@ -47,9 +47,8 @@ struct RuleDetailView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if !rule.relatedOptions.isEmpty {
-                    relatedOptions(rule.relatedOptions)
-                }
+                RuleOptionsSection(rule: rule, options: matchedOptions(for: rule), config: config)
+                    .id(rule.name)
 
                 if let example = rule.example {
                     VStack(alignment: .leading, spacing: 6) {
@@ -81,16 +80,13 @@ struct RuleDetailView: View {
         }
     }
 
-    private func relatedOptions(_ options: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Related options")
-                .font(.headline)
-            ForEach(options, id: \.self) { option in
-                Text(option)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.tint)
-            }
-        }
+    /// Resolve the rule's `relatedOptions` flags (e.g. `["--self"]`) to the
+    /// catalog's `FormatOption` values so we can render editable controls.
+    private func matchedOptions(for rule: FormatRule) -> [FormatOption] {
+        let keys = Set(rule.relatedOptions.map { flag in
+            String(flag.drop { $0 == "-" })
+        })
+        return model.options.filter { keys.contains($0.key) }
     }
 
     private func badge(_ text: String, color: Color) -> some View {
@@ -100,6 +96,77 @@ struct RuleDetailView: View {
             .padding(.vertical, 3)
             .background(color.opacity(0.18), in: Capsule())
             .foregroundStyle(color)
+    }
+}
+
+/// The options that tune a rule, rendered inline with the same editable
+/// controls as the Config tab so you can see (and change) a rule's options
+/// without leaving the rule. Collapsed by default for high-fan-out rules
+/// (e.g. `organizeDeclarations` has 21) to keep the pane scannable.
+struct RuleOptionsSection: View {
+    let rule: FormatRule
+    let options: [FormatOption]
+    @Bindable var config: ConfigModel
+    @State private var isExpanded: Bool
+    @State private var showOnlySet = false
+
+    init(rule: FormatRule, options: [FormatOption], config: ConfigModel) {
+        self.rule = rule
+        self.options = options
+        self.config = config
+        // Few options → show them; many → start collapsed.
+        _isExpanded = State(initialValue: options.count <= 3)
+    }
+
+    private func isSet(_ option: FormatOption) -> Bool {
+        config.config.options[option.key] != nil
+    }
+
+    private var setCount: Int {
+        options.count { isSet($0) }
+    }
+
+    private var visibleOptions: [FormatOption] {
+        showOnlySet ? options.filter(isSet) : options
+    }
+
+    var body: some View {
+        if options.isEmpty {
+            Text("No tunable options.")
+                .font(.callout)
+                .foregroundStyle(.tertiary)
+        } else {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                VStack(spacing: 0) {
+                    ForEach(visibleOptions) { option in
+                        Divider()
+                        OptionRow(option: option, config: config, currentRuleName: rule.name)
+                            .padding(.vertical, 2)
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Text("Options")
+                        .font(.headline)
+                    Text("\(options.count)")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(.quaternary, in: Capsule())
+                    if setCount > 0 {
+                        Text("· \(setCount) set")
+                            .font(.caption)
+                            .foregroundStyle(.tint)
+                    }
+                    Spacer()
+                    if options.count > 3 {
+                        Toggle("Only set", isOn: $showOnlySet)
+                            .toggleStyle(.checkbox)
+                            .controlSize(.small)
+                    }
+                }
+            }
+        }
     }
 }
 
