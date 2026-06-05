@@ -11,6 +11,8 @@ excluded:
   - '**/.swiftpm'
   - '**/xcuserdata'
   - '**/.xcode'
+  # Generated from CuratedExamples/*.md by Scripts/generate_curated_examples.py
+  - '**/CuratedLiveExample+Generated.swift'
 # Opt-in rules (enable specific rules that are valuable)
 opt_in_rules:
   - empty_count

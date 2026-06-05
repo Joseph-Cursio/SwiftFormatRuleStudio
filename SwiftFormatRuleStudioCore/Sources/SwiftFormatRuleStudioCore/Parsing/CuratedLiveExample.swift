@@ -16,8 +16,10 @@ import Foundation
 /// option visibly changes the result. The `LiveExampleAuditTests` validation
 /// test keeps every curated entry honest against the installed SwiftFormat.
 ///
-/// The snippet data lives in `CuratedLiveExample+Data*.swift` extensions (split
-/// to keep each type body and file within lint limits); this enum merges them.
+/// The snippets are authored as markdown in `CuratedExamples/<rule>.md` (the
+/// human source of truth: a ```swift block plus optional rationale prose).
+/// `Scripts/generate_curated_examples.py` compiles them into `generatedSnippets`
+/// in `CuratedLiveExample+Generated.swift`, which this enum exposes.
 public enum CuratedLiveExample {
     /// The curated "before" for `ruleName`, or `nil` if none is curated yet.
     public static func source(forRule ruleName: String) -> String? {
@@ -40,11 +42,7 @@ public enum CuratedLiveExample {
             + "that a short snippet can't represent."
     ]
 
-    /// All curated snippets, merged from the per-batch data extensions.
-    static let snippets: [String: String] = dataChunks.reduce(into: [:]) { result, chunk in
-        result.merge(chunk) { current, _ in current }
-    }
-
-    /// The per-batch data dictionaries, defined in `CuratedLiveExample+Data*`.
-    static let dataChunks: [[String: String]] = [dataPart1, dataPart2, dataPart3, dataPart4, dataPart5, dataPart6]
+    /// All curated snippets, compiled from `CuratedExamples/*.md` into
+    /// `generatedSnippets` (see `CuratedLiveExample+Generated.swift`).
+    static let snippets: [String: String] = generatedSnippets
 }

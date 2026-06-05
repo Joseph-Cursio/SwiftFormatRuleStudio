@@ -1,0 +1,7 @@
+# emptyBraces
+
+```swift
+func reset() {
+
+}
+```
