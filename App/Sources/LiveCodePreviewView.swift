@@ -56,10 +56,12 @@ struct LiveCodePreviewView: View {
             HStack {
                 paneHeader("SwiftFormat rules triggered", systemImage: "list.bullet.rectangle")
                 Spacer()
-                Text("\(model.changes.count)")
-                    .scaledFont(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.trailing, 10)
+                if !model.changes.isEmpty {
+                    Text(rulesSummary)
+                        .scaledFont(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, 10)
+                }
             }
             Divider()
             if model.changes.isEmpty {
@@ -79,13 +81,22 @@ struct LiveCodePreviewView: View {
         .textSelection(.enabled)
     }
 
+    /// e.g. "5 rules · 11 occurrences" — distinct rules vs total occurrences.
+    private var rulesSummary: String {
+        let occurrences = model.changes.count
+        let rules = Set(model.changes.map(\.ruleID)).count
+        return "\(rules) rule\(rules == 1 ? "" : "s") · "
+            + "\(occurrences) occurrence\(occurrences == 1 ? "" : "s")"
+    }
+
     private func changeRow(_ change: LintFinding) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .top, spacing: 10) {
             Text("\(change.line)")
                 .scaledFont(.body, design: .monospaced)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
                 .frame(width: 36, alignment: .trailing)
+            Divider()
             VStack(alignment: .leading, spacing: 1) {
                 Text(change.ruleID)
                     .scaledFont(.body)
