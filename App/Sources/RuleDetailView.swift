@@ -241,7 +241,7 @@ struct RuleLiveExampleView: View {
                 .foregroundStyle(.tertiary)
         case .idle, .formatting, .formatted:
             if model.hasChanges {
-                PreviewDiffView(lines: model.diff)
+                LiveDiffLinesView(lines: model.diff)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("No change with these options.")
@@ -250,6 +250,66 @@ struct RuleLiveExampleView: View {
                     DiffExampleView(example: before)
                 }
             }
+        }
+    }
+}
+
+/// A non-collapsing diff renderer for the rule detail's live example.
+///
+/// `PreviewDiffView` wraps a *vertical* `ScrollView`, which collapses to ~zero
+/// height when nested inside the detail pane's own vertical `ScrollView` — so the
+/// diff would render invisibly. This uses horizontal-only scrolling (safe inside
+/// a vertical parent) and lets its height grow naturally with the content.
+struct LiveDiffLinesView: View {
+    let lines: [PreviewDiffLine]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(lines) { line in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(symbol(for: line.change))
+                            .frame(width: 10, alignment: .leading)
+                        Text(line.text.isEmpty ? " " : line.text)
+                    }
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(foreground(for: line.change))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 1)
+                    .background(background(for: line.change))
+                }
+            }
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
+    }
+
+    private func symbol(for change: PreviewDiffLine.Change) -> String {
+        switch change {
+        case .added: "+"
+        case .removed: "-"
+        case .unchanged: " "
+        }
+    }
+
+    private func foreground(for change: PreviewDiffLine.Change) -> Color {
+        switch change {
+        case .added: .green
+        case .removed: .red
+        case .unchanged: .primary
+        }
+    }
+
+    private func background(for change: PreviewDiffLine.Change) -> Color {
+        switch change {
+        case .added: Color.green.opacity(0.12)
+        case .removed: Color.red.opacity(0.12)
+        case .unchanged: .clear
         }
     }
 }
