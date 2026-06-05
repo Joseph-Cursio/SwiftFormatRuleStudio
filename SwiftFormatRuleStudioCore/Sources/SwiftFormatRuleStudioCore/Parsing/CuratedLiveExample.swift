@@ -88,6 +88,92 @@ public enum CuratedLiveExample {
             cache.clear()
 
         }
+        """,
+
+        // --- redundant* family ---
+
+        "redundantStaticSelf": """
+        enum Foo {
+            static let bar = Bar()
+
+            static func makeBaaz() -> Bar {
+                Self.bar
+            }
+        }
+        """,
+
+        // Typed throws is Swift 6; the example formatter runs at 6.0.
+        "redundantTypedThrows": """
+        func alpha() throws(Never) -> Int {
+            return 0
+        }
+
+        func beta() throws(any Error) -> Int {
+            throw MyError.failed
+        }
+        """,
+
+        "redundantViewBuilder": """
+        struct MyView: View {
+            @ViewBuilder
+            var body: some View {
+                Text("hello")
+            }
+        }
+        """,
+
+        "redundantEquatable": """
+        struct Point: Equatable {
+            let x: Int
+            let y: Int
+
+            static func == (lhs: Point, rhs: Point) -> Bool {
+                lhs.x == rhs.x && lhs.y == rhs.y
+            }
+        }
+        """,
+
+        "redundantMemberwiseInit": """
+        struct User {
+            var name: String
+            var age: Int
+
+            init(name: String, age: Int) {
+                self.name = name
+                self.age = age
+            }
+        }
+        """,
+
+        // --redundant-async: tests-only (default) strips async only from the test
+        // method; "always" also strips it from the regular function.
+        "redundantAsync": """
+        import XCTest
+
+        class FeatureTests: XCTestCase {
+            func testValue() async {
+                XCTAssertEqual(value, 1)
+            }
+        }
+
+        func loadConfig() async -> Int {
+            return 0
+        }
+        """,
+
+        // Mirror of redundantAsync for throws — tests-only (default) vs always.
+        "redundantThrows": """
+        import XCTest
+
+        class FeatureTests: XCTestCase {
+            func testValue() throws {
+                XCTAssertEqual(value, 1)
+            }
+        }
+
+        func loadConfig() throws -> Int {
+            return 0
+        }
         """
     ]
 }

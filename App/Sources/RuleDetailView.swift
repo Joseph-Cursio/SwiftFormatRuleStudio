@@ -174,7 +174,8 @@ struct RuleLiveExampleView: View {
     let rule: FormatRule
     let options: [FormatOption]
     @Environment(ConfigModel.self) private var config
-    @State private var model = LivePreviewModel(source: "", swiftVersion: "5.10")
+    // Swift 6.0 so modern syntax (typed throws, etc.) is recognized in examples.
+    @State private var model = LivePreviewModel(source: "", swiftVersion: "6.0")
 
     private var beforeSource: String? { rule.liveExampleSource }
 
