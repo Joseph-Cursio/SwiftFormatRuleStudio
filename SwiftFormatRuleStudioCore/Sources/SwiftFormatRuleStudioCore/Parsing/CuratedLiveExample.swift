@@ -174,6 +174,119 @@ public enum CuratedLiveExample {
         func loadConfig() throws -> Int {
             return 0
         }
+        """,
+
+        // --- batch 1 (workflow-curated) ---
+        "acronyms": """
+        struct Endpoint {
+            let destinationUrl: URL
+            let screenIds: [String]
+            let entityUuid: UUID
+        }
+        """,
+
+        "andOperator": """
+        func validate(name: String, age: Int) -> Bool {
+            guard !name.isEmpty && age >= 0 else {
+                return false
+            }
+            if age >= 18 && name.count < 50 {
+                return true
+            }
+            return false
+        }
+        """,
+
+        "anyObjectProtocol": """
+        protocol Reloadable: class {
+            func reload()
+        }
+        """,
+
+        "applicationMain": """
+        import UIKit
+
+        @UIApplicationMain
+        class AppDelegate: UIResponder, UIApplicationDelegate {
+            var window: UIWindow?
+        }
+        """,
+
+        "assertionFailures": """
+        func handle(_ value: Int) {
+            switch value {
+            case 0:
+                assert(false, "unexpected zero")
+            case 1:
+                precondition(false, "unexpected one")
+            default:
+                break
+            }
+        }
+        """,
+
+        "blankLineAfterImports": """
+        import Foundation
+        import SwiftUI
+        @testable import MyApp
+        class Foo {
+            let value = 42
+        }
+        """,
+
+        "blankLinesAfterGuardStatements": """
+        func process(_ input: String?) -> Int {
+            guard let value = input else { return 0 }
+
+            guard let number = Int(value) else { return 0 }
+            return number * 2
+        }
+        """,
+
+        "blankLinesAroundMark": """
+        func foo() {
+            // foo
+        }
+        // MARK: Bar
+        func bar() {
+            // bar
+        }
+        """,
+
+        "blankLinesBetweenChainedFunctions": """
+        let result = [1, 2, 3]
+            .map { $0 * 2 }
+
+
+            .filter { $0 > 2 }
+        """,
+
+        "blankLinesBetweenImports": """
+        import Combine
+
+        import Foundation
+
+
+        import SwiftUI
+        """,
+
+        "blankLinesBetweenScopes": """
+        func foo() {
+            // foo
+        }
+        func bar() {
+            // bar
+        }
+        """,
+
+        "blockComments": """
+        /*
+         * Computes the area of a rectangle.
+         * Returns width multiplied by height.
+         */
+        func area(width: Int, height: Int) -> Int {
+            return width * height
+        }
         """
     ]
 }
