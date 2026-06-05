@@ -148,6 +148,7 @@ struct PreviewDiffView: View {
             }
             .padding(.vertical, 4)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func symbol(for change: PreviewDiffLine.Change) -> String {

@@ -56,6 +56,7 @@ struct RuleDetailView: View {
                             .font(.headline)
                         DiffExampleView(example: example)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 RuleLiveExampleView(rule: rule, options: matchedOptions(for: rule))
@@ -217,6 +218,7 @@ struct RuleLiveExampleView: View {
                     .foregroundStyle(.secondary)
                 content(before: before)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .task(id: rule.name) {
                 model.fragmentFallback = true
                 model.source = before
@@ -275,6 +277,8 @@ struct DiffExampleView: View {
                     .background(background(for: line))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .textBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8).strokeBorder(.separator)
