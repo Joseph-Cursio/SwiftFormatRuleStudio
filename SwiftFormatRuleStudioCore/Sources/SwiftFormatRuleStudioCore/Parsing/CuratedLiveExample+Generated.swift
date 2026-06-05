@@ -137,7 +137,7 @@ extension CuratedLiveExample {
         "void": "let foo: () -> ()\nlet bar: Void -> Void\nlet baz: (Void) -> Void\nfunc quux() -> (Void) {}\nlet callback = { _ in Void() }",
         "wrap": "let confirmation = notificationService.scheduleReminder(for: upcomingAppointment, at: preferredReminderTime, repeating: weeklyRecurrenceRule, including: attachedCalendarInvitation)\n\nlogger.info(\"Scheduled \\(reminderCount) reminders for \\(accountHolderName) starting \\(formattedStartDate) in zone \\(currentTimeZoneIdentifier)\")\n\nlet displayLabel = isAccountVerified && hasActiveSubscription ? primaryActionTitleForVerifiedMembers : fallbackActionTitleForUnverifiedGuests",
         "wrapArguments": "func register(name: String,\n        age: Int,\n            email: String) {\n    print(name)\n}",
-        "wrapAttributes": "@objc func reload() {}\n\n@available(iOS 15, *) func refresh() {}",
+        "wrapAttributes": "@available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) struct FeatureFlagRegistry {}\n\n@available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) var preferredAccountDisplayName: String = computedDefaultDisplayName\n\n@available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) var diagnosticSummaryDescription: String { buildDiagnosticSummaryDescription() }\n\n@available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) func reloadRemoteFeatureFlags() {}",
         "wrapCaseBodies": "func describe(_ value: Direction) -> String {\n    switch value {\n    case .north: return \"up\"\n    case .south: return \"down\"\n    }\n}",
         "wrapConditionalBodies": "func check(_ value: Int?) -> Int {\n    guard let value = value else { return 0 }\n    if value > 10 { return 10 }\n    return value\n}",
         "wrapEnumCases": "enum Token {\n    case plus, minus\n    case number(Int), name(String)\n}",
@@ -170,7 +170,7 @@ extension CuratedLiveExample {
         "redundantTypedThrows": "Typed throws is Swift 6; the example formatter runs at 6.0.",
         "urlMacro": "Set --url-macro (e.g. \"#URL,URLFoundation\") to migrate the force-unwrapped URL.",
         "wrap": "Set `--max-width` (e.g. 60) to wrap long lines onto multiple lines. With the default (`--max-width none`) nothing wraps, so the example is unchanged until you set a width. Three long lines exercise different cases: a multi-argument call, a call carrying an interpolated string, and a ternary expression.",
-        "wrapAttributes": "Set --func-attributes / --type-attributes to prev-line to wrap.",
+        "wrapAttributes": "Each declaration kind has its own option — `--type-attributes`, `--stored-var-attributes`, `--computed-var-attributes`, `--func-attributes` — each `prev-line` / `same-line` / `preserve` (default). Set one to `prev-line` to move that kind's attribute onto its own line; at the default `preserve` nothing moves, so the example is unchanged until you set an option.",
         "wrapSingleLineComments": "Set --max-width (e.g. 50) to wrap the long trailing comment.",
     ]
 }

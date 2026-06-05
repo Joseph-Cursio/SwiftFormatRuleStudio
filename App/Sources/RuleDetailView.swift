@@ -202,7 +202,7 @@ struct RuleLiveExampleView: View {
         } else if let before = beforeSource {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    Text("Example")
+                    Text("Examples if the Rule is Enabled…")
                         .font(.headline)
                     if model.state == .formatting {
                         ProgressView().controlSize(.small)
