@@ -51,15 +51,18 @@ public enum CuratedLiveExample {
         // blank is stripped under every value — which is why even "preserve"
         // shows a change here, not a no-op.
         "blankLinesAtStartOfScope": """
+        // type scope — obeys the option
         struct Spaced {
 
             let value = 1
         }
 
+        // type scope — obeys the option
         struct Tight {
             let value = 2
         }
 
+        // function scope — blank always removed
         func reset() {
 
             cache.clear()
@@ -69,15 +72,18 @@ public enum CuratedLiveExample {
         // Mirror of blankLinesAtStartOfScope for the *end* of scope — same shared
         // --type-blank-lines option, blank line before the closing brace.
         "blankLinesAtEndOfScope": """
+        // type scope — obeys the option
         struct Spaced {
             let value = 1
 
         }
 
+        // type scope — obeys the option
         struct Tight {
             let value = 2
         }
 
+        // function scope — blank always removed
         func reset() {
             cache.clear()
 
