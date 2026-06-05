@@ -7,11 +7,10 @@ SwiftFormatRuleStudioCore/.swiftpm/
 .swiftformat.*.backup
 .swiftlint.yml.*.backup
 
-# Tuist — the Xcode project/workspace are generated; regenerate with `tuist generate`
-*.xcodeproj
-*.xcworkspace
-Derived/
+# The .xcodeproj is committed (native sync-folder project). Ignore only the
+# per-user state inside it.
+**/xcuserdata/
 .build/
-Tuist/.build/
-Tuist/Dependencies/
-graph.png
+
+# Tuist leftover (regenerated build artifact; project now generates Info.plist)
+Derived/

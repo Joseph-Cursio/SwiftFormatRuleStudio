@@ -22,7 +22,7 @@ struct OptionRowTests {
         #expect(texts.contains("Number of spaces to indent"))
     }
 
-    @Test("Renders a toggle for a boolean option")
+    @Test("Renders an (omitted)/true/false picker for a boolean option")
     func booleanEditor() throws {
         let option = FormatOption(
             name: "--allman",
@@ -32,6 +32,7 @@ struct OptionRowTests {
             defaultValue: "false"
         )
         let view = OptionRow(option: option, config: ConfigModel())
-        _ = try view.inspect().find(ViewType.Toggle.self)
+        // Booleans are a 3-state Picker now (omitted / true / false), not a Toggle.
+        _ = try view.inspect().find(ViewType.Picker.self)
     }
 }
