@@ -254,6 +254,35 @@ struct RuleLiveExampleView: View {
     }
 }
 
+/// Maps tokenizer kinds to display colors and builds a syntax-highlighted
+/// `Text` from a line of Swift, so example code reads like an editor instead of
+/// flat monospace. Colors are chosen to stay legible in light and dark mode.
+enum SwiftCodeColor {
+    static func color(for kind: SwiftCodeTokenizer.Kind) -> Color {
+        switch kind {
+        case .keyword: Color(red: 0.79, green: 0.20, blue: 0.55) // magenta/pink
+        case .string: Color(red: 0.76, green: 0.30, blue: 0.27) // brick red
+        case .comment: .secondary
+        case .number: Color(red: 0.20, green: 0.40, blue: 0.85) // blue
+        case .type: Color(red: 0.18, green: 0.55, blue: 0.55) // teal
+        case .plain: .primary
+        }
+    }
+
+    /// A syntax-highlighted attributed rendering of one code line. Empty lines
+    /// render a single space so the diff row keeps its height.
+    static func attributed(_ line: String) -> AttributedString {
+        guard !line.isEmpty else { return AttributedString(" ") }
+        var result = AttributedString()
+        for token in SwiftCodeTokenizer.tokens(inLine: line) {
+            var span = AttributedString(token.text)
+            span.foregroundColor = color(for: token.kind)
+            result += span
+        }
+        return result
+    }
+}
+
 /// A non-collapsing diff renderer for the rule detail's live example.
 ///
 /// `PreviewDiffView` wraps a *vertical* `ScrollView`, which collapses to ~zero
@@ -269,11 +298,11 @@ struct LiveDiffLinesView: View {
                 ForEach(lines) { line in
                     HStack(alignment: .top, spacing: 8) {
                         Text(symbol(for: line.change))
+                            .foregroundStyle(foreground(for: line.change))
                             .frame(width: 10, alignment: .leading)
-                        Text(line.text.isEmpty ? " " : line.text)
+                        Text(SwiftCodeColor.attributed(line.text))
                     }
                     .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(foreground(for: line.change))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 1)
@@ -328,13 +357,18 @@ struct DiffExampleView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                Text(line.isEmpty ? " " : line)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(foreground(for: line))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 1)
-                    .background(background(for: line))
+                let split = Self.split(line)
+                HStack(alignment: .top, spacing: 8) {
+                    Text(String(split.gutter))
+                        .foregroundStyle(gutterColor(for: line))
+                        .frame(width: 8, alignment: .leading)
+                    Text(SwiftCodeColor.attributed(split.code))
+                }
+                .font(.system(.body, design: .monospaced))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 1)
+                .background(background(for: line))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -345,10 +379,19 @@ struct DiffExampleView: View {
         )
     }
 
-    private func foreground(for line: String) -> Color {
+    /// Splits a raw diff line into its 1-char gutter (`+`/`-`/space) and the code
+    /// after it. Context lines (no marker) keep their full text as code.
+    private static func split(_ line: String) -> (gutter: Character, code: String) {
+        guard let first = line.first, first == "+" || first == "-" else {
+            return (" ", line)
+        }
+        return (first, String(line.dropFirst()))
+    }
+
+    private func gutterColor(for line: String) -> Color {
         if line.hasPrefix("+") { return .green }
         if line.hasPrefix("-") { return .red }
-        return .primary
+        return .secondary
     }
 
     private func background(for line: String) -> Color {
