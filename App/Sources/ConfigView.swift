@@ -263,9 +263,10 @@ struct OptionRow: View {
         case .boolean:
             Toggle("", isOn: boolBinding).labelsHidden()
         case .enumeration:
-            Picker("", selection: stringBinding) {
+            Picker("", selection: enumSelection) {
+                Text(omittedLabel).tag(String?.none)
                 ForEach(option.allowedValues, id: \.self) { value in
-                    Text(value).tag(value)
+                    Text(value).tag(String?.some(value))
                 }
             }
             .labelsHidden()
@@ -294,11 +295,29 @@ struct OptionRow: View {
         )
     }
 
-    private var stringBinding: Binding<String> {
+    /// Enum picker selection. `nil` means the option is *omitted* from the config
+    /// (so SwiftFormat's built-in default applies); a value writes it explicitly —
+    /// even if it equals the default — so "use the default" and "pin this value"
+    /// are distinct, intentional choices.
+    private var enumSelection: Binding<String?> {
         Binding(
-            get: { effectiveValue },
-            set: { writeValue($0) }
+            get: { config.config.options[option.key] },
+            set: { newValue in
+                if let newValue {
+                    config.setOption(key: option.key, value: newValue)
+                } else {
+                    config.removeOption(key: option.key)
+                }
+            }
         )
+    }
+
+    /// First entry in the enum dropdown — shows what omitting resolves to.
+    private var omittedLabel: String {
+        if let defaultValue = option.defaultValue {
+            return "(omitted → \(defaultValue))"
+        }
+        return "(omitted)"
     }
 
     private func writeValue(_ newValue: String) {
