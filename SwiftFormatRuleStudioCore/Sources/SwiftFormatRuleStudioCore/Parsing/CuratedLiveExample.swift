@@ -27,20 +27,11 @@ public enum CuratedLiveExample {
     }
 
     /// For the few rules that act on file-level or invisible aspects a code diff
-    /// can't show, a tailored explanation of *why* there's no live example.
+    /// can't show, a tailored explanation of *why* there's no live example —
+    /// authored as a snippet-less `CuratedExamples/<rule>.md`.
     public static func unavailableNote(forRule ruleName: String) -> String? {
-        unavailableNotes[ruleName]
+        generatedNotes[ruleName]
     }
-
-    static let unavailableNotes: [String: String] = [
-        "trailingSpace": "Removes trailing whitespace at the ends of lines — not visible in a code preview.",
-        "linebreakAtEndOfFile": "Ensures the file ends with a single trailing newline — not visible in a code preview.",
-        "linebreaks": "Normalizes line endings (CR/CRLF) to LF — not visible in a code preview.",
-        "headerFileName": "Keeps the file-name in a header comment in sync with the actual file — "
-            + "needs a real file name, which a stdin preview doesn't have.",
-        "fileMacro": "Prefers #file or #fileID, but only rewrites them in safe call-chain contexts "
-            + "that a short snippet can't represent."
-    ]
 
     /// All curated snippets, compiled from `CuratedExamples/*.md` into
     /// `generatedSnippets` (see `CuratedLiveExample+Generated.swift`).

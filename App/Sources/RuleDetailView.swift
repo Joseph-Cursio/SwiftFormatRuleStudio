@@ -195,7 +195,11 @@ struct RuleLiveExampleView: View {
     }
 
     var body: some View {
-        if let before = beforeSource {
+        // A rule with a tailored "unavailable" note acts on a file-level/invisible
+        // aspect a code diff can't show — the note wins over any reconstruction.
+        if let note = CuratedLiveExample.unavailableNote(forRule: rule.name) {
+            placeholder(note)
+        } else if let before = beforeSource {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Text("Example")
@@ -222,16 +226,19 @@ struct RuleLiveExampleView: View {
                 model.scheduleFormat()
             }
         } else {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Example")
-                    .font(.headline)
-                Text(CuratedLiveExample.unavailableNote(forRule: rule.name)
-                    ?? "No example available for this rule yet.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            placeholder("No example available for this rule yet.")
         }
+    }
+
+    private func placeholder(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Example")
+                .font(.headline)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

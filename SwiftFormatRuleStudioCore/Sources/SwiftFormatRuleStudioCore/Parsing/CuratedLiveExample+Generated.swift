@@ -151,4 +151,12 @@ extension CuratedLiveExample {
         "wrapSwitchCases": "func describe(_ value: Direction) -> String {\n    switch value {\n    case .north, .south, .east, .west:\n        return \"cardinal\"\n    case .up, .down:\n        return \"vertical\"\n    }\n}",
         "yodaConditions": "func check(foo: Int, bar: Color) {\n    if 5 == foo, .red == bar {\n        print(\"match\")\n    }\n}",
     ]
+
+    static let generatedNotes: [String: String] = [
+        "fileMacro": "Prefers #file or #fileID, but only rewrites them in safe call-chain contexts that a short snippet can't represent.",
+        "headerFileName": "Keeps the file-name in a header comment in sync with the actual file — needs a real file name, which a stdin preview doesn't have.",
+        "linebreakAtEndOfFile": "Ensures the file ends with a single trailing newline — not visible in a code preview.",
+        "linebreaks": "Normalizes line endings (CR/CRLF) to LF — not visible in a code preview.",
+        "trailingSpace": "Removes trailing whitespace at the ends of lines — not visible in a code preview.",
+    ]
 }
