@@ -33,13 +33,40 @@ struct RuleDetailView: View {
         )
     }
 
+    /// Whether the rule's enabled state differs from its SwiftFormat default
+    /// (opt-in rules default off; the rest default on).
+    private func isRuleOverridden(_ rule: FormatRule) -> Bool {
+        config.isRuleEnabled(rule.name, isOptIn: rule.isOptIn) != !rule.isOptIn
+    }
+
+    /// Title color: green when enabled away from a default-off, red when disabled
+    /// away from a default-on, primary when at the default.
+    private func ruleStatusColor(for rule: FormatRule) -> Color {
+        guard isRuleOverridden(rule) else { return .primary }
+        return config.isRuleEnabled(rule.name, isOptIn: rule.isOptIn) ? .green : .red
+    }
+
     private func detail(for rule: FormatRule) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header(for: rule)
 
-                Toggle("Enabled in config", isOn: enabledBinding(for: rule))
-                    .toggleStyle(.switch)
+                HStack(spacing: 10) {
+                    Toggle("Enabled in config", isOn: enabledBinding(for: rule))
+                        .toggleStyle(.switch)
+                    if isRuleOverridden(rule) {
+                        Button {
+                            // Set to the default state — clears the override.
+                            config.setRuleEnabled(rule.name, enabled: !rule.isOptIn, isOptIn: rule.isOptIn)
+                        } label: {
+                            Image(systemName: "arrow.uturn.backward")
+                                .accessibilityLabel("Reset to default")
+                        }
+                        .buttonStyle(.borderless)
+                        .controlSize(.small)
+                        .help("Reset to default (\(rule.isOptIn ? "off" : "on"))")
+                    }
+                }
 
                 if !rule.ruleDescription.isEmpty {
                     Text(rule.ruleDescription)
@@ -65,6 +92,7 @@ struct RuleDetailView: View {
         HStack(spacing: 10) {
             Text(rule.name)
                 .font(.largeTitle.bold())
+                .foregroundStyle(ruleStatusColor(for: rule))
             badge(rule.category.displayName, color: .blue)
             if rule.isOptIn {
                 badge("Opt-in", color: .orange)
