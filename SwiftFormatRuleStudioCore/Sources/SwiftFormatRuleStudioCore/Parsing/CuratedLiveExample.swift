@@ -44,10 +44,12 @@ public enum CuratedLiveExample {
         }
         """,
 
-        // --type-blank-lines only governs *type* bodies (a function's leading
-        // blank is always removed). Two structs — one with a leading blank, one
-        // without — let the single option demo all three values distinctly:
-        // remove → a deletion, insert → an insertion, preserve → no change.
+        // --type-blank-lines governs only *type* bodies; a function/closure's
+        // boundary blank is ALWAYS removed regardless of the option. So include
+        // both: two structs (one with a leading blank, one without) to demo
+        // remove/insert/preserve on type scopes, plus a function whose leading
+        // blank is stripped under every value — which is why even "preserve"
+        // shows a change here, not a no-op.
         "blankLinesAtStartOfScope": """
         struct Spaced {
 
@@ -57,10 +59,15 @@ public enum CuratedLiveExample {
         struct Tight {
             let value = 2
         }
+
+        func reset() {
+
+            cache.clear()
+        }
         """,
 
-        // Mirror of blankLinesAtStartOfScope for the *end* of scope — the same
-        // shared --type-blank-lines option, blank line before the closing brace.
+        // Mirror of blankLinesAtStartOfScope for the *end* of scope — same shared
+        // --type-blank-lines option, blank line before the closing brace.
         "blankLinesAtEndOfScope": """
         struct Spaced {
             let value = 1
@@ -69,6 +76,11 @@ public enum CuratedLiveExample {
 
         struct Tight {
             let value = 2
+        }
+
+        func reset() {
+            cache.clear()
+
         }
         """
     ]
