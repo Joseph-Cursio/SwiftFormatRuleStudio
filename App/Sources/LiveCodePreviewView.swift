@@ -10,14 +10,21 @@ import SwiftUI
 /// diff) on the right, live. Thin wrapper over the tested `LivePreviewModel`.
 struct LiveCodePreviewView: View {
     @Environment(ConfigModel.self) private var config
+    @Environment(\.uiTextScale) private var uiTextScale
     @State private var model = LivePreviewModel(source: Self.sampleSource)
 
     var body: some View {
         HSplitView {
-            editor
+            VSplitView {
+                editor
+                    .frame(minHeight: 120)
+                changesList
+                    .frame(minHeight: 100)
+            }
             result
         }
         .task {
+            model.producesChangeList = true
             model.extraArguments = config.commandLineArguments
             await model.formatNow()
         }
@@ -34,10 +41,7 @@ struct LiveCodePreviewView: View {
         VStack(alignment: .leading, spacing: 0) {
             paneHeader("Enter your own source", systemImage: "pencil.line")
             Divider()
-            TextEditor(text: $model.source)
-                .scaledFont(.body, design: .monospaced)
-                .scrollContentBackground(.hidden)
-                .padding(6)
+            CodeTextEditor(text: $model.source, fontSize: 13 * uiTextScale)
                 .onChange(of: model.source) {
                     model.scheduleFormat()
                 }
@@ -45,20 +49,98 @@ struct LiveCodePreviewView: View {
         .frame(minWidth: 300)
     }
 
-    // MARK: - Result
+    // MARK: - Changes (which rule changed which line)
 
-    private var result: some View {
+    private var changesList: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                paneHeader("Result", systemImage: "wand.and.stars")
+                paneHeader("SwiftFormat rules triggered", systemImage: "list.bullet.rectangle")
                 Spacer()
-                statusLabel
+                Text("\(model.changes.count)")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
                     .padding(.trailing, 10)
             }
             Divider()
-            resultBody
+            if model.changes.isEmpty {
+                Text("No changes — your code already matches the current rules.")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            } else {
+                List(Array(model.changes.enumerated()), id: \.offset) { _, change in
+                    changeRow(change)
+                }
+                .listStyle(.plain)
+            }
         }
         .frame(minWidth: 300)
+        .textSelection(.enabled)
+    }
+
+    private func changeRow(_ change: LintFinding) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text("\(change.line)")
+                .scaledFont(.body, design: .monospaced)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: 36, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(change.ruleID)
+                    .scaledFont(.body)
+                Text(change.reason)
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    // MARK: - Result
+
+    private var result: some View {
+        VSplitView {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    paneHeader("Diff", systemImage: "plusminus")
+                    Spacer()
+                    statusLabel
+                        .padding(.trailing, 10)
+                }
+                Divider()
+                resultBody
+            }
+            .frame(minHeight: 100)
+
+            VStack(alignment: .leading, spacing: 0) {
+                paneHeader("Formatted output", systemImage: "wand.and.stars")
+                Divider()
+                formattedOutput
+            }
+            .frame(minHeight: 100)
+        }
+        .frame(minWidth: 300)
+    }
+
+    /// The clean formatted result (no diff markers), syntax-highlighted.
+    @ViewBuilder
+    private var formattedOutput: some View {
+        GeometryReader { geometry in
+            ScrollView([.vertical, .horizontal]) {
+                VStack(alignment: .leading, spacing: 0) {
+                    let lines = model.formattedSource.components(separatedBy: "\n")
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                        Text(SwiftCodeColor.attributed(line))
+                            .scaledFont(.body, design: .monospaced)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10)
+                    }
+                }
+                .padding(.vertical, 4)
+                .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
+            }
+        }
     }
 
     @ViewBuilder
@@ -95,6 +177,7 @@ struct LiveCodePreviewView: View {
         default:
             if model.hasChanges {
                 PreviewDiffView(lines: model.diff)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else if model.state == .formatted {
                 ContentUnavailableView(
                     "Already formatted",
@@ -130,25 +213,29 @@ struct PreviewDiffView: View {
     let lines: [PreviewDiffLine]
 
     var body: some View {
-        ScrollView([.vertical, .horizontal]) {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(lines) { line in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text(symbol(for: line.change))
-                            .frame(width: 10, alignment: .leading)
-                        Text(line.text.isEmpty ? " " : line.text)
+        // GeometryReader + minWidth/minHeight pins content to the top-left: a 2D
+        // ScrollView otherwise centers content smaller than its viewport.
+        GeometryReader { geometry in
+            ScrollView([.vertical, .horizontal]) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(lines) { line in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text(symbol(for: line.change))
+                                .frame(width: 10, alignment: .leading)
+                            Text(line.text.isEmpty ? " " : line.text)
+                        }
+                        .scaledFont(.body, design: .monospaced)
+                        .foregroundStyle(foreground(for: line.change))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 1)
+                        .background(background(for: line.change))
                     }
-                    .scaledFont(.body, design: .monospaced)
-                    .foregroundStyle(foreground(for: line.change))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 1)
-                    .background(background(for: line.change))
                 }
+                .padding(.vertical, 4)
+                .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
             }
-            .padding(.vertical, 4)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func symbol(for change: PreviewDiffLine.Change) -> String {
