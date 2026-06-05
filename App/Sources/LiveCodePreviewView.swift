@@ -151,7 +151,7 @@ struct LiveCodePreviewView: View {
         case .formatting:
             ProgressView().controlSize(.small)
         case .formatted:
-            Text(model.hasChanges ? "\(changeCount) change\(changeCount == 1 ? "" : "s")" : "No changes")
+            Text(model.hasChanges ? changeSummary : "No changes")
                 .scaledFont(.caption)
                 .foregroundStyle(.secondary)
         case .failed:
@@ -161,8 +161,15 @@ struct LiveCodePreviewView: View {
         }
     }
 
-    private var changeCount: Int {
-        model.diff.filter { $0.change != .unchanged }.count
+    private var addedCount: Int { model.diff.filter { $0.change == .added }.count }
+    private var removedCount: Int { model.diff.filter { $0.change == .removed }.count }
+
+    /// e.g. "11 line changes: 6 insertions + 5 deletions".
+    private var changeSummary: String {
+        let total = addedCount + removedCount
+        return "\(total) line \(total == 1 ? "change" : "changes"): "
+            + "\(addedCount) insertion\(addedCount == 1 ? "" : "s") + "
+            + "\(removedCount) deletion\(removedCount == 1 ? "" : "s")"
     }
 
     @ViewBuilder
