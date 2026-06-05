@@ -84,6 +84,7 @@ struct RuleDetailView: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .textSelection(.enabled) // select/copy the rule name, summaries, code
         }
         .navigationTitle(rule.name)
     }
