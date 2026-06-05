@@ -1,7 +1,9 @@
 # wrap
 
-Set --max-width (e.g. 40) to wrap the long call.
+Set `--max-width` (e.g. 60) to wrap the long call onto multiple lines. With the
+default (`--max-width none`) nothing wraps, so the example is unchanged until you
+set a width.
 
 ```swift
-let message = service.format(name: userName, salutation: preferredSalutation, locale: currentLocale)
+let confirmation = notificationService.scheduleReminder(for: upcomingAppointment, at: preferredReminderTime, repeating: weeklyRecurrenceRule, including: attachedCalendarInvitation)
 ```

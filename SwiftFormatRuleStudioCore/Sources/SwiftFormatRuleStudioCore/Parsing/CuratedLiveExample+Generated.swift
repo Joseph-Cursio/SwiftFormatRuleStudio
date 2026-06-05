@@ -135,7 +135,7 @@ extension CuratedLiveExample {
         "urlMacro": "let endpoint = URL(string: \"https://example.com\")!",
         "validateTestCases": "import XCTest\n\nfinal class CalculatorTests: XCTestCase {\n    func additionReturnsSum() {\n        XCTAssertEqual(Calculator.add(2, 3), 5)\n    }\n}",
         "void": "let foo: () -> ()\nlet bar: Void -> Void\nlet baz: (Void) -> Void\nfunc quux() -> (Void) {}\nlet callback = { _ in Void() }",
-        "wrap": "let message = service.format(name: userName, salutation: preferredSalutation, locale: currentLocale)",
+        "wrap": "let confirmation = notificationService.scheduleReminder(for: upcomingAppointment, at: preferredReminderTime, repeating: weeklyRecurrenceRule, including: attachedCalendarInvitation)",
         "wrapArguments": "func register(name: String,\n        age: Int,\n            email: String) {\n    print(name)\n}",
         "wrapAttributes": "@objc func reload() {}\n\n@available(iOS 15, *) func refresh() {}",
         "wrapCaseBodies": "func describe(_ value: Direction) -> String {\n    switch value {\n    case .north: return \"up\"\n    case .south: return \"down\"\n    }\n}",
