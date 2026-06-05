@@ -70,7 +70,7 @@ struct RuleDetailView: View {
 
                 if !rule.ruleDescription.isEmpty {
                     Text(rule.ruleDescription)
-                        .font(.title3)
+                        .scaledFont(.title3)
                         .foregroundStyle(.secondary)
                 }
 
@@ -91,7 +91,7 @@ struct RuleDetailView: View {
     private func header(for rule: FormatRule) -> some View {
         HStack(spacing: 10) {
             Text(rule.name)
-                .font(.largeTitle.bold())
+                .font(.largeTitle.bold()) // pinned — the title stays a fixed size
                 .foregroundStyle(ruleStatusColor(for: rule))
             badge(rule.category.displayName, color: .blue)
             if rule.isOptIn {
@@ -114,7 +114,7 @@ struct RuleDetailView: View {
 
     private func badge(_ text: String, color: Color) -> some View {
         Text(text)
-            .font(.caption.weight(.semibold))
+            .scaledFont(.caption, weight: .semibold)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(color.opacity(0.18), in: Capsule())
@@ -156,7 +156,7 @@ struct RuleOptionsSection: View {
     var body: some View {
         if options.isEmpty {
             Text("No tunable options.")
-                .font(.callout)
+                .scaledFont(.callout)
                 .foregroundStyle(.tertiary)
         } else {
             DisclosureGroup(isExpanded: $isExpanded) {
@@ -170,15 +170,15 @@ struct RuleOptionsSection: View {
             } label: {
                 HStack(spacing: 8) {
                     Text("Options")
-                        .font(.headline)
+                        .scaledFont(.headline, weight: .semibold)
                     Text("\(options.count)")
-                        .font(.caption.weight(.semibold))
+                        .scaledFont(.caption, weight: .semibold)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 1)
                         .background(.quaternary, in: Capsule())
                     if setCount > 0 {
                         Text("· \(setCount) set")
-                            .font(.caption)
+                            .scaledFont(.caption)
                             .foregroundStyle(.tint)
                     }
                     Spacer()
@@ -231,7 +231,7 @@ struct RuleLiveExampleView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Text("Examples if the Rule is Enabled…")
-                        .font(.headline)
+                        .scaledFont(.headline, weight: .semibold)
                     if model.state == .formatting {
                         ProgressView().controlSize(.small)
                     }
@@ -239,7 +239,7 @@ struct RuleLiveExampleView: View {
                 Text(CuratedLiveExample.hint(forRule: rule.name)
                     ?? "This rule applied to the sample with your current options — "
                     + "edit the options above to watch it change.")
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(.secondary)
                 content(before: before)
             }
@@ -262,9 +262,9 @@ struct RuleLiveExampleView: View {
     private func placeholder(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Example")
-                .font(.headline)
+                .scaledFont(.headline, weight: .semibold)
             Text(text)
-                .font(.caption)
+                .scaledFont(.caption)
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -275,7 +275,7 @@ struct RuleLiveExampleView: View {
         switch model.state {
         case .failed:
             Text("Couldn’t render a live preview for this example.")
-                .font(.caption)
+                .scaledFont(.caption)
                 .foregroundStyle(.tertiary)
         case .idle, .formatting, .formatted:
             VStack(alignment: .leading, spacing: 10) {
@@ -296,7 +296,7 @@ struct RuleLiveExampleView: View {
     private func labeledBlock(_ title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .scaledFont(.caption, weight: .semibold)
                 .foregroundStyle(.secondary)
             content()
         }
@@ -351,7 +351,7 @@ struct LiveDiffLinesView: View {
                             .frame(width: 10, alignment: .leading)
                         Text(SwiftCodeColor.attributed(line.text))
                     }
-                    .font(.system(.body, design: .monospaced))
+                    .scaledFont(.body, design: .monospaced)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 1)
@@ -413,7 +413,7 @@ struct DiffExampleView: View {
                         .frame(width: 8, alignment: .leading)
                     Text(SwiftCodeColor.attributed(split.code))
                 }
-                .font(.system(.body, design: .monospaced))
+                .scaledFont(.body, design: .monospaced)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 1)

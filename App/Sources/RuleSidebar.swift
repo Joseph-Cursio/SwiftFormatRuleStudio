@@ -16,7 +16,7 @@ struct RuleSidebar: View {
         List(selection: $selection) {
             ForEach(model.groupedRules) { group in
                 Text("\(group.category.displayName)  ·  \(group.rules.count)")
-                    .font(.title3.weight(.bold))
+                    .scaledFont(.title3, weight: .bold)
                     .foregroundStyle(.primary)
                     .padding(.top, 8)
                     .listRowSeparator(.hidden)
@@ -82,11 +82,11 @@ struct RuleRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(rule.name)
-                .font(.body)
+                .scaledFont(.body)
             Spacer()
             if rule.isDeprecated {
                 Text("deprecated")
-                    .font(.caption2)
+                    .scaledFont(.caption2)
                     .foregroundStyle(.secondary)
             }
             if rule.isOptIn {

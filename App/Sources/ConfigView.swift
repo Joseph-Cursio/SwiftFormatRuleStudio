@@ -214,7 +214,7 @@ struct OptionRow: View {
                     .fill(isSet ? Color.accentColor : Color.clear)
                     .frame(width: 6, height: 6)
                 Text(option.name)
-                    .font(.system(.body, design: .monospaced))
+                    .scaledFont(.body, design: .monospaced)
                     .foregroundStyle(isSet ? Color.accentColor : Color.primary)
                 Spacer()
                 if isSet {
@@ -231,12 +231,12 @@ struct OptionRow: View {
                 editor
             }
             Text(option.summary)
-                .font(.caption)
+                .scaledFont(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
             if let usedByText {
                 Text(usedByText)
-                    .font(.caption2)
+                    .scaledFont(.caption2)
                     .foregroundStyle(.tint)
             }
         }
