@@ -30,5 +30,5 @@ public enum CuratedLiveExample {
     }
 
     /// The per-batch data dictionaries, defined in `CuratedLiveExample+Data*`.
-    static let dataChunks: [[String: String]] = [dataPart1, dataPart2]
+    static let dataChunks: [[String: String]] = [dataPart1, dataPart2, dataPart3]
 }
