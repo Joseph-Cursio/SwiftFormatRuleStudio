@@ -62,6 +62,13 @@ public final class LivePreviewModel {
         diff.contains { $0.change != .unchanged }
     }
 
+    /// When set, a first format attempt that *fails* (e.g. SwiftFormat rejects a
+    /// bare snippet as an incomplete file) is retried once with `--fragment true`
+    /// appended. We don't pass `--fragment` up front because it *suppresses*
+    /// scope-dependent rules (e.g. `redundantSelf` keeps `self.` under
+    /// `--fragment`), so we only reach for it to rescue an outright error.
+    public var fragmentFallback = false
+
     /// The arguments passed to `swiftformat` for the current settings.
     var formatArguments: [String] {
         var arguments = ["stdin"]
@@ -78,7 +85,7 @@ public final class LivePreviewModel {
         let input = source
         state = .formatting
         do {
-            let output = try await cli.format(source: input, arguments: formatArguments)
+            let output = try await format(input, arguments: formatArguments)
             formattedSource = output
             diff = PreviewDiffLine.lines(from: UnifiedDiffEngine.computeDiff(before: input, after: output))
             state = .formatted
@@ -86,6 +93,16 @@ public final class LivePreviewModel {
             formattedSource = ""
             diff = []
             state = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Runs SwiftFormat, optionally retrying once in fragment mode on failure.
+    private func format(_ input: String, arguments: [String]) async throws -> String {
+        do {
+            return try await cli.format(source: input, arguments: arguments)
+        } catch {
+            guard fragmentFallback, !arguments.contains("--fragment") else { throw error }
+            return try await cli.format(source: input, arguments: arguments + ["--fragment", "true"])
         }
     }
 
