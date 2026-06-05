@@ -240,13 +240,13 @@ struct RuleLiveExampleView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         case .idle, .formatting, .formatted:
-            if model.hasChanges {
-                VStack(alignment: .leading, spacing: 10) {
-                    labeledBlock("Before") { DiffExampleView(example: before) }
+            VStack(alignment: .leading, spacing: 10) {
+                labeledBlock("Before") { DiffExampleView(example: before) }
+                if model.hasChanges {
                     labeledBlock("After (changes highlighted)") { LiveDiffLinesView(lines: model.diff) }
+                } else {
+                    labeledBlock("After (unchanged with these options)") { DiffExampleView(example: before) }
                 }
-            } else {
-                labeledBlock("No change with these options") { DiffExampleView(example: before) }
             }
         }
     }
