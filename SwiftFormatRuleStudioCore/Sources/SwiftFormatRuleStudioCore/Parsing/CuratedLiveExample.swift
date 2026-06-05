@@ -42,6 +42,34 @@ public enum CuratedLiveExample {
                 finish()
             }
         }
+        """,
+
+        // --type-blank-lines only governs *type* bodies (a function's leading
+        // blank is always removed). Two structs — one with a leading blank, one
+        // without — let the single option demo all three values distinctly:
+        // remove → a deletion, insert → an insertion, preserve → no change.
+        "blankLinesAtStartOfScope": """
+        struct Spaced {
+
+            let value = 1
+        }
+
+        struct Tight {
+            let value = 2
+        }
+        """,
+
+        // Mirror of blankLinesAtStartOfScope for the *end* of scope — the same
+        // shared --type-blank-lines option, blank line before the closing brace.
+        "blankLinesAtEndOfScope": """
+        struct Spaced {
+            let value = 1
+
+        }
+
+        struct Tight {
+            let value = 2
+        }
         """
     ]
 }
