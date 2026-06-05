@@ -117,7 +117,11 @@ public enum OptionsParser {
     // MARK: - Regex helpers
 
     private static func quotedTokens(in text: String) -> [String] {
-        allCaptures(in: text, pattern: "\"([^\"]*)\"")
+        // Drop quoted fragments that belong to the *description* rather than the
+        // value list — e.g. `Insert blank line after "MARK:"`. No real SwiftFormat
+        // option value contains a colon, so this safely excludes "MARK:" while
+        // keeping "true"/"false"/"insert"/etc.
+        allCaptures(in: text, pattern: "\"([^\"]*)\"").filter { !$0.contains(":") }
     }
 
     private static func firstCapture(in text: String, pattern: String) -> String? {

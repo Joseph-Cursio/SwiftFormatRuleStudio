@@ -42,6 +42,17 @@ struct OptionsParserTests {
         #expect(allman.defaultValue == "false")
     }
 
+    @Test("A quoted description fragment (e.g. \"MARK:\") is not treated as a value")
+    func quotedDescriptionFragmentExcluded() throws {
+        // Regex'ing every quoted token wrongly added "MARK:" to the dropdown,
+        // which SwiftFormat then rejected as an invalid value.
+        let blurb = "--line-after-marks Insert blank line after \"MARK:\": \"true\" (default) or \"false\""
+        let option = try option("--line-after-marks", in: OptionsParser.parse(blurb))
+        #expect(option.allowedValues == ["true", "false"])
+        #expect(option.kind == .boolean)
+        #expect(option.defaultValue == "true")
+    }
+
     @Test("Infers enumeration options with their default")
     func enumerationOption() throws {
         let explicitSelf = try option("--self", in: OptionsParser.parse(Self.fixture))
