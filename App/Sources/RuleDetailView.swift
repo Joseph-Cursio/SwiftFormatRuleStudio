@@ -225,7 +225,8 @@ struct RuleLiveExampleView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Example")
                     .font(.headline)
-                Text("No example available for this rule yet.")
+                Text(CuratedLiveExample.unavailableNote(forRule: rule.name)
+                    ?? "No example available for this rule yet.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
