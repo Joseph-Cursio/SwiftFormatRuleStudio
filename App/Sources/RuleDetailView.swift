@@ -245,7 +245,8 @@ struct RuleLiveExampleView: View {
             VStack(alignment: .leading, spacing: 10) {
                 labeledBlock("Before") { DiffExampleView(example: before) }
                 if model.hasChanges {
-                    labeledBlock("After (changes highlighted)") { LiveDiffLinesView(lines: model.diff) }
+                    labeledBlock("Diff (changes highlighted)") { LiveDiffLinesView(lines: model.diff) }
+                    labeledBlock("After") { DiffExampleView(example: model.formattedSource) }
                 } else {
                     labeledBlock("After (unchanged with these options)") { DiffExampleView(example: before) }
                 }
