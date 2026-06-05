@@ -35,7 +35,7 @@ struct LiveCodePreviewView: View {
             paneHeader("Source", systemImage: "pencil.line")
             Divider()
             TextEditor(text: $model.source)
-                .font(.system(.body, design: .monospaced))
+                .scaledFont(.body, design: .monospaced)
                 .scrollContentBackground(.hidden)
                 .padding(6)
                 .onChange(of: model.source) {
@@ -70,11 +70,11 @@ struct LiveCodePreviewView: View {
             ProgressView().controlSize(.small)
         case .formatted:
             Text(model.hasChanges ? "\(changeCount) change\(changeCount == 1 ? "" : "s")" : "No changes")
-                .font(.caption)
+                .scaledFont(.caption)
                 .foregroundStyle(.secondary)
         case .failed:
             Label("Error", systemImage: "exclamationmark.triangle")
-                .font(.caption)
+                .scaledFont(.caption)
                 .foregroundStyle(.red)
         }
     }
@@ -109,7 +109,7 @@ struct LiveCodePreviewView: View {
 
     private func paneHeader(_ title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
-            .font(.headline)
+            .scaledFont(.headline, weight: .semibold)
             .padding(8)
     }
 
@@ -138,7 +138,7 @@ struct PreviewDiffView: View {
                             .frame(width: 10, alignment: .leading)
                         Text(line.text.isEmpty ? " " : line.text)
                     }
-                    .font(.system(.body, design: .monospaced))
+                    .scaledFont(.body, design: .monospaced)
                     .foregroundStyle(foreground(for: line.change))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 10)

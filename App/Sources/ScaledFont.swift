@@ -13,6 +13,14 @@ extension EnvironmentValues {
     @Entry var uiTextScale: CGFloat = 1.0
 }
 
+extension CGFloat {
+    /// Maps a text-size step (0 = 100%) to a clamped scale multiplier. Each step
+    /// is ±12%; shared by the menu commands and the views that apply the scale.
+    static func uiTextScale(forStep step: Int) -> CGFloat {
+        Swift.min(Swift.max(1.0 + CGFloat(step) * 0.12, 0.6), 2.0)
+    }
+}
+
 extension View {
     /// Applies a semantic-style font whose point size is multiplied by the
     /// environment's `uiTextScale`. Use instead of `.font(.caption)` etc. on text

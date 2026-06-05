@@ -15,10 +15,7 @@ struct ContentView: View {
     // app's menu commands through this AppStorage key.
     @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
-    /// 0 = 100%; each step is ±12%, clamped to a sane range.
-    private var textScale: CGFloat {
-        min(max(1.0 + CGFloat(textSizeStep) * 0.12, 0.6), 2.0)
-    }
+    private var textScale: CGFloat { .uiTextScale(forStep: textSizeStep) }
 
     var body: some View {
         NavigationSplitView {

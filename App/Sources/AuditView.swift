@@ -141,8 +141,8 @@ struct AuditView: View {
 
     private func stat(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.title2.bold())
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(value).scaledFont(.title2, weight: .bold)
+            Text(label).scaledFont(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -176,15 +176,15 @@ struct ImpactRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(impact.ruleID)
-                    .font(.system(.body, design: .monospaced))
+                    .scaledFont(.body, design: .monospaced)
                 if let rule {
                     Text(rule.category.displayName)
-                        .font(.caption2)
+                        .scaledFont(.caption2)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Text(countsText)
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }

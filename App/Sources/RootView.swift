@@ -12,6 +12,7 @@ import SwiftUI
 struct RootView: View {
     @State private var catalog = RuleStudioModel()
     @State private var config = ConfigModel()
+    @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,6 +37,7 @@ struct RootView: View {
             Divider()
             StatusBar(catalog: catalog)
         }
+        .environment(\.uiTextScale, .uiTextScale(forStep: textSizeStep))
         .environment(catalog)
         .environment(config)
         .task {
@@ -67,7 +69,7 @@ private struct StatusBar: View {
             }
             Spacer()
         }
-        .font(.caption)
+        .scaledFont(.caption)
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
     }

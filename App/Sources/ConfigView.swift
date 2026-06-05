@@ -87,13 +87,13 @@ struct ConfigView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
             Text(folderURL?.lastPathComponent ?? "")
-                .font(.headline)
+                .scaledFont(.headline, weight: .semibold)
             Text(".swiftformat")
-                .font(.system(.body, design: .monospaced))
+                .scaledFont(.body, design: .monospaced)
                 .foregroundStyle(.secondary)
             if config.isDirty {
                 Text("• Unsaved")
-                    .font(.caption.weight(.semibold))
+                    .scaledFont(.caption, weight: .semibold)
                     .foregroundStyle(.orange)
             }
             Spacer()
@@ -120,9 +120,9 @@ struct ConfigView: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Text("Options")
-                    .font(.headline)
+                    .scaledFont(.headline, weight: .semibold)
                 Text("\(setCount) set · \(catalog.options.count) total")
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Toggle("Only set", isOn: $showOnlySet)
@@ -165,11 +165,11 @@ struct ConfigView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Label("Pending changes", systemImage: "doc.badge.gearshape")
-                    .font(.headline)
+                    .scaledFont(.headline, weight: .semibold)
                 Spacer()
                 if let error = config.lastError {
                     Label(error, systemImage: "exclamationmark.triangle")
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(.red)
                 }
             }
