@@ -99,7 +99,7 @@ struct LiveCodePreviewView: View {
             Divider()
             VStack(alignment: .leading, spacing: 1) {
                 Text(change.ruleID)
-                    .scaledFont(.body)
+                    .scaledFont(.body, design: .monospaced)
                 Text(change.reason)
                     .scaledFont(.caption)
                     .foregroundStyle(.secondary)
