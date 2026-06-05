@@ -50,15 +50,6 @@ struct RuleDetailView: View {
                 RuleOptionsSection(rule: rule, options: matchedOptions(for: rule), config: config)
                     .id(rule.name)
 
-                if let example = rule.example {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Static example")
-                            .font(.headline)
-                        DiffExampleView(example: example)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
                 RuleLiveExampleView(rule: rule, options: matchedOptions(for: rule))
                     .id(rule.name)
 
@@ -206,7 +197,7 @@ struct RuleLiveExampleView: View {
         if let before = beforeSource {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    Text("Live example")
+                    Text("Example")
                         .font(.headline)
                     if model.state == .formatting {
                         ProgressView().controlSize(.small)
@@ -229,6 +220,15 @@ struct RuleLiveExampleView: View {
                 model.extraArguments = newArguments
                 model.scheduleFormat()
             }
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Example")
+                    .font(.headline)
+                Text("No example available for this rule yet.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
