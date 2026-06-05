@@ -90,12 +90,15 @@ struct LiveCodePreviewView: View {
     }
 
     private func changeRow(_ change: LintFinding) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        // Gutter geometry matches CodeTextEditor's ruler: a 40pt-wide column
+        // (number right-aligned with a 4pt trailing margin) then the divider.
+        HStack(alignment: .top, spacing: 0) {
             Text("\(change.line)")
-                .scaledFont(.body, design: .monospaced)
+                .scaledFont(.subheadline, design: .monospaced)
                 .monospacedDigit()
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
                 .frame(width: 36, alignment: .trailing)
+                .padding(.trailing, 4)
             Divider()
             VStack(alignment: .leading, spacing: 1) {
                 Text(change.ruleID)
@@ -104,7 +107,10 @@ struct LiveCodePreviewView: View {
                     .scaledFont(.caption)
                     .foregroundStyle(.secondary)
             }
+            .padding(.leading, 8)
         }
+        .padding(.vertical, 2)
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 8))
         .listRowSeparator(.hidden)
     }
 
