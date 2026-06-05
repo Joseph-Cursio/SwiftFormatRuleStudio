@@ -68,6 +68,51 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
         self.example = example
     }
 
+    /// The reconstructed "before" snippet from `example`, suitable for feeding
+    /// back through SwiftFormat to build a live, option-driven preview.
+    ///
+    /// SwiftFormat's `--ruleinfo` examples are unified diffs with a 1-char gutter
+    /// (` `/`-`/`+`), but split into blank-line-delimited hunks — and block-form
+    /// rules repeat the unchanged context in *both* a "before" hunk (with `-`
+    /// lines) and an "after" hunk (with `+` lines). Concatenating the whole thing
+    /// would duplicate that context. So we take the **first hunk that contains a
+    /// change line**, drop its `+` lines, and strip the 1-char gutter from the
+    /// rest. `nil` when there's no example, or no reconstructable change hunk
+    /// (e.g. prose-only "examples").
+    public var exampleBeforeSource: String? {
+        guard let example, !example.isEmpty else { return nil }
+
+        // Group lines into blank-line-delimited hunks.
+        var hunks: [[String]] = []
+        var current: [String] = []
+        for line in example.components(separatedBy: "\n") {
+            if line.trimmingCharacters(in: .whitespaces).isEmpty {
+                if !current.isEmpty { hunks.append(current); current = [] }
+            } else {
+                current.append(line)
+            }
+        }
+        if !current.isEmpty { hunks.append(current) }
+
+        guard let hunk = hunks.first(where: { lines in
+            lines.contains { $0.hasPrefix("+") || $0.hasPrefix("-") }
+        }) else { return nil }
+
+        // Drop the result (`+`) lines; strip the 1-char gutter from the rest.
+        let before = hunk
+            .filter { !$0.hasPrefix("+") }
+            .map { $0.isEmpty ? $0 : String($0.dropFirst()) }
+            .joined(separator: "\n")
+        return before.trimmingCharacters(in: .whitespaces).isEmpty ? nil : before
+    }
+
+    /// The snippet to seed the live example: a hand-authored curated snippet if
+    /// one exists for this rule, otherwise the auto-reconstructed
+    /// `exampleBeforeSource`. `nil` when neither is available.
+    public var liveExampleSource: String? {
+        CuratedLiveExample.source(forRule: name) ?? exampleBeforeSource
+    }
+
     // MARK: - LintRule
 
     /// `LintRule.identifier` — for SwiftFormat the rule name is its identifier.
