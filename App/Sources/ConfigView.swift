@@ -261,7 +261,13 @@ struct OptionRow: View {
     private var editor: some View {
         switch option.kind {
         case .boolean:
-            Toggle("", isOn: boolBinding).labelsHidden()
+            Picker("", selection: enumSelection) {
+                Text(omittedLabel).tag(String?.none)
+                Text("true").tag(String?.some("true"))
+                Text("false").tag(String?.some("false"))
+            }
+            .labelsHidden()
+            .frame(maxWidth: 160, alignment: .trailing)
         case .enumeration:
             Picker("", selection: enumSelection) {
                 Text(omittedLabel).tag(String?.none)
@@ -278,12 +284,6 @@ struct OptionRow: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 160)
         }
-    }
-
-    /// Effective value (set value, else default) — used by controls that always
-    /// show a value (toggle, picker).
-    private var effectiveValue: String {
-        config.config.options[option.key] ?? option.defaultValue ?? ""
     }
 
     /// Text-field binding: shows the set value, or empty (so the default shows
@@ -327,12 +327,5 @@ struct OptionRow: View {
         } else {
             config.setOption(key: option.key, value: trimmed)
         }
-    }
-
-    private var boolBinding: Binding<Bool> {
-        Binding(
-            get: { effectiveValue == "true" },
-            set: { writeValue($0 ? "true" : "false") }
-        )
     }
 }
