@@ -32,7 +32,7 @@ struct LiveCodePreviewView: View {
             model.extraArguments = newArguments
             model.scheduleFormat()
         }
-        .navigationTitle("Live Preview")
+        .navigationTitle("Scratchpad")
     }
 
     // MARK: - Editor

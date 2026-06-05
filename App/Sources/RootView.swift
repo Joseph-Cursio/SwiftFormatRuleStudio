@@ -23,7 +23,7 @@ struct RootView: View {
                     }
                 LiveCodePreviewView()
                     .tabItem {
-                        Label("Live Preview", systemImage: "wand.and.stars")
+                        Label("Scratchpad", systemImage: "wand.and.stars")
                     }
                 ConfigView()
                     .tabItem {
