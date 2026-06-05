@@ -208,7 +208,8 @@ struct RuleLiveExampleView: View {
                         ProgressView().controlSize(.small)
                     }
                 }
-                Text("This rule applied to the sample with your current options — "
+                Text(CuratedLiveExample.hint(forRule: rule.name)
+                    ?? "This rule applied to the sample with your current options — "
                     + "edit the options above to watch it change.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

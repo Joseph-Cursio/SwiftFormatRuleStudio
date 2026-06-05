@@ -159,4 +159,18 @@ extension CuratedLiveExample {
         "linebreaks": "Normalizes line endings (CR/CRLF) to LF — not visible in a code preview.",
         "trailingSpace": "Removes trailing whitespace at the ends of lines — not visible in a code preview.",
     ]
+
+    static let generatedHints: [String: String] = [
+        "blankLineAfterSwitchCase": "multiline-only (default) blanks only the multi-line case; `always` also blanks the single-line ones — so include both kinds.",
+        "blankLinesAtEndOfScope": "Mirror of blankLinesAtStartOfScope for the *end* of scope — same shared --type-blank-lines option, blank line before the closing brace.",
+        "blankLinesAtStartOfScope": "--type-blank-lines governs only *type* bodies; a function/closure's boundary blank is ALWAYS removed regardless of the option. So include both: two structs (one with a leading blank, one without) to demo remove/insert/preserve on type scopes, plus a function whose leading blank is stripped under every value — which is why even \"preserve\" shows a change here, not a no-op.",
+        "fileHeader": "Set --header (e.g. \"Copyright Acme Corp.\") to insert/replace the file header.",
+        "redundantAsync": "--redundant-async: tests-only (default) strips async only from the test method; \"always\" also strips it from the regular function.",
+        "redundantThrows": "Mirror of redundantAsync for throws — tests-only (default) vs always.",
+        "redundantTypedThrows": "Typed throws is Swift 6; the example formatter runs at 6.0.",
+        "urlMacro": "Set --url-macro (e.g. \"#URL,URLFoundation\") to migrate the force-unwrapped URL.",
+        "wrap": "Set `--max-width` (e.g. 60) to wrap long lines onto multiple lines. With the default (`--max-width none`) nothing wraps, so the example is unchanged until you set a width. Three long lines exercise different cases: a multi-argument call, a call carrying an interpolated string, and a ternary expression.",
+        "wrapAttributes": "Set --func-attributes / --type-attributes to prev-line to wrap.",
+        "wrapSingleLineComments": "Set --max-width (e.g. 50) to wrap the long trailing comment.",
+    ]
 }

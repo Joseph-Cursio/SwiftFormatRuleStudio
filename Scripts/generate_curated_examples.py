@@ -37,29 +37,36 @@ def main() -> int:
         print(f"error: no .md files in {MD_DIR}", file=sys.stderr)
         return 1
 
-    def note_of(text: str) -> str:
-        """Prose body of a markdown file with the leading `# title` heading removed."""
-        lines = [ln for ln in text.splitlines() if not ln.startswith("# ")]
-        return " ".join(ln.strip() for ln in lines if ln.strip())
+    def prose(text: str) -> str:
+        """The rationale prose: everything before the ```swift fence, minus the
+        `# title` heading, collapsed to one line. For a snippet-less file this is
+        the whole body."""
+        before = text.split("```swift", 1)[0]
+        lines = [ln.strip() for ln in before.splitlines() if ln.strip() and not ln.startswith("# ")]
+        return " ".join(lines)
 
-    snippets, notes = [], []
+    snippets, notes, hints = [], [], []
     for path in files:
         rule = path.stem
-        match = FENCE.search(path.read_text())
+        text = path.read_text()
+        match = FENCE.search(text)
+        body = prose(text)
         if match:
             snippet = match.group(1).rstrip("\n")
             snippets.append(f"        {swift_literal(rule)}: {swift_literal(snippet)},")
-        else:
+            # Prose above a snippet becomes a contextual hint shown in the app.
+            if body:
+                hints.append(f"        {swift_literal(rule)}: {swift_literal(body)},")
+        elif body:
             # A snippet-less file is an "unavailable note": the rule acts on a
             # file-level/invisible aspect a code diff can't show.
-            note = note_of(path.read_text())
-            if note:
-                notes.append(f"        {swift_literal(rule)}: {swift_literal(note)},")
-            else:
-                print(f"warning: {path.name} has neither a ```swift block nor a note", file=sys.stderr)
+            notes.append(f"        {swift_literal(rule)}: {swift_literal(body)},")
+        else:
+            print(f"warning: {path.name} has neither a ```swift block nor prose", file=sys.stderr)
 
-    snippet_body = "\n".join(snippets)
-    note_body = "\n".join(notes)
+    def section(name, rows):
+        return f"    static let {name}: [String: String] = [\n" + "\n".join(rows) + "\n    ]\n"
+
     OUT.write_text(
         "//\n"
         "//  CuratedLiveExample+Generated.swift\n"
@@ -70,15 +77,12 @@ def main() -> int:
         "//\n\n"
         "import Foundation\n\n"
         "extension CuratedLiveExample {\n"
-        "    static let generatedSnippets: [String: String] = [\n"
-        f"{snippet_body}\n"
-        "    ]\n\n"
-        "    static let generatedNotes: [String: String] = [\n"
-        f"{note_body}\n"
-        "    ]\n"
-        "}\n"
+        + section("generatedSnippets", snippets) + "\n"
+        + section("generatedNotes", notes) + "\n"
+        + section("generatedHints", hints)
+        + "}\n"
     )
-    print(f"generated {OUT.relative_to(REPO)} with {len(snippets)} snippets, {len(notes)} notes")
+    print(f"generated {OUT.relative_to(REPO)}: {len(snippets)} snippets, {len(notes)} notes, {len(hints)} hints")
     return 0
 
 

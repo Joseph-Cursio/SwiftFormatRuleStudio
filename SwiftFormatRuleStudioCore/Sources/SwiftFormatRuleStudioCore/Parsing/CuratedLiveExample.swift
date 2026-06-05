@@ -33,6 +33,13 @@ public enum CuratedLiveExample {
         generatedNotes[ruleName]
     }
 
+    /// Optional rationale/hint authored above a rule's snippet in its
+    /// `CuratedExamples/<rule>.md` — e.g. "Set --max-width to see this rule act."
+    /// Surfaced as the example's caption when present.
+    public static func hint(forRule ruleName: String) -> String? {
+        generatedHints[ruleName]
+    }
+
     /// All curated snippets, compiled from `CuratedExamples/*.md` into
     /// `generatedSnippets` (see `CuratedLiveExample+Generated.swift`).
     static let snippets: [String: String] = generatedSnippets
