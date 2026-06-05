@@ -11,7 +11,9 @@ import Foundation
 /// skipped; invalid JSON yields an empty array.
 public enum LintReportParser {
     private struct RawFinding: Decodable {
-        let file: String
+        // `file` is absent when linting stdin (the live preview); present when
+        // linting on-disk files (the audit).
+        let file: String?
         let line: Int
         let reason: String
         let ruleID: String
@@ -31,7 +33,7 @@ public enum LintReportParser {
             return []
         }
         return raw.map {
-            LintFinding(filePath: $0.file, line: $0.line, ruleID: $0.ruleID, reason: $0.reason)
+            LintFinding(filePath: $0.file ?? "", line: $0.line, ruleID: $0.ruleID, reason: $0.reason)
         }
     }
 }

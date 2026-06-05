@@ -37,6 +37,9 @@ public final class LivePreviewModel {
     public private(set) var formattedSource: String = ""
     /// The before/after diff between `source` and `formattedSource`.
     public private(set) var diff: [PreviewDiffLine] = []
+    /// Per-change rule attribution (line + rule + reason) from a `--lint` pass.
+    /// Populated only when `producesChangeList` is set.
+    public private(set) var changes: [LintFinding] = []
     /// The current state of the format operation.
     public private(set) var state: PreviewState = .idle
 
@@ -69,9 +72,23 @@ public final class LivePreviewModel {
     /// `--fragment`), so we only reach for it to rescue an outright error.
     public var fragmentFallback = false
 
+    /// When set, each format also runs a `--lint --reporter json` pass to populate
+    /// `changes` (line + rule attribution). Off by default so the per-rule example
+    /// previews don't pay for an extra subprocess.
+    public var producesChangeList = false
+
     /// The arguments passed to `swiftformat` for the current settings.
     var formatArguments: [String] {
-        var arguments = ["stdin"]
+        argumentsAppendingExtras(to: ["stdin"])
+    }
+
+    /// Arguments for the `--lint` pass that yields per-change rule attribution.
+    var lintArguments: [String] {
+        argumentsAppendingExtras(to: ["stdin", "--lint", "--reporter", "json", "--quiet"])
+    }
+
+    private func argumentsAppendingExtras(to base: [String]) -> [String] {
+        var arguments = base
         // Don't double-set the Swift version if the config already provides it.
         if let swiftVersion, !swiftVersion.isEmpty, !extraArguments.contains("--swift-version") {
             arguments += ["--swift-version", swiftVersion]
@@ -89,9 +106,14 @@ public final class LivePreviewModel {
             formattedSource = output
             diff = PreviewDiffLine.lines(from: UnifiedDiffEngine.computeDiff(before: input, after: output))
             state = .formatted
+            if producesChangeList {
+                let report = (try? await cli.format(source: input, arguments: lintArguments)) ?? ""
+                changes = LintReportParser.parse(report)
+            }
         } catch {
             formattedSource = ""
             diff = []
+            changes = []
             state = .failed(error.localizedDescription)
         }
     }
