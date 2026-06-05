@@ -32,7 +32,11 @@ public protocol CatalogLoading: Sendable {
 public final class CatalogLoader: CatalogLoading {
     private let cli: any SwiftFormatCLIProtocol
     private let cache: FileCache?
-    private let catalogFileName = "rule_catalog.json"
+    /// Bump when the parser's output shape changes (e.g. how option values are
+    /// extracted) so stale on-disk caches from an older build are ignored even
+    /// when the SwiftFormat version is unchanged.
+    private static let catalogSchemaVersion = 2
+    private let catalogFileName = "rule_catalog_v\(catalogSchemaVersion).json"
 
     /// In-memory copy to avoid re-reading the disk cache within a session.
     private var memoryCache: RuleCatalog?
