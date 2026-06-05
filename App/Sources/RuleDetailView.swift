@@ -52,11 +52,14 @@ struct RuleDetailView: View {
 
                 if let example = rule.example {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Example")
+                        Text("Static example")
                             .font(.headline)
                         DiffExampleView(example: example)
                     }
                 }
+
+                RuleLiveExampleView(rule: rule, options: matchedOptions(for: rule))
+                    .id(rule.name)
 
                 Spacer(minLength: 0)
             }
@@ -164,6 +167,85 @@ struct RuleOptionsSection: View {
                             .toggleStyle(.checkbox)
                             .controlSize(.small)
                     }
+                }
+            }
+        }
+    }
+}
+
+/// A live, option-driven example: reconstructs the rule's "before" snippet,
+/// runs it back through SwiftFormat with *only this rule* enabled plus the
+/// currently-set options, and shows the resulting before→after diff — updating
+/// (debounced) as the options above are edited. So you change `--self` to
+/// `remove` and watch the `self.` disappear, instead of guessing.
+struct RuleLiveExampleView: View {
+    let rule: FormatRule
+    let options: [FormatOption]
+    @Environment(ConfigModel.self) private var config
+    @State private var model = LivePreviewModel(source: "", swiftVersion: "5.10")
+
+    private var beforeSource: String? { rule.liveExampleSource }
+
+    /// Isolate this rule and pass only its *set* options — unset ones fall back
+    /// to SwiftFormat's defaults, so at no overrides the live diff reproduces the
+    /// static example, then diverges as you edit. No `--fragment` here: it
+    /// suppresses scope-dependent rules; the model only adds it to rescue an
+    /// outright format error (see `fragmentFallback`).
+    private var ruleArguments: [String] {
+        var arguments = ["--rules", rule.name]
+        for option in options {
+            if let value = config.config.options[option.key] {
+                arguments += ["--\(option.key)", value]
+            }
+        }
+        return arguments
+    }
+
+    var body: some View {
+        if let before = beforeSource {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text("Live example")
+                        .font(.headline)
+                    if model.state == .formatting {
+                        ProgressView().controlSize(.small)
+                    }
+                }
+                Text("This rule applied to the sample with your current options — "
+                    + "edit the options above to watch it change.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                content(before: before)
+            }
+            .task(id: rule.name) {
+                model.fragmentFallback = true
+                model.source = before
+                model.extraArguments = ruleArguments
+                await model.formatNow()
+            }
+            .onChange(of: ruleArguments) { _, newArguments in
+                model.extraArguments = newArguments
+                model.scheduleFormat()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func content(before: String) -> some View {
+        switch model.state {
+        case .failed:
+            Text("Couldn’t render a live preview for this example.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        case .idle, .formatting, .formatted:
+            if model.hasChanges {
+                PreviewDiffView(lines: model.diff)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("No change with these options.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    DiffExampleView(example: before)
                 }
             }
         }
