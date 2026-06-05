@@ -241,15 +241,25 @@ struct RuleLiveExampleView: View {
                 .foregroundStyle(.tertiary)
         case .idle, .formatting, .formatted:
             if model.hasChanges {
-                LiveDiffLinesView(lines: model.diff)
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("No change with these options.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                    DiffExampleView(example: before)
+                VStack(alignment: .leading, spacing: 10) {
+                    labeledBlock("Before") { DiffExampleView(example: before) }
+                    labeledBlock("After (changes highlighted)") { LiveDiffLinesView(lines: model.diff) }
                 }
+            } else {
+                labeledBlock("No change with these options") { DiffExampleView(example: before) }
             }
+        }
+    }
+
+    /// A captioned code block — used for the Before / After panes so it's always
+    /// clear which is the original and which is the formatted result.
+    @ViewBuilder
+    private func labeledBlock(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            content()
         }
     }
 }
