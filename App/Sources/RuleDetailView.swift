@@ -51,22 +51,7 @@ struct RuleDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 header(for: rule)
 
-                HStack(spacing: 10) {
-                    Toggle("Enabled in config", isOn: enabledBinding(for: rule))
-                        .toggleStyle(.switch)
-                    if isRuleOverridden(rule) {
-                        Button {
-                            // Set to the default state — clears the override.
-                            config.setRuleEnabled(rule.name, enabled: !rule.isOptIn, isOptIn: rule.isOptIn)
-                        } label: {
-                            Image(systemName: "arrow.uturn.backward")
-                                .accessibilityLabel("Reset to default")
-                        }
-                        .buttonStyle(.borderless)
-                        .controlSize(.small)
-                        .help("Reset to default (\(rule.isOptIn ? "off" : "on"))")
-                    }
-                }
+                enabledRow(for: rule)
 
                 if !rule.ruleDescription.isEmpty {
                     Text(rule.ruleDescription)
@@ -87,6 +72,26 @@ struct RuleDetailView: View {
             .textSelection(.enabled) // select/copy the rule name, summaries, code
         }
         .navigationTitle(rule.name)
+    }
+
+    /// The "Enabled in config" switch plus a reset-to-default button shown when
+    /// the rule's enabled state is overridden.
+    private func enabledRow(for rule: FormatRule) -> some View {
+        HStack(spacing: 10) {
+            Toggle("Enabled in config", isOn: enabledBinding(for: rule))
+                .toggleStyle(.switch)
+            if isRuleOverridden(rule) {
+                Button {
+                    config.setRuleEnabled(rule.name, enabled: !rule.isOptIn, isOptIn: rule.isOptIn)
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .accessibilityLabel("Reset to default")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .help("Reset to default (\(rule.isOptIn ? "off" : "on"))")
+            }
+        }
     }
 
     private func header(for rule: FormatRule) -> some View {
