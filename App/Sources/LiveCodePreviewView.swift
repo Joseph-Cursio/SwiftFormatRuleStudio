@@ -32,7 +32,7 @@ struct LiveCodePreviewView: View {
 
     private var editor: some View {
         VStack(alignment: .leading, spacing: 0) {
-            paneHeader("Source", systemImage: "pencil.line")
+            paneHeader("Enter your own source", systemImage: "pencil.line")
             Divider()
             TextEditor(text: $model.source)
                 .scaledFont(.body, design: .monospaced)
