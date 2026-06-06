@@ -10,11 +10,23 @@ import SwiftUI
 /// diff) on the right, live. Thin wrapper over the tested `LivePreviewModel`.
 struct LiveCodePreviewView: View {
     @Environment(ConfigModel.self) private var config
+    @Environment(WorkspaceModel.self) private var workspace
     @Environment(\.uiTextScale) private var uiTextScale
     @State private var model = LivePreviewModel(source: Self.sampleSource)
 
+    /// Swift files discovered under the selected project folder.
+    @State private var projectFiles: [URL] = []
+    /// The file currently loaded into the editor, if any.
+    @State private var selectedFile: URL?
+    /// Filter text for the file list.
+    @State private var fileFilter = ""
+
     var body: some View {
         HSplitView {
+            if workspace.selectedFolder != nil {
+                fileList
+                    .frame(minWidth: 200, idealWidth: 250)
+            }
             VSplitView {
                 editor
                     .frame(minHeight: 120)
@@ -32,14 +44,99 @@ struct LiveCodePreviewView: View {
             model.extraArguments = newArguments
             model.scheduleFormat()
         }
+        // Rebuild the file list for the selected project; clear a stale selection
+        // when the project changes.
+        .task(id: workspace.selectedFolder) { await loadProjectFiles() }
+        .onChange(of: workspace.selectedFolder) { _, _ in selectedFile = nil }
         .navigationTitle("Scratchpad")
+    }
+
+    // MARK: - Project files
+
+    private var fileList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            paneHeader("Project files", systemImage: "folder")
+            Divider()
+            TextField("Filter", text: $fileFilter)
+                .textFieldStyle(.roundedBorder)
+                .padding(8)
+            if projectFiles.isEmpty {
+                Text("No Swift files in this folder.")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            } else {
+                List(filteredFiles, id: \.self, selection: $selectedFile) { url in
+                    Text(relativePath(url))
+                        .scaledFont(.callout, design: .monospaced)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .listStyle(.sidebar)
+            }
+        }
+        .onChange(of: selectedFile) { _, url in
+            if let url { loadFile(url) }
+        }
+    }
+
+    private var filteredFiles: [URL] {
+        let query = fileFilter.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !query.isEmpty else { return projectFiles }
+        return projectFiles.filter { relativePath($0).lowercased().contains(query) }
+    }
+
+    /// Path relative to the project folder, e.g. `Sources/App/Foo.swift`.
+    private func relativePath(_ url: URL) -> String {
+        guard let base = workspace.selectedFolder?.path, url.path.hasPrefix(base + "/") else {
+            return url.lastPathComponent
+        }
+        return String(url.path.dropFirst(base.count + 1))
+    }
+
+    /// Loads a file's contents as the editor's "before" source and reformats.
+    private func loadFile(_ url: URL) {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return }
+        model.source = text
+        model.scheduleFormat()
+    }
+
+    private func loadProjectFiles() async {
+        guard let folder = workspace.selectedFolder else {
+            projectFiles = []
+            return
+        }
+        projectFiles = await Self.swiftFiles(in: folder)
+    }
+
+    /// Enumerates `.swift` files under `folder`, skipping hidden dirs (`.build`,
+    /// `.git`) and package bundles — the same set SwiftFormat would scan. Runs off
+    /// the main actor since large trees take a moment to walk.
+    private static func swiftFiles(in folder: URL) async -> [URL] {
+        await Task.detached(priority: .utility) {
+            let manager = FileManager.default
+            guard let enumerator = manager.enumerator(
+                at: folder,
+                includingPropertiesForKeys: [.isRegularFileKey],
+                options: [.skipsHiddenFiles, .skipsPackageDescendants]
+            ) else { return [] }
+            var found: [URL] = []
+            while let url = enumerator.nextObject() as? URL {
+                if url.pathExtension == "swift" { found.append(url) }
+            }
+            return found.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+        }.value
     }
 
     // MARK: - Editor
 
     private var editor: some View {
         VStack(alignment: .leading, spacing: 0) {
-            paneHeader("Enter your own source", systemImage: "pencil.line")
+            paneHeader(
+                selectedFile.map(relativePath) ?? "Enter your own source",
+                systemImage: selectedFile == nil ? "pencil.line" : "doc.text"
+            )
             Divider()
             CodeTextEditor(text: $model.source, fontSize: 13 * uiTextScale)
                 .onChange(of: model.source) {
