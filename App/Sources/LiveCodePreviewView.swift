@@ -546,40 +546,10 @@ struct PreviewDiffView: View {
     let lines: [PreviewDiffLine]
     var showsLineNumbers = false
 
-    /// A diff line paired with its old/new line numbers (nil where it doesn't
-    /// exist on that side).
-    private struct Numbered: Identifiable {
-        let line: PreviewDiffLine
-        let oldNumber: Int?
-        let newNumber: Int?
-        var id: Int { line.id }
-    }
-
-    private var numberedLines: [Numbered] {
-        var old = 1, new = 1
-        return lines.map { line in
-            switch line.change {
-            case .removed:
-                defer { old += 1 }
-                return Numbered(line: line, oldNumber: old, newNumber: nil)
-            case .added:
-                defer { new += 1 }
-                return Numbered(line: line, oldNumber: nil, newNumber: new)
-            case .unchanged:
-                defer { old += 1; new += 1 }
-                return Numbered(line: line, oldNumber: old, newNumber: new)
-            }
-        }
-    }
-
-    private func gutterWidth(_ maxNumber: Int) -> CGFloat {
-        CGFloat(max(String(maxNumber).count, 1)) * 9 + 2
-    }
-
     var body: some View {
-        let rows = numberedLines
-        let oldWidth = gutterWidth(rows.compactMap(\.oldNumber).max() ?? 0)
-        let newWidth = gutterWidth(rows.compactMap(\.newNumber).max() ?? 0)
+        let rows = lines.numbered()
+        let oldWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.oldNumber).max() ?? 0)
+        let newWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.newNumber).max() ?? 0)
         // GeometryReader + minWidth/minHeight pins content to the top-left: a 2D
         // ScrollView otherwise centers content smaller than its viewport.
         GeometryReader { geometry in
@@ -588,8 +558,8 @@ struct PreviewDiffView: View {
                     ForEach(rows) { row in
                         HStack(alignment: .top, spacing: 8) {
                             if showsLineNumbers {
-                                gutter(row.oldNumber, width: oldWidth)
-                                gutter(row.newNumber, width: newWidth)
+                                lineNumberGutter(row.oldNumber, width: oldWidth)
+                                lineNumberGutter(row.newNumber, width: newWidth)
                                 Divider()
                             }
                             HStack(alignment: .top, spacing: 8) {
@@ -610,14 +580,6 @@ struct PreviewDiffView: View {
                 .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
             }
         }
-    }
-
-    /// One line-number cell (blank when the line doesn't exist on that side).
-    private func gutter(_ number: Int?, width: CGFloat) -> some View {
-        Text(number.map(String.init) ?? "")
-            .monospacedDigit()
-            .foregroundStyle(.tertiary)
-            .frame(width: width, alignment: .trailing)
     }
 
     private func symbol(for change: PreviewDiffLine.Change) -> String {

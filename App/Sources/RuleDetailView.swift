@@ -349,24 +349,75 @@ enum SwiftCodeColor {
 /// height when nested inside the detail pane's own vertical `ScrollView` — so the
 /// diff would render invisibly. This uses horizontal-only scrolling (safe inside
 /// a vertical parent) and lets its height grow naturally with the content.
+/// A diff line paired with its old/new line numbers (`nil` where the line doesn't
+/// exist on that side) — git/GitHub-style two-column numbering.
+struct NumberedDiffLine: Identifiable {
+    let line: PreviewDiffLine
+    let oldNumber: Int?
+    let newNumber: Int?
+    var id: Int { line.id }
+}
+
+extension [PreviewDiffLine] {
+    /// Assigns old/new numbers across the diff: removed → old only, added → new
+    /// only, unchanged → both.
+    func numbered() -> [NumberedDiffLine] {
+        var old = 1
+        var new = 1
+        return map { line in
+            switch line.change {
+            case .removed:
+                defer { old += 1 }
+                return NumberedDiffLine(line: line, oldNumber: old, newNumber: nil)
+            case .added:
+                defer { new += 1 }
+                return NumberedDiffLine(line: line, oldNumber: nil, newNumber: new)
+            case .unchanged:
+                defer { old += 1; new += 1 }
+                return NumberedDiffLine(line: line, oldNumber: old, newNumber: new)
+            }
+        }
+    }
+}
+
+/// Gutter width sufficient for the widest line number (monospaced).
+func diffGutterWidth(forMaxNumber maxNumber: Int) -> CGFloat {
+    CGFloat(max(String(maxNumber).count, 1)) * 9 + 2
+}
+
+/// One right-aligned, dimmed line-number cell (blank for a missing number).
+@ViewBuilder
+func lineNumberGutter(_ number: Int?, width: CGFloat) -> some View {
+    Text(number.map(String.init) ?? "")
+        .monospacedDigit()
+        .foregroundStyle(.tertiary)
+        .frame(width: width, alignment: .trailing)
+}
+
 struct LiveDiffLinesView: View {
     let lines: [PreviewDiffLine]
 
     var body: some View {
+        let rows = lines.numbered()
+        let oldWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.oldNumber).max() ?? 0)
+        let newWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.newNumber).max() ?? 0)
         ScrollView(.horizontal, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(lines) { line in
+                ForEach(rows) { row in
                     HStack(alignment: .top, spacing: 8) {
-                        Text(symbol(for: line.change))
-                            .foregroundStyle(foreground(for: line.change))
+                        lineNumberGutter(row.oldNumber, width: oldWidth)
+                        lineNumberGutter(row.newNumber, width: newWidth)
+                        Divider()
+                        Text(symbol(for: row.line.change))
+                            .foregroundStyle(foreground(for: row.line.change))
                             .frame(width: 10, alignment: .leading)
-                        Text(SwiftCodeColor.attributed(line.text))
+                        Text(SwiftCodeColor.attributed(row.line.text))
                     }
                     .scaledFont(.body, design: .monospaced)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 1)
-                    .background(background(for: line.change))
+                    .background(background(for: row.line.change))
                 }
             }
             .padding(.vertical, 4)
@@ -415,10 +466,13 @@ struct DiffExampleView: View {
     }
 
     var body: some View {
+        let width = diffGutterWidth(forMaxNumber: lines.count)
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+            ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
                 let split = Self.split(line)
                 HStack(alignment: .top, spacing: 8) {
+                    lineNumberGutter(index + 1, width: width)
+                    Divider()
                     Text(String(split.gutter))
                         .foregroundStyle(gutterColor(for: line))
                         .frame(width: 8, alignment: .leading)
