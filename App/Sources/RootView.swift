@@ -14,7 +14,7 @@ struct RootView: View {
     /// across re-renders — without it, presenting a `.fileImporter` from Config or
     /// Audit resets an unbound `TabView` back to the first tab.
     private enum Tab: Hashable {
-        case rules, scratchpad, config, audit
+        case rules, config, preview, audit
     }
 
     @State private var catalog = RuleStudioModel()
@@ -59,16 +59,16 @@ struct RootView: View {
                         Label("Rules", systemImage: "list.bullet.rectangle")
                     }
                     .tag(Tab.rules)
-                LiveCodePreviewView()
-                    .tabItem {
-                        Label("Scratchpad", systemImage: "wand.and.stars")
-                    }
-                    .tag(Tab.scratchpad)
                 ConfigView()
                     .tabItem {
                         Label("Config", systemImage: "slider.horizontal.3")
                     }
                     .tag(Tab.config)
+                LiveCodePreviewView()
+                    .tabItem {
+                        Label("Preview", systemImage: "wand.and.stars")
+                    }
+                    .tag(Tab.preview)
                 AuditView()
                     .tabItem {
                         Label("Audit", systemImage: "chart.bar.doc.horizontal")

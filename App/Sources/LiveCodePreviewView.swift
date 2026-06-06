@@ -58,7 +58,7 @@ struct LiveCodePreviewView: View {
         // Rebuild the file list for the selected project, then restore the
         // remembered file (or clear the selection if it isn't in this project).
         .task(id: workspace.selectedFolder) { await loadProjectFiles() }
-        .navigationTitle("Scratchpad")
+        .navigationTitle("Preview")
     }
 
     // MARK: - Project files
