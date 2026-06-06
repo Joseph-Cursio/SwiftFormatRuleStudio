@@ -151,6 +151,7 @@ struct ConfigView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(rule.name)
                     .scaledFont(.body, design: .monospaced)
+                    .foregroundStyle(isRuleEnabled(rule) ? Color.green : Color.primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if !rule.ruleDescription.isEmpty {
@@ -163,7 +164,8 @@ struct ConfigView: View {
                 if let usesText = usesText(for: rule) {
                     Text(usesText)
                         .scaledFont(.caption2)
-                        .foregroundStyle(.tint)
+                        .italic()
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
             }
@@ -202,6 +204,19 @@ struct ConfigView: View {
         )
     }
 
+    private func isRuleEnabled(_ rule: FormatRule) -> Bool {
+        config.isRuleEnabled(rule.name, isOptIn: rule.isOptIn)
+    }
+
+    /// Whether any rule that consumes this option is currently enabled, so the
+    /// option is actually in effect.
+    private func isOptionActive(_ option: FormatOption) -> Bool {
+        OptionRuleUsage.rules(forOptionKey: option.key).contains { name in
+            guard let rule = catalog.catalog?.rule(named: name) else { return false }
+            return config.isRuleEnabled(rule.name, isOptIn: rule.isOptIn)
+        }
+    }
+
     // MARK: - Options panel
 
     private var optionsPanel: some View {
@@ -222,7 +237,7 @@ struct ConfigView: View {
             Divider()
             List {
                 ForEach(filteredOptions) { option in
-                    OptionRow(option: option, config: config)
+                    OptionRow(option: option, config: config, isActive: isOptionActive(option))
                 }
             }
             .searchable(text: $optionSearch, prompt: "Search options")
@@ -290,6 +305,9 @@ struct OptionRow: View {
     /// that rule's name. The caption then reads "Shared — also drives X" listing
     /// only the *other* rules, instead of the redundant "Used by <this rule>".
     var currentRuleName: String?
+    /// Whether a rule that consumes this option is enabled, so the option is
+    /// actually in effect. Drives the green "active" coloring.
+    var isActive = false
 
     private var isSet: Bool {
         config.config.options[option.key] != nil
@@ -303,7 +321,7 @@ struct OptionRow: View {
                     .frame(width: 6, height: 6)
                 Text(option.name)
                     .scaledFont(.body, design: .monospaced)
-                    .foregroundStyle(isSet ? Color.accentColor : Color.primary)
+                    .foregroundStyle(isActive ? Color.green : Color.primary)
                 Spacer()
                 if isSet {
                     Button {
@@ -325,7 +343,8 @@ struct OptionRow: View {
             if let usedByText {
                 Text(usedByText)
                     .scaledFont(.caption2)
-                    .foregroundStyle(.tint)
+                    .italic()
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 2)

@@ -169,8 +169,13 @@ struct RuleOptionsSection: View {
                 VStack(spacing: 0) {
                     ForEach(visibleOptions) { option in
                         Divider()
-                        OptionRow(option: option, config: config, currentRuleName: rule.name)
-                            .padding(.vertical, 2)
+                        OptionRow(
+                            option: option,
+                            config: config,
+                            currentRuleName: rule.name,
+                            isActive: config.isRuleEnabled(rule.name, isOptIn: rule.isOptIn)
+                        )
+                        .padding(.vertical, 2)
                     }
                 }
             } label: {
