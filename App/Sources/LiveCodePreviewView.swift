@@ -219,10 +219,17 @@ struct LiveCodePreviewView: View {
                 systemImage: selectedFile == nil ? "pencil.line" : "doc.text"
             )
             Divider()
-            CodeTextEditor(text: $model.source, fontSize: 13 * uiTextScale)
-                .onChange(of: model.source) {
-                    model.scheduleFormat()
-                }
+            if selectedFile == nil {
+                // No file loaded: an editable scratchpad.
+                CodeTextEditor(text: $model.source, fontSize: 13 * uiTextScale)
+                    .onChange(of: model.source) {
+                        model.scheduleFormat()
+                    }
+            } else {
+                // A loaded project file: read-only, syntax-highlighted like the
+                // formatted output (no editable-field background).
+                readOnlyCode(model.source)
+            }
         }
         .frame(minWidth: 300)
     }
@@ -321,10 +328,17 @@ struct LiveCodePreviewView: View {
     /// The clean formatted result (no diff markers), syntax-highlighted.
     @ViewBuilder
     private var formattedOutput: some View {
+        readOnlyCode(model.formattedSource)
+    }
+
+    /// A read-only, syntax-highlighted rendering of Swift source. Used for the
+    /// formatted output and for a loaded project file (which shouldn't be edited).
+    @ViewBuilder
+    private func readOnlyCode(_ source: String) -> some View {
         GeometryReader { geometry in
             ScrollView([.vertical, .horizontal]) {
                 VStack(alignment: .leading, spacing: 0) {
-                    let lines = model.formattedSource.components(separatedBy: "\n")
+                    let lines = source.components(separatedBy: "\n")
                     ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                         Text(SwiftCodeColor.attributed(line))
                             .scaledFont(.body, design: .monospaced)
@@ -336,6 +350,7 @@ struct LiveCodePreviewView: View {
                 .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
             }
         }
+        .textSelection(.enabled)
     }
 
     @ViewBuilder
