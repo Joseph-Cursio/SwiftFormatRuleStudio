@@ -143,9 +143,12 @@ struct LiveCodePreviewView: View {
         fileTree = Self.tree(from: files, root: folder)
 
         // Reopen the remembered file if it belongs to this project; otherwise drop
-        // any stale selection. Setting listSelection drives onChange → loadFile.
+        // any stale selection. Load directly (not via the listSelection onChange,
+        // which isn't armed yet at first appearance).
         if let remembered = files.first(where: { $0.path == savedFilePath }) {
             listSelection = remembered
+            selectedFile = remembered
+            loadFile(remembered)
         } else {
             clearFileSelection()
         }
