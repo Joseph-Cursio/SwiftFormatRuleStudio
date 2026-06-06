@@ -15,6 +15,7 @@ struct ConfigView: View {
     @Environment(ConfigModel.self) private var config
     @Environment(WorkspaceModel.self) private var workspace
     @State private var optionSearch = ""
+    @State private var ruleSearch = ""
     @State private var choosingFolder = false
     @State private var showOnlySet = false
 
@@ -27,7 +28,11 @@ struct ConfigView: View {
                     folderHeader
                     Divider()
                     HSplitView {
-                        optionsPanel
+                        VSplitView {
+                            rulesPanel
+                            optionsPanel
+                        }
+                        .frame(minWidth: 360)
                         diffPanel
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -113,6 +118,90 @@ struct ConfigView: View {
         }
     }
 
+    // MARK: - Rules panel
+
+    private var rulesPanel: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text("Rules")
+                    .scaledFont(.headline, weight: .semibold)
+                Text("\(enabledRuleCount) of \(allRules.count) enabled")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            Divider()
+            TextField("Filter rules", text: $ruleSearch)
+                .textFieldStyle(.roundedBorder)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+            List {
+                ForEach(filteredRules) { rule in
+                    ruleRow(rule)
+                }
+            }
+        }
+        .frame(minWidth: 360, minHeight: 160, maxHeight: .infinity)
+    }
+
+    private func ruleRow(_ rule: FormatRule) -> some View {
+        Toggle(isOn: ruleBinding(rule)) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(rule.name)
+                    .scaledFont(.body, design: .monospaced)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if !rule.ruleDescription.isEmpty {
+                    Text(rule.ruleDescription)
+                        .scaledFont(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let usesText = usesText(for: rule) {
+                    Text(usesText)
+                        .scaledFont(.caption2)
+                        .foregroundStyle(.tint)
+                        .lineLimit(2)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .controlSize(.small)
+    }
+
+    /// The options a rule consumes, e.g. "Uses --self, --self-required" — the
+    /// mirror of the Options panel's "Used by" caption. `nil` when the rule has
+    /// no options.
+    private func usesText(for rule: FormatRule) -> String? {
+        let keys = OptionRuleUsage.optionKeys(forRule: rule.name)
+        guard !keys.isEmpty else { return nil }
+        return "Uses " + keys.map { "--\($0)" }.joined(separator: ", ")
+    }
+
+    private var allRules: [FormatRule] {
+        catalog.catalog?.rules ?? []
+    }
+
+    private var enabledRuleCount: Int {
+        allRules.count { config.isRuleEnabled($0.name, isOptIn: $0.isOptIn) }
+    }
+
+    private var filteredRules: [FormatRule] {
+        let query = ruleSearch.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !query.isEmpty else { return allRules }
+        return allRules.filter { $0.name.lowercased().contains(query) }
+    }
+
+    private func ruleBinding(_ rule: FormatRule) -> Binding<Bool> {
+        Binding(
+            get: { config.isRuleEnabled(rule.name, isOptIn: rule.isOptIn) },
+            set: { config.setRuleEnabled(rule.name, enabled: $0, isOptIn: rule.isOptIn) }
+        )
+    }
+
     // MARK: - Options panel
 
     private var optionsPanel: some View {
@@ -138,7 +227,7 @@ struct ConfigView: View {
             }
             .searchable(text: $optionSearch, prompt: "Search options")
         }
-        .frame(minWidth: 360, maxHeight: .infinity)
+        .frame(minWidth: 360, minHeight: 160, maxHeight: .infinity)
     }
 
     private func isSet(_ option: FormatOption) -> Bool {
