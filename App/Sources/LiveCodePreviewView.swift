@@ -27,6 +27,9 @@ struct LiveCodePreviewView: View {
     /// Path of the last file opened in the Scratchpad, persisted across launches
     /// and restored when its project is reopened.
     @AppStorage("scratchpadLastFilePath") private var savedFilePath = ""
+    /// Newline-joined paths of expanded directories in the file tree, persisted so
+    /// the tree reopens to the same shape.
+    @AppStorage("scratchpadExpandedDirs") private var expandedDirsRaw = ""
 
     var body: some View {
         HSplitView {
@@ -84,11 +87,8 @@ struct LiveCodePreviewView: View {
                 .listStyle(.sidebar)
             } else {
                 List(selection: $listSelection) {
-                    OutlineGroup(fileTree, children: \.children) { node in
-                        Label(node.name, systemImage: node.isDirectory ? "folder" : "swift")
-                            .scaledFont(.callout, design: .monospaced)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                    ForEach(fileTree) { node in
+                        FileRow(node: node) { expansionBinding(for: $0) }
                     }
                 }
                 .listStyle(.sidebar)
@@ -159,6 +159,23 @@ struct LiveCodePreviewView: View {
         listSelection = nil
         selectedFile = nil
         model.stdinPath = nil
+    }
+
+    /// The set of expanded directory paths (decoded from the persisted string).
+    private var expandedSet: Set<String> {
+        Set(expandedDirsRaw.split(separator: "\n").map(String.init))
+    }
+
+    /// A persisted expand/collapse binding for one directory's path.
+    private func expansionBinding(for path: String) -> Binding<Bool> {
+        Binding(
+            get: { expandedSet.contains(path) },
+            set: { isOpen in
+                var set = expandedSet
+                if isOpen { set.insert(path) } else { set.remove(path) }
+                expandedDirsRaw = set.sorted().joined(separator: "\n")
+            }
+        )
     }
 
     /// Enumerates `.swift` files under `folder`, skipping hidden dirs (`.build`,
@@ -462,6 +479,35 @@ private struct FileNode: Identifiable, Hashable {
     let children: [FileNode]?
     var id: URL { url }
     var isDirectory: Bool { children != nil }
+}
+
+/// One outline row, recursive over its children. Directories are `DisclosureGroup`s
+/// whose expansion is persisted via `expansion(path)`; files are selectable leaves
+/// (tagged by URL for the enclosing `List`'s selection).
+private struct FileRow: View {
+    let node: FileNode
+    let expansion: (String) -> Binding<Bool>
+
+    var body: some View {
+        if let children = node.children {
+            DisclosureGroup(isExpanded: expansion(node.url.path)) {
+                ForEach(children) { child in
+                    FileRow(node: child, expansion: expansion)
+                }
+            } label: {
+                Label(node.name, systemImage: "folder")
+                    .scaledFont(.callout, design: .monospaced)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+        } else {
+            Label(node.name, systemImage: "swift")
+                .scaledFont(.callout, design: .monospaced)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .tag(node.url)
+        }
+    }
 }
 
 /// Renders `[PreviewDiffLine]` as a colored unified diff.
