@@ -37,7 +37,7 @@ struct AuditView: View {
             .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
                 if case .success(let url) = result {
                     _ = url.startAccessingSecurityScopedResource()
-                    workspace.selectedFolder = url
+                    workspace.open(url)
                 }
             }
             .fileExporter(

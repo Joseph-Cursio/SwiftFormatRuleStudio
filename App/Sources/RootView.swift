@@ -25,6 +25,33 @@ struct RootView: View {
     @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
     var body: some View {
+        Group {
+            if workspace.hasCompletedStartup {
+                mainUI
+            } else {
+                StartupView()
+            }
+        }
+        .environment(\.uiTextScale, .uiTextScale(forStep: textSizeStep))
+        .environment(catalog)
+        .environment(config)
+        .environment(workspace)
+        .environment(audit)
+        .task {
+            await catalog.load()
+        }
+        // One source of truth for the project: when the shared folder changes,
+        // load its config and run its audit so both tabs reflect it. Driven from
+        // RootView (always alive) so it fires once per change, not on tab switches.
+        .onChange(of: workspace.selectedFolder) { _, folder in
+            guard let folder else { return }
+            config.load(from: folder.appendingPathComponent(".swiftformat"))
+            audit.extraArguments = config.commandLineArguments
+            Task { await audit.runAudit(path: folder) }
+        }
+    }
+
+    private var mainUI: some View {
         VStack(spacing: 0) {
             TabView(selection: $selectedTab) {
                 ContentView()
@@ -50,23 +77,6 @@ struct RootView: View {
             }
             Divider()
             StatusBar(catalog: catalog)
-        }
-        .environment(\.uiTextScale, .uiTextScale(forStep: textSizeStep))
-        .environment(catalog)
-        .environment(config)
-        .environment(workspace)
-        .environment(audit)
-        .task {
-            await catalog.load()
-        }
-        // One source of truth for the project: when the shared folder changes,
-        // load its config and run its audit so both tabs reflect it. Driven from
-        // RootView (always alive) so it fires once per change, not on tab switches.
-        .onChange(of: workspace.selectedFolder) { _, folder in
-            guard let folder else { return }
-            config.load(from: folder.appendingPathComponent(".swiftformat"))
-            audit.extraArguments = config.commandLineArguments
-            Task { await audit.runAudit(path: folder) }
         }
     }
 }
