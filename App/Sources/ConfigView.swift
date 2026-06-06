@@ -151,7 +151,7 @@ struct ConfigView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(rule.name)
                     .scaledFont(.body, design: .monospaced)
-                    .foregroundStyle(isRuleEnabled(rule) ? Color.green : Color.primary)
+                    .foregroundStyle(isRuleEnabled(rule) ? Color.accentColor : Color.primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if !rule.ruleDescription.isEmpty {
@@ -321,7 +321,7 @@ struct OptionRow: View {
                     .frame(width: 6, height: 6)
                 Text(option.name)
                     .scaledFont(.body, design: .monospaced)
-                    .foregroundStyle(isActive ? Color.green : Color.primary)
+                    .foregroundStyle(isActive ? Color.accentColor : Color.primary)
                 Spacer()
                 if isSet {
                     Button {
