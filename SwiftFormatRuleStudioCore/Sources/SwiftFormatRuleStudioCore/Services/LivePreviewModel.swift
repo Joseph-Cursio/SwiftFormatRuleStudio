@@ -33,6 +33,11 @@ public final class LivePreviewModel {
     /// edited settings rather than SwiftFormat's defaults.
     public var extraArguments: [String] = []
 
+    /// Path passed as `--stdin-path` when previewing an existing file, so
+    /// path-dependent rules (e.g. `fileHeader`) behave as they would in place.
+    /// `nil` for hand-typed source.
+    public var stdinPath: String?
+
     /// The most recent formatted output.
     public private(set) var formattedSource: String = ""
     /// The before/after diff between `source` and `formattedSource`.
@@ -89,6 +94,9 @@ public final class LivePreviewModel {
 
     private func argumentsAppendingExtras(to base: [String]) -> [String] {
         var arguments = base
+        if let stdinPath, !stdinPath.isEmpty {
+            arguments += ["--stdin-path", stdinPath]
+        }
         // Don't double-set the Swift version if the config already provides it.
         if let swiftVersion, !swiftVersion.isEmpty, !extraArguments.contains("--swift-version") {
             arguments += ["--swift-version", swiftVersion]

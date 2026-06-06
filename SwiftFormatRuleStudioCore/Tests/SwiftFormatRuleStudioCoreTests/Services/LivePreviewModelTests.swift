@@ -95,6 +95,16 @@ struct LivePreviewModelTests {
         let args = await cli.lastFormatArguments
         #expect(args == ["stdin", "--swift-version", "6.0", "--indent", "4"])
     }
+
+    @Test("stdinPath is passed as --stdin-path, right after stdin")
+    func passesStdinPath() async {
+        let (model, cli) = makeModel(source: "x", swiftVersion: "5.10")
+        model.stdinPath = "/ws/Sources/Foo.swift"
+        await model.formatNow()
+
+        let args = await cli.lastFormatArguments
+        #expect(args == ["stdin", "--stdin-path", "/ws/Sources/Foo.swift", "--swift-version", "5.10"])
+    }
 }
 
 /// Exercises real `swiftformat stdin` formatting end-to-end. Skips when
