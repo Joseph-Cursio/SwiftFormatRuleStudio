@@ -3,6 +3,7 @@
 DerivedData/
 *.xcresult
 SwiftFormatRuleStudioCore/.build/
+SwiftFormatRuleStudioCore/.build-coverage/
 SwiftFormatRuleStudioCore/.swiftpm/
 .swiftformat.*.backup
 .swiftlint.yml.*.backup
