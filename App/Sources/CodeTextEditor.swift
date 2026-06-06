@@ -19,7 +19,7 @@ struct CodeTextEditor: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    func makeNSView(context: Context) -> NSScrollView {
+    func makeNSView(context: Context) -> EditorContainerView {
         let big = CGFloat.greatestFiniteMagnitude
         let textView = PlaceholderTextView()
         textView.placeholder = placeholder
@@ -51,12 +51,10 @@ struct CodeTextEditor: NSViewRepresentable {
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
 
-        // The recessed bezel + focus ring are macOS's standard "this is where you
-        // type" affordance for a scroll-backed text area.
+        // A recessed bezel gives the always-on "this is a field" frame.
         scrollView.drawsBackground = true
         scrollView.backgroundColor = .textBackgroundColor
         scrollView.borderType = .bezelBorder
-        scrollView.focusRingType = .exterior
         scrollView.contentView.postsBoundsChangedNotifications = true
 
         let ruler = LineNumberRulerView(textView: textView)
@@ -64,7 +62,15 @@ struct CodeTextEditor: NSViewRepresentable {
         scrollView.hasVerticalRuler = true
         scrollView.rulersVisible = true
 
+        // AppKit only auto-draws a focus ring for the first-responder view, and
+        // the first responder here is the (scrollable) text view — its ring would
+        // wrap the whole document, not the visible frame. So we draw our own ring
+        // around the editor's frame via an overlay, toggled on first-responder.
+        let overlay = FocusRingOverlay()
+        textView.onFocusChange = { [weak overlay] focused in overlay?.isActive = focused }
+
         context.coordinator.ruler = ruler
+        context.coordinator.textView = textView
 
         // Focus the editor when the pane first appears so the insertion-point
         // caret blinks — an unambiguous cue that the area accepts typing.
@@ -72,11 +78,11 @@ struct CodeTextEditor: NSViewRepresentable {
             guard let textView, textView.window?.firstResponder !== textView else { return }
             textView.window?.makeFirstResponder(textView)
         }
-        return scrollView
+        return EditorContainerView(scrollView: scrollView, overlay: overlay)
     }
 
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        guard let textView = scrollView.documentView as? NSTextView else { return }
+    func updateNSView(_ container: EditorContainerView, context: Context) {
+        guard let textView = container.scrollView.documentView as? NSTextView else { return }
         if textView.string != text {
             textView.string = text
             textView.needsDisplay = true
@@ -90,6 +96,7 @@ struct CodeTextEditor: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
         let parent: CodeTextEditor
         weak var ruler: LineNumberRulerView?
+        weak var textView: NSTextView?
 
         init(_ parent: CodeTextEditor) { self.parent = parent }
 
@@ -108,6 +115,64 @@ struct CodeTextEditor: NSViewRepresentable {
 /// render it ourselves in the text container's top-left.
 final class PlaceholderTextView: NSTextView {
     var placeholder = ""
+    /// Notifies when the view gains/loses first-responder status so the enclosing
+    /// editor can show/hide its focus ring.
+    var onFocusChange: ((Bool) -> Void)?
+    private var outsideClickMonitor: Any?
+
+    override func becomeFirstResponder() -> Bool {
+        let didBecome = super.becomeFirstResponder()
+        if didBecome {
+            onFocusChange?(true)
+            startWatchingForOutsideClicks()
+        }
+        return didBecome
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let didResign = super.resignFirstResponder()
+        if didResign {
+            onFocusChange?(false)
+            stopWatchingForOutsideClicks()
+        }
+        return didResign
+    }
+
+    deinit { stopWatchingForOutsideClicks() }
+
+    /// A mouse-down on a non-focusable sibling pane (the read-only diff/output)
+    /// doesn't move first responder, so the editor would keep its focus ring while
+    /// the focusable changes list *does* clear it. Watch for clicks outside the
+    /// editor's frame and drop focus, so the ring behaves the same wherever you
+    /// click away.
+    private func startWatchingForOutsideClicks() {
+        stopWatchingForOutsideClicks()
+        outsideClickMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            guard let self,
+                  let window = self.window,
+                  event.window === window,
+                  let scrollView = self.enclosingScrollView else { return event }
+            let frameInWindow = scrollView.convert(scrollView.bounds, to: nil)
+            if !frameInWindow.contains(event.locationInWindow) {
+                // Resign after the click is delivered so its own target (if any)
+                // settles first; only act if we're still the first responder.
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.window?.firstResponder === self else { return }
+                    self.window?.makeFirstResponder(nil)
+                }
+            }
+            return event
+        }
+    }
+
+    private func stopWatchingForOutsideClicks() {
+        if let monitor = outsideClickMonitor {
+            NSEvent.removeMonitor(monitor)
+            outsideClickMonitor = nil
+        }
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
@@ -122,6 +187,51 @@ final class PlaceholderTextView: NSTextView {
             y: textContainerInset.height
         )
         placeholder.draw(at: origin, withAttributes: attributes)
+    }
+}
+
+/// Hosts the editor's scroll view and a focus-ring overlay stacked on top, both
+/// pinned to fill. The overlay lives here (not inside the scroll view) so its ring
+/// isn't clipped by the clip view, scrollers, or ruler.
+final class EditorContainerView: NSView {
+    let scrollView: NSScrollView
+    let overlay: FocusRingOverlay
+
+    init(scrollView: NSScrollView, overlay: FocusRingOverlay) {
+        self.scrollView = scrollView
+        self.overlay = overlay
+        super.init(frame: .zero)
+        addSubview(scrollView)
+        addSubview(overlay) // on top of the scroll view
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override func layout() {
+        super.layout()
+        scrollView.frame = bounds
+        overlay.frame = bounds
+    }
+}
+
+/// A click-through overlay that strokes a keyboard focus ring around its edge
+/// while `isActive`. Drawing it ourselves is the reliable way to ring a
+/// scroll-backed text view's *visible frame* (see `CodeTextEditor.makeNSView`).
+final class FocusRingOverlay: NSView {
+    var isActive = false {
+        didSet { if oldValue != isActive { needsDisplay = true } }
+    }
+
+    /// Let clicks fall through to the text view beneath.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard isActive else { return }
+        let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 1.5, dy: 1.5), xRadius: 4, yRadius: 4)
+        ring.lineWidth = 3
+        NSColor.keyboardFocusIndicatorColor.setStroke()
+        ring.stroke()
     }
 }
 
