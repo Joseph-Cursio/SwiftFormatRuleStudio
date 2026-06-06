@@ -13,8 +13,8 @@ import UniformTypeIdentifiers
 struct AuditView: View {
     @Environment(RuleStudioModel.self) private var catalog
     @Environment(ConfigModel.self) private var config
-    @State private var model = ImpactAuditModel()
-    @State private var folderURL: URL?
+    @Environment(WorkspaceModel.self) private var workspace
+    @Environment(ImpactAuditModel.self) private var model
     @State private var choosingFolder = false
     @State private var exportDocument: TextExportDocument?
     @State private var exportFormat: AuditExportFormat = .csv
@@ -22,7 +22,7 @@ struct AuditView: View {
 
     var body: some View {
         Group {
-            if folderURL == nil {
+            if workspace.selectedFolder == nil {
                 content
             } else {
                 VStack(spacing: 0) {
@@ -37,8 +37,7 @@ struct AuditView: View {
             .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
                 if case .success(let url) = result {
                     _ = url.startAccessingSecurityScopedResource()
-                    folderURL = url
-                    Task { await runAudit(url) }
+                    workspace.selectedFolder = url
                 }
             }
             .fileExporter(
@@ -55,7 +54,7 @@ struct AuditView: View {
         let text = ImpactReportExporter.export(
             report,
             as: format,
-            workspaceName: folderURL?.lastPathComponent ?? "Project",
+            workspaceName: workspace.selectedFolder?.lastPathComponent ?? "Project",
             timestamp: stamp
         )
         exportFormat = format
@@ -72,7 +71,7 @@ struct AuditView: View {
             Image(systemName: "folder.fill")
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
-            Text(folderURL?.lastPathComponent ?? "")
+            Text(workspace.selectedFolder?.lastPathComponent ?? "")
                 .scaledFont(.headline, weight: .semibold)
             if model.state == .running {
                 ProgressView().controlSize(.small)
@@ -116,7 +115,7 @@ struct AuditView: View {
             Button {
                 choosingFolder = true
             } label: {
-                Label(folderURL?.lastPathComponent ?? "Choose Folder…", systemImage: "folder")
+                Label(workspace.selectedFolder?.lastPathComponent ?? "Choose Folder…", systemImage: "folder")
             }
         }
         ToolbarItemGroup {
@@ -130,11 +129,11 @@ struct AuditView: View {
             .disabled(model.report?.isClean ?? true)
 
             Button("Re-run") {
-                if let folderURL {
-                    Task { await runAudit(folderURL) }
+                if let folder = workspace.selectedFolder {
+                    Task { await runAudit(folder) }
                 }
             }
-            .disabled(folderURL == nil || model.state == .running)
+            .disabled(workspace.selectedFolder == nil || model.state == .running)
         }
     }
 

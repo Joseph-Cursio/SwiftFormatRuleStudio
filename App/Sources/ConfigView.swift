@@ -13,14 +13,14 @@ import UniformTypeIdentifiers
 struct ConfigView: View {
     @Environment(RuleStudioModel.self) private var catalog
     @Environment(ConfigModel.self) private var config
-    @State private var folderURL: URL?
+    @Environment(WorkspaceModel.self) private var workspace
     @State private var optionSearch = ""
     @State private var choosingFolder = false
     @State private var showOnlySet = false
 
     var body: some View {
         Group {
-            if folderURL == nil {
+            if workspace.selectedFolder == nil {
                 chooseFolderPrompt
             } else {
                 VStack(spacing: 0) {
@@ -39,8 +39,7 @@ struct ConfigView: View {
         .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result {
                 _ = url.startAccessingSecurityScopedResource()
-                folderURL = url
-                config.load(from: url.appendingPathComponent(".swiftformat"))
+                workspace.selectedFolder = url
             }
         }
     }
@@ -53,7 +52,7 @@ struct ConfigView: View {
             Button {
                 choosingFolder = true
             } label: {
-                Label(folderURL?.lastPathComponent ?? "Choose Folder…", systemImage: "folder")
+                Label(workspace.selectedFolder?.lastPathComponent ?? "Choose Folder…", systemImage: "folder")
             }
         }
         ToolbarItemGroup {
@@ -69,7 +68,7 @@ struct ConfigView: View {
             } label: {
                 Label("Presets", systemImage: "wand.and.stars")
             }
-            .disabled(folderURL == nil)
+            .disabled(workspace.selectedFolder == nil)
 
             Button("Revert") { config.revert() }
                 .disabled(config.isDirty == false)
@@ -86,7 +85,7 @@ struct ConfigView: View {
             Image(systemName: "folder.fill")
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
-            Text(folderURL?.lastPathComponent ?? "")
+            Text(workspace.selectedFolder?.lastPathComponent ?? "")
                 .scaledFont(.headline, weight: .semibold)
             Text(".swiftformat")
                 .scaledFont(.body, design: .monospaced)

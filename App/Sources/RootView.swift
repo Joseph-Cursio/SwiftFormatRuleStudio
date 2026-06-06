@@ -19,6 +19,8 @@ struct RootView: View {
 
     @State private var catalog = RuleStudioModel()
     @State private var config = ConfigModel()
+    @State private var workspace = WorkspaceModel()
+    @State private var audit = ImpactAuditModel()
     @State private var selectedTab: Tab = .rules
     @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
@@ -52,8 +54,19 @@ struct RootView: View {
         .environment(\.uiTextScale, .uiTextScale(forStep: textSizeStep))
         .environment(catalog)
         .environment(config)
+        .environment(workspace)
+        .environment(audit)
         .task {
             await catalog.load()
+        }
+        // One source of truth for the project: when the shared folder changes,
+        // load its config and run its audit so both tabs reflect it. Driven from
+        // RootView (always alive) so it fires once per change, not on tab switches.
+        .onChange(of: workspace.selectedFolder) { _, folder in
+            guard let folder else { return }
+            config.load(from: folder.appendingPathComponent(".swiftformat"))
+            audit.extraArguments = config.commandLineArguments
+            Task { await audit.runAudit(path: folder) }
         }
     }
 }
