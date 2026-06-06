@@ -13,5 +13,9 @@ struct Point {
     func translate(byX deltaX: Int) {
         posX = self.posX + deltaX
     }
+
+    func validate() {
+        precondition(self.posX > 0)
+    }
 }
 ```

@@ -9,4 +9,12 @@ struct Point: Equatable {
         lhs.x == rhs.x && lhs.y == rhs.y
     }
 }
+
+final class Node: Equatable {
+    let value: Int
+
+    static func == (lhs: Node, rhs: Node) -> Bool {
+        lhs.value == rhs.value
+    }
+}
 ```

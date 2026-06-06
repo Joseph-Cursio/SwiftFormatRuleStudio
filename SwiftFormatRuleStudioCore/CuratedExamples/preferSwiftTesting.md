@@ -8,6 +8,7 @@ final class CalculatorTests: XCTestCase {
         let result = 2 + 2
         XCTAssertEqual(result, 4)
         XCTAssertTrue(result > 0)
+        waitForExpectations(timeout: 1)
     }
 }
 ```

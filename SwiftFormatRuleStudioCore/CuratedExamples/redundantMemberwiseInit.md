@@ -10,4 +10,14 @@ struct User {
         self.age = age
     }
 }
+
+struct Account {
+    private let identifier: Int
+    private let label: String
+
+    init(identifier: Int, label: String) {
+        self.identifier = identifier
+        self.label = label
+    }
+}
 ```

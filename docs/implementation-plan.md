@@ -289,3 +289,43 @@ and LintStudioUI already owns the diff rendering.
 [`shared-package-extraction.md`](shared-package-extraction.md) — the SwiftLint-side
 refactor that must land first: what to promote, in what order, how to keep the
 SwiftLint app green, and how to version the LintStudioUI release.
+
+---
+
+## 8. Curated examples & the option-effect audit
+
+The rule-detail "live example" reconstructs a *before* snippet, re-runs it through
+SwiftFormat with **only that rule** enabled plus the user's set options, and shows
+the diff. For this to feel dynamic, each rule's snippet must contain the constructs
+its options actually act on (e.g. `--indent-strings` does nothing without a
+multiline string in the snippet).
+
+**Curated-example pipeline:**
+
+- Source of truth: `SwiftFormatRuleStudioCore/CuratedExamples/<rule>.md` — one file
+  per rule, optional prose (becomes a contextual hint) plus one ` ```swift ` block
+  (the *before* snippet). A snippet-less file is an "unavailable note" for rules
+  whose effect a short diff can't show (e.g. `fileMacro`).
+- `Scripts/generate_curated_examples.py` compiles every `.md` into the
+  SwiftLint-excluded build artifact
+  `Sources/.../Parsing/CuratedLiveExample+Generated.swift`. Re-run it after editing
+  any `.md`; never hand-edit the generated file.
+
+**`Scripts/audit_option_effects.py`** — coverage tool for the above. For every rule
+with a live example and related options, it re-formats the snippet while toggling
+each option's value and reports which options visibly change the output (`live`)
+versus which don't (`dead`). Run with no args for all rules, or pass rule names to
+scope it: `python3 Scripts/audit_option_effects.py indent numberFormatting`.
+
+Known limits (a `dead`/`untested` verdict is *not* always a real gap):
+
+- **Free-form options** (`--modifier-order`, `--generic-types`, `--no-space-operators`,
+  …): the script can't synthesize meaningful values, so they show as
+  `untested`/`dead` even when the snippet supports them. Verify these by hand.
+- **Option coupling**: `wrap*` sub-options only act once `--max-width` is set, and
+  some `organizeDeclarations` options only fire under `--organization-mode type` or
+  `--organize-types extension`. The script tests one option at a time, so it can't
+  see these.
+- **Single-rule isolation**: the live example runs one rule, so options that need a
+  companion rule (e.g. `wrapArguments --wrap-conditions` needs `wrap` to break the
+  line first) can't be demonstrated and are expected to read as dead.
