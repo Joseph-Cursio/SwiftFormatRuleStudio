@@ -35,7 +35,7 @@ public final class CatalogLoader: CatalogLoading {
     /// Bump when the parser's output shape changes (e.g. how option values are
     /// extracted) so stale on-disk caches from an older build are ignored even
     /// when the SwiftFormat version is unchanged.
-    private static let catalogSchemaVersion = 2
+    private static let catalogSchemaVersion = 3
     private let catalogFileName = "rule_catalog_v\(catalogSchemaVersion).json"
 
     /// In-memory copy to avoid re-reading the disk cache within a session.
@@ -57,10 +57,16 @@ public final class CatalogLoader: CatalogLoading {
         }
 
         let entries = RuleListParser.parse(try await cli.rulesOutput())
+        // One bulk `--ruleinfo` call gives every rule's one-line description, so
+        // the catalog carries them without 145 per-rule calls.
+        let descriptions = RuleInfoParser.descriptions(
+            from: try await cli.allRuleInfoOutput(),
+            knownRuleNames: Set(entries.map(\.name))
+        )
         let rules = entries.map { entry in
             FormatRule(
                 name: entry.name,
-                ruleDescription: "",
+                ruleDescription: descriptions[entry.name] ?? "",
                 category: FormatRuleClassifier.category(for: entry.name),
                 isOptIn: entry.isOptIn,
                 isDeprecated: entry.isDeprecated

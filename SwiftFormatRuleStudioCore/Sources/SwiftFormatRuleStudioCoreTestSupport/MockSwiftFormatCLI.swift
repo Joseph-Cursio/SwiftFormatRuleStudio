@@ -13,6 +13,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     private let rules: String
     private let options: String
     private let ruleInfos: [String: String]
+    private let allRuleInfo: String
     private let failWith: SwiftFormatError?
     private let formatOverride: String?
     private let lintOutput: String
@@ -32,6 +33,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         rules: String = "",
         options: String = "",
         ruleInfos: [String: String] = [:],
+        allRuleInfo: String = "",
         failWith: SwiftFormatError? = nil,
         formatOverride: String? = nil,
         lintOutput: String = "[]",
@@ -41,6 +43,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         self.rules = rules
         self.options = options
         self.ruleInfos = ruleInfos
+        self.allRuleInfo = allRuleInfo
         self.failWith = failWith
         self.formatOverride = formatOverride
         self.lintOutput = lintOutput
@@ -70,6 +73,10 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     public func ruleInfoOutput(ruleName: String) -> String {
         ruleInfoCallCount += 1
         return ruleInfos[ruleName] ?? ""
+    }
+
+    public func allRuleInfoOutput() -> String {
+        allRuleInfo
     }
 
     public func optionsOutput() -> String {

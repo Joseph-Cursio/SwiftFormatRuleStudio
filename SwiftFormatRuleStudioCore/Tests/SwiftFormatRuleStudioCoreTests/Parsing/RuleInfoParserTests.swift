@@ -114,4 +114,40 @@ struct RuleInfoParserTests {
         #expect(info.example == nil)
         #expect(info.relatedOptions.isEmpty)
     }
+
+    // Two rule blocks as `swiftformat --ruleinfo` (no argument) concatenates them.
+    static let bulk = """
+    acronyms
+
+    Capitalize acronyms when the first character is capitalized.
+
+    Options:
+
+    --acronyms         Acronyms to auto-capitalize. Defaults to "ID,URL,UUID"
+
+    Examples:
+
+    - let destinationUrl: URL
+    + let destinationURL: URL
+
+    andOperator
+
+    Prefer comma over && in if, guard or while conditions.
+
+    Examples:
+
+    - if true && true {
+    + if true, true {
+    """
+
+    @Test("Bulk descriptions map each rule to its one-line description")
+    func bulkDescriptions() {
+        let map = RuleInfoParser.descriptions(
+            from: Self.bulk,
+            knownRuleNames: ["acronyms", "andOperator"]
+        )
+        #expect(map["acronyms"] == "Capitalize acronyms when the first character is capitalized.")
+        #expect(map["andOperator"] == "Prefer comma over && in if, guard or while conditions.")
+        #expect(map.count == 2)
+    }
 }

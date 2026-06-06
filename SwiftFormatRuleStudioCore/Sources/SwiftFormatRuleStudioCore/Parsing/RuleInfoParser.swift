@@ -45,6 +45,51 @@ public enum RuleInfoParser {
     private static let optionsHeader = "Options:"
     private static let examplesHeader = "Examples:"
 
+    /// Parses the bulk `swiftformat --ruleinfo` output (every rule, no argument)
+    /// into a `ruleName → description` map. Each rule block starts with the rule
+    /// name left-aligned on its own line; its description is the following
+    /// non-blank line(s), up to the next blank line or `Options:` / `Examples:`.
+    /// `knownRuleNames` disambiguates header lines from prose.
+    public static func descriptions(
+        from bulkOutput: String,
+        knownRuleNames: Set<String>
+    ) -> [String: String] {
+        var result: [String: String] = [:]
+        let lines = bulkOutput.components(separatedBy: "\n")
+        var index = 0
+        while index < lines.count {
+            let line = lines[index]
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            // A rule header: left-aligned (no leading/trailing space) and a known name.
+            guard line == trimmed, knownRuleNames.contains(trimmed) else {
+                index += 1
+                continue
+            }
+            var cursor = index + 1
+            while cursor < lines.count, lines[cursor].trimmingCharacters(in: .whitespaces).isEmpty {
+                cursor += 1
+            }
+            var descriptionLines: [String] = []
+            while cursor < lines.count {
+                let candidate = lines[cursor]
+                let candidateTrimmed = candidate.trimmingCharacters(in: .whitespaces)
+                if candidateTrimmed.isEmpty
+                    || candidateTrimmed == optionsHeader
+                    || candidateTrimmed == examplesHeader
+                    || (candidate == candidateTrimmed && knownRuleNames.contains(candidateTrimmed)) {
+                    break
+                }
+                descriptionLines.append(candidateTrimmed)
+                cursor += 1
+            }
+            if !descriptionLines.isEmpty {
+                result[trimmed] = descriptionLines.joined(separator: " ")
+            }
+            index = cursor
+        }
+        return result
+    }
+
     /// Parses `swiftformat --ruleinfo <name>` output into a `ParsedRuleInfo`.
     public static func parse(_ output: String) -> ParsedRuleInfo {
         let lines = output.components(separatedBy: "\n")

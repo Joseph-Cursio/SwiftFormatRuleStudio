@@ -38,6 +38,9 @@ public protocol SwiftFormatCLIProtocol: Sendable {
     func rulesOutput() async throws -> String
     /// Raw stdout of `swiftformat --ruleinfo <ruleName>`.
     func ruleInfoOutput(ruleName: String) async throws -> String
+    /// Raw stdout of `swiftformat --ruleinfo` (no rule) — every rule's info in one
+    /// call, used to populate all descriptions cheaply at catalog load.
+    func allRuleInfoOutput() async throws -> String
     /// Raw stdout of `swiftformat --options`.
     func optionsOutput() async throws -> String
     /// Formats `source` by piping it through `swiftformat <arguments>` (where
@@ -134,6 +137,10 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
 
     public func ruleInfoOutput(ruleName: String) async throws -> String {
         try await run(["--ruleinfo", ruleName])
+    }
+
+    public func allRuleInfoOutput() async throws -> String {
+        try await run(["--ruleinfo"])
     }
 
     public func optionsOutput() async throws -> String {
