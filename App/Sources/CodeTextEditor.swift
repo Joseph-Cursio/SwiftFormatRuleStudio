@@ -13,12 +13,16 @@ import SwiftUI
 struct CodeTextEditor: NSViewRepresentable {
     @Binding var text: String
     var fontSize: CGFloat
+    /// Greyed-out prompt drawn when the editor is empty (Apple's "you can type
+    /// here" convention). Disappears on the first keystroke.
+    var placeholder = "Type or paste Swift here…"
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeNSView(context: Context) -> NSScrollView {
         let big = CGFloat.greatestFiniteMagnitude
-        let textView = NSTextView()
+        let textView = PlaceholderTextView()
+        textView.placeholder = placeholder
         textView.delegate = context.coordinator
         textView.isRichText = false
         textView.isAutomaticQuoteSubstitutionEnabled = false
@@ -29,7 +33,11 @@ struct CodeTextEditor: NSViewRepresentable {
         textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
         textView.string = text
         textView.textContainerInset = NSSize(width: 4, height: 6)
-        textView.drawsBackground = false
+
+        // Look like an editable field, not a static label: a real text-field
+        // background distinguishes this pane from the read-only result panes.
+        textView.drawsBackground = true
+        textView.backgroundColor = .textBackgroundColor
 
         // Don't wrap — let long lines scroll horizontally so line numbers map 1:1.
         textView.isHorizontallyResizable = true
@@ -42,7 +50,13 @@ struct CodeTextEditor: NSViewRepresentable {
         scrollView.documentView = textView
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
-        scrollView.drawsBackground = false
+
+        // The recessed bezel + focus ring are macOS's standard "this is where you
+        // type" affordance for a scroll-backed text area.
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = .textBackgroundColor
+        scrollView.borderType = .bezelBorder
+        scrollView.focusRingType = .exterior
         scrollView.contentView.postsBoundsChangedNotifications = true
 
         let ruler = LineNumberRulerView(textView: textView)
@@ -51,6 +65,13 @@ struct CodeTextEditor: NSViewRepresentable {
         scrollView.rulersVisible = true
 
         context.coordinator.ruler = ruler
+
+        // Focus the editor when the pane first appears so the insertion-point
+        // caret blinks — an unambiguous cue that the area accepts typing.
+        DispatchQueue.main.async { [weak textView] in
+            guard let textView, textView.window?.firstResponder !== textView else { return }
+            textView.window?.makeFirstResponder(textView)
+        }
         return scrollView
     }
 
@@ -58,6 +79,7 @@ struct CodeTextEditor: NSViewRepresentable {
         guard let textView = scrollView.documentView as? NSTextView else { return }
         if textView.string != text {
             textView.string = text
+            textView.needsDisplay = true
         }
         if textView.font?.pointSize != fontSize {
             textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
@@ -74,8 +96,32 @@ struct CodeTextEditor: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
             parent.text = textView.string
+            // Repaint so the placeholder appears/clears as the editor empties/fills.
+            textView.needsDisplay = true
             ruler?.needsDisplay = true
         }
+    }
+}
+
+/// An `NSTextView` that draws greyed-out placeholder text while it's empty.
+/// `NSTextView` has no native `placeholderString` (unlike `NSTextField`), so we
+/// render it ourselves in the text container's top-left.
+final class PlaceholderTextView: NSTextView {
+    var placeholder = ""
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard string.isEmpty, !placeholder.isEmpty else { return }
+
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font ?? .monospacedSystemFont(ofSize: 13, weight: .regular),
+            .foregroundColor: NSColor.placeholderTextColor
+        ]
+        let origin = NSPoint(
+            x: textContainerInset.width + (textContainer?.lineFragmentPadding ?? 0),
+            y: textContainerInset.height
+        )
+        placeholder.draw(at: origin, withAttributes: attributes)
     }
 }
 
