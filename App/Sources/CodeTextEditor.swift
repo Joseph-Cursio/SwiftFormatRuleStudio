@@ -263,7 +263,17 @@ final class LineNumberRulerView: NSRulerView {
 
     @objc private func invalidate() { needsDisplay = true }
 
-    override func drawHashMarksAndLabels(in _: NSRect) {
+    override func drawHashMarksAndLabels(in rect: NSRect) {
+        // Gutter divider: a hairline at the gutter's trailing edge, matching the
+        // line-number gutters in the other panels.
+        NSColor.separatorColor.setStroke()
+        let separatorX = ruleThickness - 0.5
+        let divider = NSBezierPath()
+        divider.move(to: NSPoint(x: separatorX, y: rect.minY))
+        divider.line(to: NSPoint(x: separatorX, y: rect.maxY))
+        divider.lineWidth = 1
+        divider.stroke()
+
         guard let textView = clientView as? NSTextView,
               let layoutManager = textView.layoutManager,
               let container = textView.textContainer else { return }

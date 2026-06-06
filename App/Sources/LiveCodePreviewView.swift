@@ -387,10 +387,11 @@ struct LiveCodePreviewView: View {
         .frame(minWidth: 300)
     }
 
-    /// The clean formatted result (no diff markers), syntax-highlighted.
+    /// The clean formatted result (no diff markers), syntax-highlighted. Its line
+    /// numbers line up with the diff's "new" column.
     @ViewBuilder
     private var formattedOutput: some View {
-        readOnlyCode(model.formattedSource)
+        readOnlyCode(model.formattedSource, showsLineNumbers: true)
     }
 
     /// A read-only, syntax-highlighted rendering of Swift source. Used for the
@@ -411,6 +412,7 @@ struct LiveCodePreviewView: View {
                                     .monospacedDigit()
                                     .foregroundStyle(.tertiary)
                                     .frame(width: gutterWidth, alignment: .trailing)
+                                Divider()
                             }
                             Text(SwiftCodeColor.attributed(line))
                                 .scaledFont(.body, design: .monospaced)
@@ -466,7 +468,7 @@ struct LiveCodePreviewView: View {
             }
         default:
             if model.hasChanges {
-                PreviewDiffView(lines: model.diff)
+                PreviewDiffView(lines: model.diff, showsLineNumbers: true)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else if model.state == .formatted {
                 ContentUnavailableView(
@@ -537,34 +539,85 @@ private struct FileRow: View {
     }
 }
 
-/// Renders `[PreviewDiffLine]` as a colored unified diff.
+/// Renders `[PreviewDiffLine]` as a colored unified diff. With `showsLineNumbers`,
+/// a two-column gutter shows old and new line numbers (git/GitHub style) so moves
+/// are legible: a removed line numbers the old side, an added line the new side.
 struct PreviewDiffView: View {
     let lines: [PreviewDiffLine]
+    var showsLineNumbers = false
+
+    /// A diff line paired with its old/new line numbers (nil where it doesn't
+    /// exist on that side).
+    private struct Numbered: Identifiable {
+        let line: PreviewDiffLine
+        let oldNumber: Int?
+        let newNumber: Int?
+        var id: Int { line.id }
+    }
+
+    private var numberedLines: [Numbered] {
+        var old = 1, new = 1
+        return lines.map { line in
+            switch line.change {
+            case .removed:
+                defer { old += 1 }
+                return Numbered(line: line, oldNumber: old, newNumber: nil)
+            case .added:
+                defer { new += 1 }
+                return Numbered(line: line, oldNumber: nil, newNumber: new)
+            case .unchanged:
+                defer { old += 1; new += 1 }
+                return Numbered(line: line, oldNumber: old, newNumber: new)
+            }
+        }
+    }
+
+    private func gutterWidth(_ maxNumber: Int) -> CGFloat {
+        CGFloat(max(String(maxNumber).count, 1)) * 9 + 2
+    }
 
     var body: some View {
+        let rows = numberedLines
+        let oldWidth = gutterWidth(rows.compactMap(\.oldNumber).max() ?? 0)
+        let newWidth = gutterWidth(rows.compactMap(\.newNumber).max() ?? 0)
         // GeometryReader + minWidth/minHeight pins content to the top-left: a 2D
         // ScrollView otherwise centers content smaller than its viewport.
         GeometryReader { geometry in
             ScrollView([.vertical, .horizontal]) {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(lines) { line in
+                    ForEach(rows) { row in
                         HStack(alignment: .top, spacing: 8) {
-                            Text(symbol(for: line.change))
-                                .frame(width: 10, alignment: .leading)
-                            Text(line.text.isEmpty ? " " : line.text)
+                            if showsLineNumbers {
+                                gutter(row.oldNumber, width: oldWidth)
+                                gutter(row.newNumber, width: newWidth)
+                                Divider()
+                            }
+                            HStack(alignment: .top, spacing: 8) {
+                                Text(symbol(for: row.line.change))
+                                    .frame(width: 10, alignment: .leading)
+                                Text(row.line.text.isEmpty ? " " : row.line.text)
+                            }
+                            .foregroundStyle(foreground(for: row.line.change))
                         }
                         .scaledFont(.body, design: .monospaced)
-                        .foregroundStyle(foreground(for: line.change))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 1)
-                        .background(background(for: line.change))
+                        .background(background(for: row.line.change))
                     }
                 }
                 .padding(.vertical, 4)
                 .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
             }
         }
+    }
+
+    /// One line-number cell (blank when the line doesn't exist on that side).
+    private func gutter(_ number: Int?, width: CGFloat) -> some View {
+        Text(number.map(String.init) ?? "")
+            .monospacedDigit()
+            .foregroundStyle(.tertiary)
+            .frame(width: width, alignment: .trailing)
     }
 
     private func symbol(for change: PreviewDiffLine.Change) -> String {
