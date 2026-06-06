@@ -21,7 +21,17 @@ struct AuditView: View {
     @State private var showingExporter = false
 
     var body: some View {
-        content
+        Group {
+            if folderURL == nil {
+                content
+            } else {
+                VStack(spacing: 0) {
+                    folderHeader
+                    Divider()
+                    content
+                }
+            }
+        }
             .navigationTitle("Impact Audit")
             .toolbar { toolbarContent }
             .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
@@ -53,6 +63,26 @@ struct AuditView: View {
         showingExporter = true
     }
 
+    // MARK: - Folder header
+
+    /// Mirrors the Config tab: once a project is chosen, keep its name visible at
+    /// the top of the pane (the toolbar button alone is easy to miss).
+    private var folderHeader: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "folder.fill")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text(folderURL?.lastPathComponent ?? "")
+                .scaledFont(.headline, weight: .semibold)
+            if model.state == .running {
+                ProgressView().controlSize(.small)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+    }
+
     @ViewBuilder
     private var content: some View {
         switch model.state {
@@ -65,7 +95,8 @@ struct AuditView: View {
                 Button("Choose Folder…") { choosingFolder = true }
             }
         case .running:
-            ProgressView("Auditing \(folderURL?.lastPathComponent ?? "")…")
+            ProgressView("Auditing…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let message):
             ContentUnavailableView {
                 Label("Audit failed", systemImage: "exclamationmark.triangle")
