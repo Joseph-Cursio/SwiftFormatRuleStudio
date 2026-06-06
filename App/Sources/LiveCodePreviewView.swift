@@ -14,9 +14,13 @@ struct LiveCodePreviewView: View {
     @Environment(\.uiTextScale) private var uiTextScale
     @State private var model = LivePreviewModel(source: Self.sampleSource)
 
-    /// Swift files discovered under the selected project folder.
+    /// Swift files discovered under the selected project folder (flat).
     @State private var projectFiles: [URL] = []
-    /// The file currently loaded into the editor, if any.
+    /// The same files arranged as a directory tree for the outline view.
+    @State private var fileTree: [FileNode] = []
+    /// The outline/list row currently highlighted (a file or a directory).
+    @State private var listSelection: URL?
+    /// The file currently loaded into the editor, if any (drives the header).
     @State private var selectedFile: URL?
     /// Filter text for the file list.
     @State private var fileFilter = ""
@@ -47,7 +51,11 @@ struct LiveCodePreviewView: View {
         // Rebuild the file list for the selected project; clear a stale selection
         // when the project changes.
         .task(id: workspace.selectedFolder) { await loadProjectFiles() }
-        .onChange(of: workspace.selectedFolder) { _, _ in selectedFile = nil }
+        .onChange(of: workspace.selectedFolder) { _, _ in
+            selectedFile = nil
+            listSelection = nil
+            model.stdinPath = nil // hand-typed/sample source has no path
+        }
         .navigationTitle("Scratchpad")
     }
 
@@ -66,19 +74,38 @@ struct LiveCodePreviewView: View {
                     .foregroundStyle(.tertiary)
                     .padding(10)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            } else {
-                List(filteredFiles, id: \.self, selection: $selectedFile) { url in
-                    Text(relativePath(url))
+            } else if isFiltering {
+                // While filtering, a flat list of matches (with full paths) reads
+                // better than a tree of half-expanded directories.
+                List(filteredFiles, id: \.self, selection: $listSelection) { url in
+                    Label(relativePath(url), systemImage: "swift")
                         .scaledFont(.callout, design: .monospaced)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
                 .listStyle(.sidebar)
+            } else {
+                List(selection: $listSelection) {
+                    OutlineGroup(fileTree, children: \.children) { node in
+                        Label(node.name, systemImage: node.isDirectory ? "folder" : "swift")
+                            .scaledFont(.callout, design: .monospaced)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+                .listStyle(.sidebar)
             }
         }
-        .onChange(of: selectedFile) { _, url in
-            if let url { loadFile(url) }
+        // Loading only makes sense for file rows; directory rows just expand.
+        .onChange(of: listSelection) { _, url in
+            guard let url, Set(projectFiles).contains(url) else { return }
+            selectedFile = url
+            loadFile(url)
         }
+    }
+
+    private var isFiltering: Bool {
+        !fileFilter.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private var filteredFiles: [URL] {
@@ -96,8 +123,11 @@ struct LiveCodePreviewView: View {
     }
 
     /// Loads a file's contents as the editor's "before" source and reformats.
+    /// Passing the real path via `--stdin-path` lets path-dependent rules (e.g.
+    /// `fileHeader`) behave as they would in place.
     private func loadFile(_ url: URL) {
         guard let text = try? String(contentsOf: url, encoding: .utf8) else { return }
+        model.stdinPath = url.path
         model.source = text
         model.scheduleFormat()
     }
@@ -105,9 +135,12 @@ struct LiveCodePreviewView: View {
     private func loadProjectFiles() async {
         guard let folder = workspace.selectedFolder else {
             projectFiles = []
+            fileTree = []
             return
         }
-        projectFiles = await Self.swiftFiles(in: folder)
+        let files = await Self.swiftFiles(in: folder)
+        projectFiles = files
+        fileTree = Self.tree(from: files, root: folder)
     }
 
     /// Enumerates `.swift` files under `folder`, skipping hidden dirs (`.build`,
@@ -127,6 +160,54 @@ struct LiveCodePreviewView: View {
             }
             return found.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
         }.value
+    }
+
+    /// Builds a directory tree from the flat file list. Directory nodes are
+    /// synthesized for grouping; leaf nodes keep the file's real URL so loading
+    /// reads the exact file SwiftFormat enumerated.
+    private static func tree(from files: [URL], root: URL) -> [FileNode] {
+        let entries = files.map { url -> (components: [String], url: URL) in
+            let path = url.path
+            let relative = path.hasPrefix(root.path + "/")
+                ? String(path.dropFirst(root.path.count + 1))
+                : url.lastPathComponent
+            return (relative.split(separator: "/").map(String.init), url)
+        }
+        return nodes(entries: entries, prefix: root)
+    }
+
+    private static func nodes(
+        entries: [(components: [String], url: URL)],
+        prefix: URL
+    ) -> [FileNode] {
+        var dirOrder: [String] = []
+        var dirGroups: [String: [(components: [String], url: URL)]] = [:]
+        var leaves: [(name: String, url: URL)] = []
+
+        for entry in entries {
+            guard let first = entry.components.first else { continue }
+            if entry.components.count == 1 {
+                leaves.append((first, entry.url))
+            } else {
+                if dirGroups[first] == nil { dirGroups[first] = []; dirOrder.append(first) }
+                dirGroups[first]?.append((Array(entry.components.dropFirst()), entry.url))
+            }
+        }
+
+        // Directories first, then files — each sorted naturally.
+        var result: [FileNode] = []
+        for name in dirOrder.sorted(by: { $0.localizedStandardCompare($1) == .orderedAscending }) {
+            let dirURL = prefix.appendingPathComponent(name, isDirectory: true)
+            result.append(FileNode(
+                url: dirURL,
+                name: name,
+                children: nodes(entries: dirGroups[name] ?? [], prefix: dirURL)
+            ))
+        }
+        for leaf in leaves.sorted(by: { $0.name.localizedStandardCompare($1.name) == .orderedAscending }) {
+            result.append(FileNode(url: leaf.url, name: leaf.name, children: nil))
+        }
+        return result
     }
 
     // MARK: - Editor
@@ -327,6 +408,16 @@ struct LiveCodePreviewView: View {
         }
     }
     """
+}
+
+/// A node in the project file outline: a directory (with `children`) or a file
+/// leaf (`children == nil`). Leaves carry the file's real URL.
+private struct FileNode: Identifiable, Hashable {
+    let url: URL
+    let name: String
+    let children: [FileNode]?
+    var id: URL { url }
+    var isDirectory: Bool { children != nil }
 }
 
 /// Renders `[PreviewDiffLine]` as a colored unified diff.
