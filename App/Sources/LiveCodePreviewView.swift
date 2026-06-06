@@ -244,9 +244,9 @@ struct LiveCodePreviewView: View {
                         model.scheduleFormat()
                     }
             } else {
-                // A loaded project file: read-only, syntax-highlighted like the
-                // formatted output (no editable-field background).
-                readOnlyCode(model.source)
+                // A loaded project file: read-only, syntax-highlighted, with line
+                // numbers like the editable editor (no editable-field background).
+                readOnlyCode(model.source, showsLineNumbers: true)
             }
         }
         .frame(minWidth: 300)
@@ -351,17 +351,28 @@ struct LiveCodePreviewView: View {
 
     /// A read-only, syntax-highlighted rendering of Swift source. Used for the
     /// formatted output and for a loaded project file (which shouldn't be edited).
+    /// `showsLineNumbers` adds a gutter, matching the editable editor.
     @ViewBuilder
-    private func readOnlyCode(_ source: String) -> some View {
+    private func readOnlyCode(_ source: String, showsLineNumbers: Bool = false) -> some View {
+        let lines = source.components(separatedBy: "\n")
+        let gutterWidth = CGFloat(String(max(lines.count, 1)).count) * 9 + 6
         GeometryReader { geometry in
             ScrollView([.vertical, .horizontal]) {
                 VStack(alignment: .leading, spacing: 0) {
-                    let lines = source.components(separatedBy: "\n")
-                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                        Text(SwiftCodeColor.attributed(line))
-                            .scaledFont(.body, design: .monospaced)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 10)
+                    ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                        HStack(alignment: .top, spacing: 8) {
+                            if showsLineNumbers {
+                                Text("\(index + 1)")
+                                    .scaledFont(.body, design: .monospaced)
+                                    .monospacedDigit()
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: gutterWidth, alignment: .trailing)
+                            }
+                            Text(SwiftCodeColor.attributed(line))
+                                .scaledFont(.body, design: .monospaced)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
                     }
                 }
                 .padding(.vertical, 4)
