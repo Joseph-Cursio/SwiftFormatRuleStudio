@@ -387,8 +387,13 @@ struct OptionRow: View {
         case .integer, .list, .string:
             // Show the set value, or an empty field with the default as a dimmed
             // placeholder — so unset options read as "not set (default: X)".
+            // Use a control-face background (like the dropdowns) rather than the
+            // editable-field background, which is near-invisible when empty.
             TextField(option.defaultValue ?? "", text: textBinding)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
                 .frame(maxWidth: 160)
         }
     }
