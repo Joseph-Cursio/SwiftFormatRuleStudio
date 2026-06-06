@@ -24,6 +24,9 @@ struct LiveCodePreviewView: View {
     @State private var selectedFile: URL?
     /// Filter text for the file list.
     @State private var fileFilter = ""
+    /// Path of the last file opened in the Scratchpad, persisted across launches
+    /// and restored when its project is reopened.
+    @AppStorage("scratchpadLastFilePath") private var savedFilePath = ""
 
     var body: some View {
         HSplitView {
@@ -48,14 +51,9 @@ struct LiveCodePreviewView: View {
             model.extraArguments = newArguments
             model.scheduleFormat()
         }
-        // Rebuild the file list for the selected project; clear a stale selection
-        // when the project changes.
+        // Rebuild the file list for the selected project, then restore the
+        // remembered file (or clear the selection if it isn't in this project).
         .task(id: workspace.selectedFolder) { await loadProjectFiles() }
-        .onChange(of: workspace.selectedFolder) { _, _ in
-            selectedFile = nil
-            listSelection = nil
-            model.stdinPath = nil // hand-typed/sample source has no path
-        }
         .navigationTitle("Scratchpad")
     }
 
@@ -130,17 +128,34 @@ struct LiveCodePreviewView: View {
         model.stdinPath = url.path
         model.source = text
         model.scheduleFormat()
+        savedFilePath = url.path // remember across launches
     }
 
     private func loadProjectFiles() async {
         guard let folder = workspace.selectedFolder else {
             projectFiles = []
             fileTree = []
+            clearFileSelection()
             return
         }
         let files = await Self.swiftFiles(in: folder)
         projectFiles = files
         fileTree = Self.tree(from: files, root: folder)
+
+        // Reopen the remembered file if it belongs to this project; otherwise drop
+        // any stale selection. Setting listSelection drives onChange → loadFile.
+        if let remembered = files.first(where: { $0.path == savedFilePath }) {
+            listSelection = remembered
+        } else {
+            clearFileSelection()
+        }
+    }
+
+    /// Returns the editor to the editable, no-file state.
+    private func clearFileSelection() {
+        listSelection = nil
+        selectedFile = nil
+        model.stdinPath = nil
     }
 
     /// Enumerates `.swift` files under `folder`, skipping hidden dirs (`.build`,
