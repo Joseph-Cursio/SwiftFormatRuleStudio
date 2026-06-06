@@ -10,29 +10,41 @@ import SwiftUI
 /// them into the environment so all tabs work off the same state (e.g. the live
 /// preview reflects the edited config).
 struct RootView: View {
+    /// The tabs, in display order. A bound selection keeps the active tab stable
+    /// across re-renders — without it, presenting a `.fileImporter` from Config or
+    /// Audit resets an unbound `TabView` back to the first tab.
+    private enum Tab: Hashable {
+        case rules, scratchpad, config, audit
+    }
+
     @State private var catalog = RuleStudioModel()
     @State private var config = ConfigModel()
+    @State private var selectedTab: Tab = .rules
     @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
     var body: some View {
         VStack(spacing: 0) {
-            TabView {
+            TabView(selection: $selectedTab) {
                 ContentView()
                     .tabItem {
                         Label("Rules", systemImage: "list.bullet.rectangle")
                     }
+                    .tag(Tab.rules)
                 LiveCodePreviewView()
                     .tabItem {
                         Label("Scratchpad", systemImage: "wand.and.stars")
                     }
+                    .tag(Tab.scratchpad)
                 ConfigView()
                     .tabItem {
                         Label("Config", systemImage: "slider.horizontal.3")
                     }
+                    .tag(Tab.config)
                 AuditView()
                     .tabItem {
                         Label("Audit", systemImage: "chart.bar.doc.horizontal")
                     }
+                    .tag(Tab.audit)
             }
             Divider()
             StatusBar(catalog: catalog)
