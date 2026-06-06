@@ -20,6 +20,21 @@ public enum OptionRuleUsage {
         rulesByOptionKey[key] ?? []
     }
 
+    /// The option keys that tune the given rule, sorted. Empty if the rule has no
+    /// options. The inverse of `rulesByOptionKey`.
+    nonisolated public static func optionKeys(forRule ruleName: String) -> [String] {
+        optionKeysByRule[ruleName] ?? []
+    }
+
+    nonisolated static let optionKeysByRule: [String: [String]] = {
+        var map: [String: [String]] = [:]
+        for (key, rules) in rulesByOptionKey {
+            for rule in rules { map[rule, default: []].append(key) }
+        }
+        for rule in map.keys { map[rule]?.sort() }
+        return map
+    }()
+
     nonisolated static let rulesByOptionKey: [String: [String]] = [
         "acronyms": ["acronyms"],
         "allman": ["braces"],

@@ -20,6 +20,15 @@ struct OptionRuleUsageTests {
     func noEmptyEntries() {
         #expect(OptionRuleUsage.rulesByOptionKey.values.allSatisfy { !$0.isEmpty })
     }
+
+    @Test("Inverse: a rule maps to its options, sorted")
+    func optionKeysForRule() {
+        #expect(OptionRuleUsage.optionKeys(forRule: "docComments") == ["doc-comments"])
+        #expect(OptionRuleUsage.optionKeys(forRule: "sortImports") == ["import-grouping"])
+        #expect(OptionRuleUsage.optionKeys(forRule: "redundantSelf") == ["self", "self-required"])
+        #expect(OptionRuleUsage.optionKeys(forRule: "linebreaks") == ["linebreaks"])
+        #expect(OptionRuleUsage.optionKeys(forRule: "does-not-exist").isEmpty)
+    }
 }
 
 /// Validates the curated table against the installed SwiftFormat: every

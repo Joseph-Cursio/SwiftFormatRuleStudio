@@ -10,6 +10,7 @@ import SwiftUI
 /// diff) on the right, live. Thin wrapper over the tested `LivePreviewModel`.
 struct LiveCodePreviewView: View {
     @Environment(ConfigModel.self) private var config
+    @Environment(RuleStudioModel.self) private var catalog
     @Environment(WorkspaceModel.self) private var workspace
     @Environment(\.uiTextScale) private var uiTextScale
     @State private var model = LivePreviewModel(source: Self.sampleSource)
@@ -309,6 +310,23 @@ struct LiveCodePreviewView: View {
             + "\(occurrences) occurrence\(occurrences == 1 ? "" : "s")"
     }
 
+    /// The options that tune a rule, each as `--flag = value` (the value being the
+    /// config override or SwiftFormat's default) — shown under each triggered rule
+    /// so it's clear which knobs governed the change.
+    private func optionLines(for ruleID: String) -> [String] {
+        OptionRuleUsage.optionKeys(forRule: ruleID).map { key in
+            let option = catalog.options.first { $0.key == key }
+            let flag = option?.name ?? "--\(key)"
+            if let value = config.config.options[key] {
+                return "\(flag) = \(value)"
+            }
+            if let defaultValue = option?.defaultValue {
+                return "\(flag) = \(defaultValue)"
+            }
+            return flag
+        }
+    }
+
     private func changeRow(_ change: LintFinding) -> some View {
         // Gutter geometry matches CodeTextEditor's ruler: a 40pt-wide column
         // (number right-aligned with a 4pt trailing margin) then the divider.
@@ -323,9 +341,18 @@ struct LiveCodePreviewView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(change.ruleID)
                     .scaledFont(.body, design: .monospaced)
-                Text(change.reason)
-                    .scaledFont(.caption)
-                    .foregroundStyle(.secondary)
+                let options = optionLines(for: change.ruleID)
+                if options.isEmpty {
+                    Text("No options")
+                        .scaledFont(.caption)
+                        .foregroundStyle(.tertiary)
+                } else {
+                    ForEach(options, id: \.self) { line in
+                        Text(line)
+                            .scaledFont(.caption, design: .monospaced)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             .padding(.leading, 8)
         }
