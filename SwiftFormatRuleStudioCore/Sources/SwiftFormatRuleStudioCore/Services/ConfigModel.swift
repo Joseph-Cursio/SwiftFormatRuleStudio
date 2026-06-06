@@ -86,6 +86,12 @@ public final class ConfigModel {
         configPath != nil && isDirty
     }
 
+    /// The edited config serialized to `.swiftformat` text — the "after" that
+    /// would be written on save.
+    public var editedText: String {
+        config.serialized()
+    }
+
     /// The pending change as a before/after diff for preview.
     public var diff: [PreviewDiffLine] {
         PreviewDiffLine.lines(from: UnifiedDiffEngine.computeDiff(before: originalText, after: config.serialized()))
