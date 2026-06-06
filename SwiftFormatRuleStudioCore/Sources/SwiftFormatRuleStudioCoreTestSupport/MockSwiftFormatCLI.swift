@@ -16,6 +16,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     private let failWith: SwiftFormatError?
     private let formatOverride: String?
     private let lintOutput: String
+    private let lintSummary: String
 
     public private(set) var versionCallCount = 0
     public private(set) var rulesCallCount = 0
@@ -33,7 +34,8 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         ruleInfos: [String: String] = [:],
         failWith: SwiftFormatError? = nil,
         formatOverride: String? = nil,
-        lintOutput: String = "[]"
+        lintOutput: String = "[]",
+        lintSummary: String = ""
     ) {
         self.versionValue = version
         self.rules = rules
@@ -42,6 +44,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         self.failWith = failWith
         self.formatOverride = formatOverride
         self.lintOutput = lintOutput
+        self.lintSummary = lintSummary
     }
 
     /// Changes the reported version (to exercise cache invalidation).
@@ -84,10 +87,10 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         return formatOverride ?? source
     }
 
-    public func lint(path _: String, arguments: [String]) throws -> String {
+    public func lint(path _: String, arguments: [String]) throws -> LintRun {
         lintCallCount += 1
         lastLintArguments = arguments
         if let failWith { throw failWith }
-        return lintOutput
+        return LintRun(reporterOutput: lintOutput, summary: lintSummary)
     }
 }

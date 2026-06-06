@@ -13,6 +13,21 @@ public typealias SwiftFormatCommandRunner = @Sendable ([String]) async throws ->
 /// Checks whether a file exists at a path. Injected in tests.
 public typealias SwiftFormatFileExists = @Sendable (String) async -> Bool
 
+/// The result of a `swiftformat --lint` run: the machine-readable reporter output
+/// (stdout) plus SwiftFormat's human run summary (stderr), which carries the
+/// `N/M files require formatting` counts the JSON reporter omits.
+public nonisolated struct LintRun: Sendable, Equatable {
+    /// stdout — e.g. the `--reporter json` payload.
+    public let reporterOutput: String
+    /// stderr — the run summary line(s).
+    public let summary: String
+
+    public init(reporterOutput: String, summary: String) {
+        self.reporterOutput = reporterOutput
+        self.summary = summary
+    }
+}
+
 /// The CLI operations the app needs from `swiftformat`.
 public protocol SwiftFormatCLIProtocol: Sendable {
     /// Locates the `swiftformat` binary, throwing `.notFound` if absent.
@@ -29,8 +44,8 @@ public protocol SwiftFormatCLIProtocol: Sendable {
     /// `arguments` should begin with `stdin`), returning the formatted result.
     func format(source: String, arguments: [String]) async throws -> String
     /// Runs `swiftformat <path> <arguments>` (for `--lint --reporter json`),
-    /// returning stdout.
-    func lint(path: String, arguments: [String]) async throws -> String
+    /// returning stdout (reporter output) and stderr (run summary).
+    func lint(path: String, arguments: [String]) async throws -> LintRun
 }
 
 /// Errors surfaced while invoking the SwiftFormat CLI.
@@ -131,8 +146,11 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
         }
     }
 
-    public func lint(path: String, arguments: [String]) async throws -> String {
-        try await run([path] + arguments)
+    public func lint(path: String, arguments: [String]) async throws -> LintRun {
+        try await mapping {
+            let result = try await tool.run(arguments: [path] + arguments)
+            return LintRun(reporterOutput: result.stdoutString, summary: result.stderrString)
+        }
     }
 
     // MARK: - Execution

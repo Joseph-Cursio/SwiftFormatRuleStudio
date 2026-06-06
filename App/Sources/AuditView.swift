@@ -162,12 +162,27 @@ struct AuditView: View {
 
     private func summary(_ report: ImpactReport) -> some View {
         HStack(spacing: 24) {
-            stat("\(report.ruleImpacts.count)", "rules")
+            stat("\(report.ruleImpacts.count)", "triggered rules")
+            stat("\(enabledRuleCount)", "enabled rules")
+            stat("\(disabledRuleCount)", "disabled rules")
             stat("\(report.filesAffected)", "files affected")
+            stat("\(report.filesChecked)", "files checked")
             stat("\(report.totalFindings)", "findings")
             Spacer()
         }
         .padding(12)
+    }
+
+    /// Rules that would run under the active config (default-on minus disables,
+    /// plus any explicitly enabled opt-in rules).
+    private var enabledRuleCount: Int {
+        guard let rules = catalog.catalog?.rules else { return 0 }
+        return rules.count { config.isRuleEnabled($0.name, isOptIn: $0.isOptIn) }
+    }
+
+    private var disabledRuleCount: Int {
+        guard let rules = catalog.catalog?.rules else { return 0 }
+        return rules.count - enabledRuleCount
     }
 
     private func stat(_ value: String, _ label: String) -> some View {

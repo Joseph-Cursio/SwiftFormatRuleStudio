@@ -28,14 +28,26 @@ struct ImpactAuditModelTests {
 
     @Test("runAudit lints, parses, and aggregates")
     func runsAudit() async {
-        let model = ImpactAuditModel(cli: MockSwiftFormatCLI(lintOutput: Self.json))
+        let cli = MockSwiftFormatCLI(
+            lintOutput: Self.json,
+            lintSummary: "2/7 files require formatting, 1 file skipped."
+        )
+        let model = ImpactAuditModel(cli: cli)
         await model.runAudit(path: URL(fileURLWithPath: "/ws"))
 
         #expect(model.state == .completed)
         #expect(model.report?.filesAffected == 2)
+        #expect(model.report?.filesChecked == 7) // from the run summary denominator
         #expect(model.report?.totalFindings == 3)
         #expect(model.report?.ruleImpacts.first?.ruleID == "indent")
         #expect(model.auditedPath?.path == "/ws")
+    }
+
+    @Test("filesChecked falls back to affected files when no summary is present")
+    func filesCheckedFallback() async {
+        let model = ImpactAuditModel(cli: MockSwiftFormatCLI(lintOutput: Self.json))
+        await model.runAudit(path: URL(fileURLWithPath: "/ws"))
+        #expect(model.report?.filesChecked == 2) // == filesAffected
     }
 
     @Test("Audit failure surfaces .failed and clears the report")
@@ -59,7 +71,7 @@ struct ImpactAuditModelTests {
 
         let args = await cli.lastLintArguments
         #expect(args == [
-            "--lint", "--reporter", "json", "--quiet",
+            "--lint", "--reporter", "json",
             "--swift-version", "5.10", "--disable", "redundantSelf"
         ])
     }
@@ -96,6 +108,7 @@ struct ImpactAuditIntegrationTests {
         let report = try #require(model.report)
         #expect(report.totalFindings > 0)
         #expect(report.filesAffected == 1)
+        #expect(report.filesChecked == 1) // parsed from SwiftFormat's run summary
         #expect(report.ruleImpacts.contains { $0.ruleID == "spaceAroundBraces" })
     }
 }

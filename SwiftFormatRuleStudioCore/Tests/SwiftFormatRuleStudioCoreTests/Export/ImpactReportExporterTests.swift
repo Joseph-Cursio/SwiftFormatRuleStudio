@@ -10,6 +10,7 @@ import Testing
 struct ImpactReportExporterTests {
     private static let report = ImpactReport(
         filesAffected: 3,
+        filesChecked: 8,
         totalFindings: 5,
         ruleImpacts: [
             RuleImpact(ruleID: "indent", fileCount: 2, findingCount: 3),

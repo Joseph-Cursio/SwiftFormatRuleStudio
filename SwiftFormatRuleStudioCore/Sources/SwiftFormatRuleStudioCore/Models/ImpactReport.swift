@@ -47,13 +47,18 @@ public struct RuleImpact: Identifiable, Equatable, Sendable {
 public struct ImpactReport: Equatable, Sendable {
     /// Distinct files with at least one finding.
     public let filesAffected: Int
+    /// Total Swift files SwiftFormat actually checked (its `N/M files require
+    /// formatting` denominator). Hidden dirs like `.build` are skipped, so this is
+    /// the real scan size, not every `.swift` on disk.
+    public let filesChecked: Int
     /// Total findings across all rules.
     public let totalFindings: Int
     /// Per-rule impact, ranked by file count (then finding count, then name).
     public let ruleImpacts: [RuleImpact]
 
-    public init(filesAffected: Int, totalFindings: Int, ruleImpacts: [RuleImpact]) {
+    public init(filesAffected: Int, filesChecked: Int, totalFindings: Int, ruleImpacts: [RuleImpact]) {
         self.filesAffected = filesAffected
+        self.filesChecked = filesChecked
         self.totalFindings = totalFindings
         self.ruleImpacts = ruleImpacts
     }
@@ -63,8 +68,10 @@ public struct ImpactReport: Equatable, Sendable {
         totalFindings == 0
     }
 
-    /// Aggregates raw findings into a ranked per-rule report.
-    public static func from(findings: [LintFinding]) -> Self {
+    /// Aggregates raw findings into a ranked per-rule report. `filesChecked` comes
+    /// from SwiftFormat's run summary; when unknown it falls back to the number of
+    /// affected files (a lower bound).
+    public static func from(findings: [LintFinding], filesChecked: Int? = nil) -> Self {
         let byRule = Dictionary(grouping: findings, by: \.ruleID)
         let impacts = byRule.map { ruleID, group in
             RuleImpact(
@@ -79,8 +86,10 @@ public struct ImpactReport: Equatable, Sendable {
             return lhs.ruleID < rhs.ruleID
         }
 
+        let affected = Set(findings.map(\.filePath)).count
         return Self(
-            filesAffected: Set(findings.map(\.filePath)).count,
+            filesAffected: affected,
+            filesChecked: filesChecked ?? affected,
             totalFindings: findings.count,
             ruleImpacts: impacts
         )
