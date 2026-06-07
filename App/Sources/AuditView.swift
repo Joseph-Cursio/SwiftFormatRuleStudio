@@ -92,18 +92,18 @@ struct AuditView: View {
         switch model.state {
         case .idle:
             ContentUnavailableView {
-                Label("Audit a project", systemImage: "chart.bar.doc.horizontal")
+                Label("Scan a project", systemImage: "chart.bar.doc.horizontal")
             } description: {
                 Text("Choose a folder to see how much each rule would change.")
             } actions: {
                 Button("Choose Folder…") { choosingFolder = true }
             }
         case .running:
-            ProgressView("Auditing…")
+            ProgressView("Scanning…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let message):
             ContentUnavailableView {
-                Label("Audit failed", systemImage: "exclamationmark.triangle")
+                Label("Scan failed", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(message)
             }
