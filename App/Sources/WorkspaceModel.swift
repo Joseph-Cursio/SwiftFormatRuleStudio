@@ -54,6 +54,16 @@ final class WorkspaceModel {
     /// triggered-rules list (and by Back). The Rules tab selects it and clears it.
     var ruleRequest: String?
 
+    /// The file currently loaded in the Preview tab (`nil` for the scratchpad or
+    /// no project). Lets the Rules tab offer "see this rule on my file" using the
+    /// exact file the user was just looking at.
+    var currentPreviewFile: URL?
+
+    /// Whether the rule detail's live example runs against `currentPreviewFile`
+    /// instead of the curated snippet. Sticky across rules (a session preference);
+    /// flipped on automatically when the user jumps from Preview to a rule.
+    var rulesShowsProjectFile = false
+
     /// What the Impact tab should restore on Back (expand the rule/file, scroll to
     /// it). The Impact tab consumes and clears it.
     var impactRestore: ImpactTarget?
@@ -75,10 +85,15 @@ final class WorkspaceModel {
     }
 
     /// Opens `ruleID` in the Rules tab, remembering `origin` so Back can return.
+    /// Arriving from a Preview file flips the rule example to that file, so you
+    /// land on the rule already showing its effect on the code you were viewing.
     func openInRules(_ ruleID: String, from origin: Location) {
         backStack.append(origin)
         selectedTab = .rules
         ruleRequest = ruleID
+        if case .preview(let file) = origin, file != nil {
+            rulesShowsProjectFile = true
+        }
     }
 
     /// Returns to the previous location, restoring its context.

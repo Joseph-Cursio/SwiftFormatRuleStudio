@@ -133,6 +133,7 @@ struct LiveCodePreviewView: View {
         model.source = text
         model.scheduleFormat()
         savedFilePath = url.path // remember across launches
+        workspace.currentPreviewFile = url // let the Rules tab target this file
     }
 
     private func loadProjectFiles() async {
@@ -180,6 +181,7 @@ struct LiveCodePreviewView: View {
         listSelection = nil
         selectedFile = nil
         model.stdinPath = nil
+        workspace.currentPreviewFile = nil
     }
 
     /// The set of expanded directory paths (decoded from the persisted string).

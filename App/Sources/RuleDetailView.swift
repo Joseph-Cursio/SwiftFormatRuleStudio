@@ -204,19 +204,42 @@ struct RuleOptionsSection: View {
     }
 }
 
-/// A live, option-driven example: reconstructs the rule's "before" snippet,
-/// runs it back through SwiftFormat with *only this rule* enabled plus the
-/// currently-set options, and shows the resulting before→after diff — updating
-/// (debounced) as the options above are edited. So you change `--self` to
-/// `remove` and watch the `self.` disappear, instead of guessing.
+/// A live, option-driven example: runs SwiftFormat with *only this rule* enabled
+/// plus the currently-set options, and shows the resulting before→after diff —
+/// updating (debounced) as the options above are edited. So you change `--self`
+/// to `remove` and watch the `self.` disappear, instead of guessing.
+///
+/// The source is either the rule's curated snippet (the default — always shows
+/// the rule's effect, good for learning) or the file currently open in Preview
+/// (your real code, good for "does this actually affect me?"). A segmented
+/// toggle switches between them; it's offered only when a project file is loaded.
 struct RuleLiveExampleView: View {
     let rule: FormatRule
     let options: [FormatOption]
     @Environment(ConfigModel.self) private var config
+    @Environment(WorkspaceModel.self) private var workspace
     // Swift 6.0 so modern syntax (typed throws, etc.) is recognized in examples.
     @State private var model = LivePreviewModel(source: "", swiftVersion: "6.0")
+    /// Contents of `projectFile` for the current mode, or `nil` in example mode.
+    @State private var projectFileSource: String?
 
-    private var beforeSource: String? { rule.liveExampleSource }
+    private var curatedSource: String? { rule.liveExampleSource }
+
+    /// The file the Preview tab currently has loaded, offered as a live target.
+    private var projectFile: URL? { workspace.currentPreviewFile }
+
+    /// Whether we're showing the project file (toggle on *and* one is loaded).
+    private var showingProjectFile: Bool { workspace.rulesShowsProjectFile && projectFile != nil }
+
+    /// The "before" source for the active mode.
+    private var beforeSource: String? {
+        showingProjectFile ? projectFileSource : curatedSource
+    }
+
+    /// Re-run whenever the rule, the mode, or the targeted file changes.
+    private var reloadKey: String {
+        "\(rule.name)|\(showingProjectFile)|\(projectFile?.path ?? "")"
+    }
 
     /// Isolate this rule and pass only its *set* options — unset ones fall back
     /// to SwiftFormat's defaults, so at no overrides the live diff reproduces the
@@ -234,51 +257,109 @@ struct RuleLiveExampleView: View {
     }
 
     var body: some View {
-        // A rule with a tailored "unavailable" note acts on a file-level/invisible
-        // aspect a code diff can't show — the note wins over any reconstruction.
-        if let note = CuratedLiveExample.unavailableNote(forRule: rule.name) {
-            placeholder(note)
-        } else if let before = beforeSource {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Text("Examples if the Rule is Enabled…")
-                        .scaledFont(.headline, weight: .semibold)
-                    if model.state == .formatting {
-                        ProgressView().controlSize(.small)
-                    }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(showingProjectFile ? "This rule on your file" : "Examples if the Rule is Enabled…")
+                    .scaledFont(.headline, weight: .semibold)
+                if model.state == .formatting {
+                    ProgressView().controlSize(.small)
                 }
-                Text(CuratedLiveExample.hint(forRule: rule.name)
-                    ?? "This rule applied to the sample with your current options — "
-                    + "edit the options above to watch it change.")
-                    .scaledFont(.caption)
-                    .foregroundStyle(.secondary)
-                content(before: before)
+                Spacer()
+                sourcePicker
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .task(id: rule.name) {
-                model.fragmentFallback = true
-                model.source = before
-                model.extraArguments = ruleArguments
-                await model.formatNow()
-            }
-            .onChange(of: ruleArguments) { _, newArguments in
-                model.extraArguments = newArguments
-                model.scheduleFormat()
-            }
-        } else {
-            placeholder("No example available for this rule yet.")
+            hint
+            contentArea
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task(id: reloadKey) { await reload() }
+        .onChange(of: ruleArguments) { _, newArguments in
+            model.extraArguments = newArguments
+            model.scheduleFormat()
         }
     }
 
-    private func placeholder(_ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Example")
-                .scaledFont(.headline, weight: .semibold)
-            Text(text)
-                .scaledFont(.caption)
-                .foregroundStyle(.tertiary)
+    /// The `[ Example | MyFile.swift ]` segmented toggle, shown only when Preview
+    /// has a file loaded. Bound straight to the (sticky) workspace preference.
+    @ViewBuilder
+    private var sourcePicker: some View {
+        if let file = projectFile {
+            Picker("Example source", selection: projectFileBinding) {
+                Text("Example").tag(false)
+                Text(file.lastPathComponent).tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .help("Switch between the built-in example and the file open in Preview")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var projectFileBinding: Binding<Bool> {
+        Binding(
+            get: { workspace.rulesShowsProjectFile },
+            set: { workspace.rulesShowsProjectFile = $0 }
+        )
+    }
+
+    @ViewBuilder
+    private var hint: some View {
+        if showingProjectFile {
+            Text("Running just this rule on \(projectFile?.lastPathComponent ?? "your file") with your "
+                + "current options — edit the options above to see the effect change.")
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+        } else if curatedSource != nil, CuratedLiveExample.unavailableNote(forRule: rule.name) == nil {
+            Text(CuratedLiveExample.hint(forRule: rule.name)
+                ?? "This rule applied to the sample with your current options — "
+                + "edit the options above to watch it change.")
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var contentArea: some View {
+        // In example mode a rule that acts on an invisible/file-level aspect shows
+        // an explanatory note instead of an always-empty diff. The real file can
+        // still render a diff, so the note only applies to the curated snippet.
+        if !showingProjectFile, let note = CuratedLiveExample.unavailableNote(forRule: rule.name) {
+            placeholderText(note)
+        } else if let before = beforeSource {
+            content(before: before)
+        } else if showingProjectFile {
+            placeholderText("Couldn’t read \(projectFile?.lastPathComponent ?? "the file").")
+        } else {
+            placeholderText("No example available for this rule yet.")
+        }
+    }
+
+    private func placeholderText(_ text: String) -> some View {
+        Text(text)
+            .scaledFont(.caption)
+            .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Loads the source for the current mode and formats it. Reading the file
+    /// here (not cached) keeps it fresh when the Preview file or mode changes.
+    private func reload() async {
+        let before: String?
+        if showingProjectFile, let file = projectFile {
+            let text = try? String(contentsOf: file, encoding: .utf8)
+            projectFileSource = text
+            before = text
+            model.stdinPath = file.path // path-dependent rules behave as in place
+            model.fragmentFallback = false // a real file is complete, not a fragment
+        } else {
+            projectFileSource = nil
+            before = curatedSource
+            model.stdinPath = nil
+            model.fragmentFallback = true
+        }
+        guard let before else { return }
+        model.source = before
+        model.extraArguments = ruleArguments
+        await model.formatNow()
     }
 
     @ViewBuilder
@@ -289,16 +370,28 @@ struct RuleLiveExampleView: View {
                 .scaledFont(.caption)
                 .foregroundStyle(.tertiary)
         case .idle, .formatting, .formatted:
+            // Before / Diff / After in both modes. For a real file each block is
+            // height-capped and scrolls internally, so all three stay visible at
+            // once; the curated snippet is small, so it renders at natural height.
+            let cap: CGFloat? = showingProjectFile ? 200 : nil
             VStack(alignment: .leading, spacing: 10) {
-                labeledBlock("Before") { DiffExampleView(example: before) }
+                labeledBlock("Before") { DiffExampleView(example: before, maxHeight: cap) }
                 if model.hasChanges {
-                    labeledBlock("Diff (changes highlighted)") { LiveDiffLinesView(lines: model.diff) }
-                    labeledBlock("After") { DiffExampleView(example: model.formattedSource) }
+                    labeledBlock("Diff (changes highlighted)") { LiveDiffLinesView(lines: model.diff, maxHeight: cap) }
+                    labeledBlock("After") { DiffExampleView(example: model.formattedSource, maxHeight: cap) }
                 } else {
-                    labeledBlock("After (unchanged with these options)") { DiffExampleView(example: before) }
+                    labeledBlock(unchangedLabel) { DiffExampleView(example: before, maxHeight: cap) }
                 }
             }
         }
+    }
+
+    /// The "After" caption when the rule changes nothing — phrased for whichever
+    /// source is showing.
+    private var unchangedLabel: String {
+        showingProjectFile
+            ? "After (\(rule.name) leaves \(projectFile?.lastPathComponent ?? "this file") unchanged)"
+            : "After (unchanged with these options)"
     }
 
     /// A captioned code block — used for the Before / After panes so it's always
@@ -394,14 +487,39 @@ func lineNumberGutter(_ number: Int?, width: CGFloat) -> some View {
         .frame(width: width, alignment: .trailing)
 }
 
+/// Reports a view's laid-out height, so a capped block can size to its content
+/// (up to the cap) instead of always reserving the full cap height.
+private struct BlockHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+private extension View {
+    func measuringHeight() -> some View {
+        background(GeometryReader { geometry in
+            Color.clear.preference(key: BlockHeightKey.self, value: geometry.size.height)
+        })
+    }
+
+    /// Clamps content to `cap`: short content sizes to fit (no leftover space),
+    /// long content caps and scrolls. `nil` cap leaves the height unconstrained.
+    func cappedHeight(_ measured: CGFloat, _ cap: CGFloat?) -> some View {
+        frame(height: cap.map { min(measured == 0 ? $0 : measured, $0) })
+    }
+}
+
 struct LiveDiffLinesView: View {
     let lines: [PreviewDiffLine]
+    /// When set, the diff is capped to this height and scrolls vertically too — so
+    /// a long project-file diff stays compact alongside the Before/After panes.
+    var maxHeight: CGFloat? = nil
+    @State private var contentHeight: CGFloat = 0
 
     var body: some View {
         let rows = lines.numbered()
         let oldWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.oldNumber).max() ?? 0)
         let newWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.newNumber).max() ?? 0)
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(maxHeight == nil ? .horizontal : [.horizontal, .vertical], showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(rows) { row in
                     HStack(alignment: .top, spacing: 8) {
@@ -422,8 +540,11 @@ struct LiveDiffLinesView: View {
             }
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .measuringHeight()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .cappedHeight(contentHeight, maxHeight)
+        .onPreferenceChange(BlockHeightKey.self) { contentHeight = $0 }
         .background(Color(nsColor: .textBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
@@ -460,14 +581,37 @@ struct LiveDiffLinesView: View {
 /// view for the live `swiftformat stdin` preview.)
 struct DiffExampleView: View {
     let example: String
+    /// When set, the block is capped to this height and scrolls internally — so a
+    /// long project file's Before/After panes stay compact and all three visible.
+    var maxHeight: CGFloat? = nil
+
+    @State private var contentHeight: CGFloat = 0
 
     private var lines: [String] {
         example.components(separatedBy: "\n")
     }
 
     var body: some View {
+        Group {
+            if maxHeight != nil {
+                ScrollView([.vertical, .horizontal]) { rows.measuringHeight() }
+                    .cappedHeight(contentHeight, maxHeight)
+                    .onPreferenceChange(BlockHeightKey.self) { contentHeight = $0 }
+            } else {
+                rows
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8).strokeBorder(.separator)
+        )
+    }
+
+    private var rows: some View {
         let width = diffGutterWidth(forMaxNumber: lines.count)
-        VStack(alignment: .leading, spacing: 0) {
+        return VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
                 let split = Self.split(line)
                 HStack(alignment: .top, spacing: 8) {
@@ -486,11 +630,6 @@ struct DiffExampleView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .textBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8).strokeBorder(.separator)
-        )
     }
 
     /// Splits a raw diff line into its 1-char gutter (`+`/`-`/space) and the code
