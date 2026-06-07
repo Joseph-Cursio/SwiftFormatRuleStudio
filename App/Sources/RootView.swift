@@ -77,6 +77,12 @@ struct RootView: View {
                         Label("Impact", systemImage: "chart.bar.doc.horizontal")
                     }
                     .tag(WorkspaceModel.Tab.impact)
+                TuneView()
+                    .modifier(backToolbar)
+                    .tabItem {
+                        Label("Tune", systemImage: "sparkles")
+                    }
+                    .tag(WorkspaceModel.Tab.tune)
             }
             Divider()
             StatusBar(catalog: catalog)

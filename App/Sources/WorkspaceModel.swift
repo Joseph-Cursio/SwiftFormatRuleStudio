@@ -17,7 +17,7 @@ final class WorkspaceModel {
     /// The app's top-level tabs. Owned here (not as RootView state) so navigation
     /// — cross-links and Back — can switch tabs centrally.
     enum Tab: Hashable {
-        case rules, config, preview, impact
+        case rules, config, preview, impact, tune
     }
 
     /// A place a cross-link came from, captured so Back can return and restore it.
