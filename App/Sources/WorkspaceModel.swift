@@ -14,12 +14,85 @@ import Observation
 @MainActor
 @Observable
 final class WorkspaceModel {
+    /// The app's top-level tabs. Owned here (not as RootView state) so navigation
+    /// — cross-links and Back — can switch tabs centrally.
+    enum Tab: Hashable {
+        case rules, config, preview, audit
+    }
+
+    /// A place a cross-link came from, captured so Back can return and restore it.
+    /// Only the two tabs that originate jumps need cases.
+    enum Location: Equatable {
+        /// The Preview tab with a file loaded (`nil` for the scratchpad).
+        case preview(file: URL?)
+        /// The Audit tab with a rule row expanded, optionally a file row under it.
+        case audit(ruleID: String, filePath: String?)
+    }
+
+    /// What the Audit tab should re-expand and scroll to when Back lands on it.
+    struct AuditTarget: Equatable {
+        let ruleID: String
+        let filePath: String?
+    }
+
     /// The selected project folder, or `nil` when browsing without a project.
     var selectedFolder: URL?
 
     /// Whether the user has made their initial choice (opened a folder or chose
     /// to browse without one). While `false`, RootView shows the startup screen.
     var hasCompletedStartup = false
+
+    /// The currently selected tab. RootView binds the `TabView` to this.
+    var selectedTab: Tab = .rules
+
+    /// A file the user asked to open in the Preview tab — set from the Audit
+    /// drill-down's "Open in Preview" (and by Back). The Preview tab loads the
+    /// file and clears it.
+    var previewRequest: URL?
+
+    /// A rule the user asked to open in the Rules tab — set from the Preview tab's
+    /// triggered-rules list (and by Back). The Rules tab selects it and clears it.
+    var ruleRequest: String?
+
+    /// What the Audit tab should restore on Back (expand the rule/file, scroll to
+    /// it). The Audit tab consumes and clears it.
+    var auditRestore: AuditTarget?
+
+    /// Locations to return to, most recent last. A cross-link pushes where it came
+    /// from; Back pops and restores.
+    private var backStack: [Location] = []
+
+    /// Whether there's somewhere to go Back to.
+    var canGoBack: Bool { !backStack.isEmpty }
+
+    // MARK: - Navigation
+
+    /// Opens `file` in the Preview tab, remembering `origin` so Back can return.
+    func openInPreview(_ file: URL, from origin: Location) {
+        backStack.append(origin)
+        selectedTab = .preview
+        previewRequest = file
+    }
+
+    /// Opens `ruleID` in the Rules tab, remembering `origin` so Back can return.
+    func openInRules(_ ruleID: String, from origin: Location) {
+        backStack.append(origin)
+        selectedTab = .rules
+        ruleRequest = ruleID
+    }
+
+    /// Returns to the previous location, restoring its context.
+    func goBack() {
+        guard let location = backStack.popLast() else { return }
+        switch location {
+        case .preview(let file):
+            selectedTab = .preview
+            if let file { previewRequest = file }
+        case .audit(let ruleID, let filePath):
+            selectedTab = .audit
+            auditRestore = AuditTarget(ruleID: ruleID, filePath: filePath)
+        }
+    }
 
     /// Absolute path of the most recently opened project, persisted across
     /// launches so the startup screen can offer to reopen it.

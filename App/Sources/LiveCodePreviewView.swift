@@ -58,6 +58,9 @@ struct LiveCodePreviewView: View {
         // Rebuild the file list for the selected project, then restore the
         // remembered file (or clear the selection if it isn't in this project).
         .task(id: workspace.selectedFolder) { await loadProjectFiles() }
+        // A cross-link from the Audit tab can request a file; open it once the
+        // file list is loaded (consumePreviewRequest no-ops until it matches).
+        .onChange(of: workspace.previewRequest) { _, _ in consumePreviewRequest() }
         .navigationTitle("Preview")
     }
 
@@ -143,16 +146,33 @@ struct LiveCodePreviewView: View {
         projectFiles = files
         fileTree = Self.tree(from: files, root: folder)
 
-        // Reopen the remembered file if it belongs to this project; otherwise drop
-        // any stale selection. Load directly (not via the listSelection onChange,
-        // which isn't armed yet at first appearance).
-        if let remembered = files.first(where: { $0.path == savedFilePath }) {
+        // A pending cross-link from Audit wins over the remembered file. Otherwise
+        // reopen the remembered file if it belongs to this project, or drop any
+        // stale selection. Load directly (not via the listSelection onChange, which
+        // isn't armed yet at first appearance).
+        if consumePreviewRequest() {
+            return
+        } else if let remembered = files.first(where: { $0.path == savedFilePath }) {
             listSelection = remembered
             selectedFile = remembered
             loadFile(remembered)
         } else {
             clearFileSelection()
         }
+    }
+
+    /// Opens the file requested by the Audit cross-link, if one is pending and
+    /// present in this project, then clears the request. Returns whether it opened
+    /// a file. No-ops (leaving the request intact) until the file list is loaded.
+    @discardableResult
+    private func consumePreviewRequest() -> Bool {
+        guard let requested = workspace.previewRequest,
+              let match = projectFiles.first(where: { $0.path == requested.path }) else { return false }
+        listSelection = match
+        selectedFile = match
+        loadFile(match)
+        workspace.previewRequest = nil
+        return true
     }
 
     /// Returns the editor to the editable, no-file state.
@@ -314,17 +334,7 @@ struct LiveCodePreviewView: View {
     /// config override or SwiftFormat's default) — shown under each triggered rule
     /// so it's clear which knobs governed the change.
     private func optionLines(for ruleID: String) -> [String] {
-        OptionRuleUsage.optionKeys(forRule: ruleID).map { key in
-            let option = catalog.options.first { $0.key == key }
-            let flag = option?.name ?? "--\(key)"
-            if let value = config.config.options[key] {
-                return "\(flag) = \(value)"
-            }
-            if let defaultValue = option?.defaultValue {
-                return "\(flag) = \(defaultValue)"
-            }
-            return flag
-        }
+        ruleOptionLines(forRule: ruleID, catalog: catalog, config: config)
     }
 
     private func changeRow(_ change: LintFinding) -> some View {
@@ -355,10 +365,28 @@ struct LiveCodePreviewView: View {
                 }
             }
             .padding(.leading, 8)
+            Spacer(minLength: 8)
+            Button {
+                showRuleInRulesTab(change.ruleID)
+            } label: {
+                Image(systemName: "arrow.up.forward")
+            }
+            .buttonStyle(.borderless)
+            .help("Show “\(change.ruleID)” in the Rules tab")
+            .accessibilityLabel("Show \(change.ruleID) in the Rules tab")
         }
         .padding(.vertical, 2)
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 8))
         .listRowSeparator(.hidden)
+        .contextMenu {
+            Button("Show in Rules Tab") { showRuleInRulesTab(change.ruleID) }
+        }
+    }
+
+    /// Opens `ruleID` in the Rules tab, remembering this Preview location so Back
+    /// returns here. Shared by the row's reveal button and its context menu.
+    private func showRuleInRulesTab(_ ruleID: String) {
+        workspace.openInRules(ruleID, from: .preview(file: selectedFile))
     }
 
     // MARK: - Result

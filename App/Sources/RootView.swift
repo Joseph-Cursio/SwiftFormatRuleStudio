@@ -10,18 +10,10 @@ import SwiftUI
 /// them into the environment so all tabs work off the same state (e.g. the live
 /// preview reflects the edited config).
 struct RootView: View {
-    /// The tabs, in display order. A bound selection keeps the active tab stable
-    /// across re-renders — without it, presenting a `.fileImporter` from Config or
-    /// Audit resets an unbound `TabView` back to the first tab.
-    private enum Tab: Hashable {
-        case rules, config, preview, audit
-    }
-
     @State private var catalog = RuleStudioModel()
     @State private var config = ConfigModel()
     @State private var workspace = WorkspaceModel()
     @State private var audit = ImpactAuditModel()
-    @State private var selectedTab: Tab = .rules
     @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
     var body: some View {
@@ -51,32 +43,71 @@ struct RootView: View {
         }
     }
 
+    /// Binds the TabView to the shared selection so cross-links and Back can switch
+    /// tabs centrally. A bound selection also keeps the active tab stable when a
+    /// `.fileImporter` is presented from Config or Audit.
+    private var tabSelection: Binding<WorkspaceModel.Tab> {
+        Binding(get: { workspace.selectedTab }, set: { workspace.selectedTab = $0 })
+    }
+
     private var mainUI: some View {
         VStack(spacing: 0) {
-            TabView(selection: $selectedTab) {
+            TabView(selection: tabSelection) {
                 ContentView()
+                    .modifier(backToolbar)
                     .tabItem {
                         Label("Rules", systemImage: "list.bullet.rectangle")
                     }
-                    .tag(Tab.rules)
+                    .tag(WorkspaceModel.Tab.rules)
                 ConfigView()
+                    .modifier(backToolbar)
                     .tabItem {
                         Label("Config", systemImage: "slider.horizontal.3")
                     }
-                    .tag(Tab.config)
+                    .tag(WorkspaceModel.Tab.config)
                 LiveCodePreviewView()
+                    .modifier(backToolbar)
                     .tabItem {
                         Label("Preview", systemImage: "wand.and.stars")
                     }
-                    .tag(Tab.preview)
+                    .tag(WorkspaceModel.Tab.preview)
                 AuditView()
+                    .modifier(backToolbar)
                     .tabItem {
                         Label("Audit", systemImage: "chart.bar.doc.horizontal")
                     }
-                    .tag(Tab.audit)
+                    .tag(WorkspaceModel.Tab.audit)
             }
             Divider()
             StatusBar(catalog: catalog)
+        }
+    }
+
+    /// A leading "Back" toolbar item, added to every tab so the control sits in
+    /// the standard top-left spot whichever tab is showing (⌘[ triggers it too).
+    /// Reads RootView's own `workspace` directly — not the environment — so it
+    /// doesn't trap when a view is inspected/previewed without the shared models.
+    private var backToolbar: BackToolbar {
+        BackToolbar(workspace: workspace)
+    }
+}
+
+/// See `RootView.backToolbar`.
+private struct BackToolbar: ViewModifier {
+    let workspace: WorkspaceModel
+
+    func body(content: Content) -> some View {
+        content.toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    workspace.goBack()
+                } label: {
+                    Label("Back", systemImage: "chevron.backward")
+                }
+                .disabled(!workspace.canGoBack)
+                .keyboardShortcut("[", modifiers: .command)
+                .help("Back to where you jumped from")
+            }
         }
     }
 }

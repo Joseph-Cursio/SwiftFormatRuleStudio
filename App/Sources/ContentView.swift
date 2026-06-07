@@ -10,6 +10,7 @@ import SwiftUI
 /// lives in the tested `RuleStudioModel`; these views are thin bindings.
 struct ContentView: View {
     @Environment(RuleStudioModel.self) private var model
+    @Environment(WorkspaceModel.self) private var workspace
     @State private var selection: String?
     // Adjustable via View ▸ Larger/Smaller Text (⌘+ / ⌘- / ⌘0). Shared with the
     // app's menu commands through this AppStorage key.
@@ -29,5 +30,18 @@ struct ContentView: View {
         .onChange(of: selection) { _, newValue in
             Task { await model.select(newValue) }
         }
+        // A cross-link from the Preview tab can request a rule; select it (which
+        // drives the detail pane) and clear the request. `.task` covers the case
+        // where the request was set before this view first appeared.
+        .onChange(of: workspace.ruleRequest) { _, _ in consumeRuleRequest() }
+        .task { consumeRuleRequest() }
+    }
+
+    /// Selects the rule requested by the Preview cross-link, if any, then clears
+    /// the request. Setting `selection` drives the existing `model.select` path.
+    private func consumeRuleRequest() {
+        guard let rule = workspace.ruleRequest else { return }
+        selection = rule
+        workspace.ruleRequest = nil
     }
 }
