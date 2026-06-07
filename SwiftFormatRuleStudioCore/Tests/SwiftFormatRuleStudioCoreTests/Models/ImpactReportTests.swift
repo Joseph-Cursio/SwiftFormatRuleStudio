@@ -39,6 +39,22 @@ struct ImpactReportTests {
         #expect(report.ruleImpacts.map(\.ruleID) == ["indent", "consecutiveSpaces"])
     }
 
+    @Test("Per-rule affected files carry finding counts and lines, ranked")
+    func affectedFiles() {
+        let report = ImpactReport.from(findings: Self.findings)
+
+        let indent = report.ruleImpacts.first { $0.ruleID == "indent" }
+        // A has 2 findings, B has 1 → A ranks first.
+        #expect(indent?.files.map(\.filePath) == ["/ws/A.swift", "/ws/B.swift"])
+        #expect(indent?.files.first?.findingCount == 2)
+        #expect(indent?.files.first?.lines == [1, 2]) // sorted line numbers
+        #expect(indent?.files.last?.lines == [1])
+
+        let spaces = report.ruleImpacts.first { $0.ruleID == "consecutiveSpaces" }
+        // Tie on count (1 each) → sorted by path: A before C.
+        #expect(spaces?.files.map(\.filePath) == ["/ws/A.swift", "/ws/C.swift"])
+    }
+
     @Test("An empty audit is clean")
     func emptyIsClean() {
         let report = ImpactReport.from(findings: [])

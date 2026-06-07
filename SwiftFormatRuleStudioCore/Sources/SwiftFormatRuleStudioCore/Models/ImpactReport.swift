@@ -25,6 +25,25 @@ public struct LintFinding: Equatable, Sendable {
     }
 }
 
+/// One file a rule would change, with the lines its findings sit on. Backs the
+/// audit drill-down: a rule row expands to these, and each expands to a diff.
+public struct FileImpact: Identifiable, Equatable, Sendable {
+    /// Absolute path of the affected file.
+    public let filePath: String
+    /// Findings this rule produced in the file.
+    public let findingCount: Int
+    /// 1-based line numbers of those findings, ascending.
+    public let lines: [Int]
+
+    public init(filePath: String, findingCount: Int, lines: [Int]) {
+        self.filePath = filePath
+        self.findingCount = findingCount
+        self.lines = lines
+    }
+
+    public var id: String { filePath }
+}
+
 /// How much a single rule would change the audited workspace.
 public struct RuleImpact: Identifiable, Equatable, Sendable {
     /// The rule's name, e.g. `"indent"`.
@@ -33,11 +52,15 @@ public struct RuleImpact: Identifiable, Equatable, Sendable {
     public let fileCount: Int
     /// Total findings this rule produced across the workspace.
     public let findingCount: Int
+    /// The affected files, ranked by finding count (then path). Empty unless the
+    /// report was built from findings carrying file paths.
+    public let files: [FileImpact]
 
-    public init(ruleID: String, fileCount: Int, findingCount: Int) {
+    public init(ruleID: String, fileCount: Int, findingCount: Int, files: [FileImpact] = []) {
         self.ruleID = ruleID
         self.fileCount = fileCount
         self.findingCount = findingCount
+        self.files = files
     }
 
     public var id: String { ruleID }
@@ -74,10 +97,23 @@ public struct ImpactReport: Equatable, Sendable {
     public static func from(findings: [LintFinding], filesChecked: Int? = nil) -> Self {
         let byRule = Dictionary(grouping: findings, by: \.ruleID)
         let impacts = byRule.map { ruleID, group in
-            RuleImpact(
+            let byFile = Dictionary(grouping: group, by: \.filePath)
+            let files = byFile.map { filePath, items in
+                FileImpact(
+                    filePath: filePath,
+                    findingCount: items.count,
+                    lines: items.map(\.line).sorted()
+                )
+            }
+            .sorted { lhs, rhs in
+                if lhs.findingCount != rhs.findingCount { return lhs.findingCount > rhs.findingCount }
+                return lhs.filePath < rhs.filePath
+            }
+            return RuleImpact(
                 ruleID: ruleID,
-                fileCount: Set(group.map(\.filePath)).count,
-                findingCount: group.count
+                fileCount: byFile.count,
+                findingCount: group.count,
+                files: files
             )
         }
         .sorted { lhs, rhs in
