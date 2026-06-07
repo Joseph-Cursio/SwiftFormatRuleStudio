@@ -74,7 +74,7 @@ struct RootView: View {
                 AuditView()
                     .modifier(backToolbar)
                     .tabItem {
-                        Label("Audit", systemImage: "chart.bar.doc.horizontal")
+                        Label("Impact", systemImage: "chart.bar.doc.horizontal")
                     }
                     .tag(WorkspaceModel.Tab.audit)
             }
