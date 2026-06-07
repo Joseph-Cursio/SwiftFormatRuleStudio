@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import LintStudioCore
 import Observation
 
 /// Observable model for the impact audit (M5): run `swiftformat --lint` over a
@@ -36,6 +37,14 @@ public final class ImpactAuditModel {
 
     private let cli: any SwiftFormatCLIProtocol
 
+    /// Memoized drill-down diffs, keyed by rule + file, so re-expanding a row in
+    /// the report doesn't re-run SwiftFormat. Cleared on each new audit.
+    private var diffCache: [String: [PreviewDiffLine]] = [:]
+
+    /// The config flags that pick *which* rules run. We strip these when isolating
+    /// a single rule for the drill-down, keeping only the option flags.
+    private static let ruleSelectionFlags: Set<String> = ["--enable", "--disable", "--rules"]
+
     /// Creates an audit model backed by the given CLI.
     public init(cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(), swiftVersion: String? = "5.10") {
         self.cli = cli
@@ -60,6 +69,7 @@ public final class ImpactAuditModel {
     public func runAudit(path: URL) async {
         state = .running
         auditedPath = path
+        diffCache.removeAll()
         do {
             let result = try await cli.lint(path: path.path, arguments: auditArguments)
             let findings = LintReportParser.parse(result.reporterOutput)
@@ -72,6 +82,49 @@ public final class ImpactAuditModel {
             report = nil
             state = .failed(error.localizedDescription)
         }
+    }
+
+    /// The before/after diff for a single rule applied to a single file, for the
+    /// report drill-down: the file as it is on disk vs. SwiftFormat run with *only*
+    /// `ruleID` enabled (under the active config's options). This is the rule's
+    /// standalone effect, so it can differ slightly from its marginal effect inside
+    /// the full config when rules interact — but it answers "what does this rule do
+    /// here?" directly. Empty if the file can't be read or formatting fails.
+    /// Results are cached for the lifetime of the current report.
+    public func ruleDiff(ruleID: String, filePath: String) async -> [PreviewDiffLine] {
+        let key = "\(ruleID)\u{0}\(filePath)"
+        if let cached = diffCache[key] { return cached }
+        guard let source = try? String(contentsOfFile: filePath, encoding: .utf8) else { return [] }
+
+        var arguments = ["stdin", "--stdin-path", filePath]
+        if let swiftVersion, !swiftVersion.isEmpty, !extraArguments.contains("--swift-version") {
+            arguments += ["--swift-version", swiftVersion]
+        }
+        arguments += optionArguments
+        arguments += ["--rules", ruleID]
+
+        guard let output = try? await cli.format(source: source, arguments: arguments) else { return [] }
+        let diff = PreviewDiffLine.lines(from: UnifiedDiffEngine.computeDiff(before: source, after: output))
+        diffCache[key] = diff
+        return diff
+    }
+
+    /// `extraArguments` with the rule-selection flags (`--enable`/`--disable`/
+    /// `--rules`) and their values dropped, leaving only the option flags. Used to
+    /// isolate one rule without the config's own enable/disable set fighting
+    /// `--rules`.
+    private var optionArguments: [String] {
+        var result: [String] = []
+        var index = 0
+        while index < extraArguments.count {
+            if Self.ruleSelectionFlags.contains(extraArguments[index]) {
+                index += 2 // skip the flag and its comma-joined value
+            } else {
+                result.append(extraArguments[index])
+                index += 1
+            }
+        }
+        return result
     }
 
     /// Pulls the files-checked count from SwiftFormat's run summary, e.g.

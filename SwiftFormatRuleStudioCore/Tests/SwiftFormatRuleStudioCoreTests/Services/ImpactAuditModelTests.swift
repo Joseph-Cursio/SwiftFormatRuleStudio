@@ -62,6 +62,54 @@ struct ImpactAuditModelTests {
         #expect(model.report == nil)
     }
 
+    @Test("ruleDiff isolates the rule: keeps options, drops enable/disable, appends --rules")
+    func ruleDiffIsolatesRule() async throws {
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SFRSDiff-\(UUID().uuidString).swift")
+        try "let x=1\n".write(to: file, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        let cli = MockSwiftFormatCLI(formatOverride: "let x = 1\n")
+        let model = ImpactAuditModel(cli: cli, swiftVersion: "5.10")
+        model.extraArguments = ["--indent", "4", "--disable", "redundantSelf", "--enable", "isEmpty"]
+
+        let diff = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: file.path)
+        #expect(diff.contains { $0.change != .unchanged }) // before/after differ
+
+        let args = await cli.lastFormatArguments
+        #expect(args == [
+            "stdin", "--stdin-path", file.path,
+            "--swift-version", "5.10",
+            "--indent", "4", // option kept
+            "--rules", "spaceAroundOperators"
+        ])
+        // The config's rule-selection flags are stripped so only the one rule runs.
+        #expect(!args.contains("redundantSelf"))
+        #expect(!args.contains("isEmpty"))
+    }
+
+    @Test("ruleDiff caches: a second call doesn't re-run SwiftFormat")
+    func ruleDiffCaches() async throws {
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SFRSDiff-\(UUID().uuidString).swift")
+        try "let x=1\n".write(to: file, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        let cli = MockSwiftFormatCLI(formatOverride: "let x = 1\n")
+        let model = ImpactAuditModel(cli: cli)
+
+        _ = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: file.path)
+        _ = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: file.path)
+        #expect(await cli.formatCallCount == 1)
+    }
+
+    @Test("ruleDiff returns empty when the file can't be read")
+    func ruleDiffMissingFile() async {
+        let model = ImpactAuditModel(cli: MockSwiftFormatCLI(formatOverride: "changed"))
+        let diff = await model.ruleDiff(ruleID: "indent", filePath: "/no/such/file.swift")
+        #expect(diff.isEmpty)
+    }
+
     @Test("auditArguments include the lint flags, swift version and config")
     func auditArguments() async {
         let cli = MockSwiftFormatCLI(lintOutput: "[]")
