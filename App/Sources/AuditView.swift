@@ -37,7 +37,7 @@ struct AuditView: View {
                 }
             }
         }
-            .navigationTitle("Impact Audit")
+            .navigationTitle("Impact")
             .toolbar { toolbarContent }
             .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
                 if case .success(let url) = result {
