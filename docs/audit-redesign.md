@@ -15,6 +15,35 @@ That scope decision (see "Forgoing D" below) turns the Audit tab from a dashboar
 into the heart of the app: **help the user choose a config by seeing its
 consequences on their real code.**
 
+## Positioning
+
+The realistic baseline isn't "programmers carefully manage their formatting
+config" — it's **they mostly don't.** The conscientious loop in the appendix is
+what a diligent minority do; the median case is: copy a config once (or take the
+defaults), wire CI once, and never revisit it — usually without knowing what most
+rules/options do. Formatting config is low-salience and high-friction-to-explore,
+so the payoff of digging never beats the effort.
+
+That cuts two ways, and the tool should be built and pitched with both in mind:
+
+- **The opportunity:** the value (zero-churn rules you could enable for free,
+  options better matched to your code) genuinely exists and goes unclaimed
+  *because the friction is too high*. We're not competing with a careful manual
+  process — we're competing with **nothing happening**. Making exploration a
+  10-second, visual, safe, even enjoyable thing converts "can't be bothered" into
+  "sure, one click." That is the whole point of the marginal-impact scan.
+- **The risk:** if nobody manages config, the day-to-day audience is thin. So aim
+  the tool at the **inflection points where people actually engage**, not at being
+  a daily driver:
+  - bootstrapping a config for a new project,
+  - upgrading SwiftFormat (rule behavior changes between releases),
+  - defining or aligning a team standard,
+  - onboarding to someone else's style.
+
+Design implication: optimize for the first-five-minutes "what does my config buy
+me, and what could I adopt for free?" experience, since that's the moment the tool
+is reached for.
+
 ## Where the Audit tab is today
 
 A read-only aggregate report: lint the project with the active config, rank rules
