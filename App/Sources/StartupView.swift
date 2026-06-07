@@ -8,7 +8,7 @@ import UniformTypeIdentifiers
 
 /// The launch gate: pick a project (so the whole app reflects its `.swiftformat`)
 /// or browse the rule catalog with SwiftFormat's defaults. Sets the shared
-/// `WorkspaceModel`, which RootView then loads config + runs the audit from.
+/// `WorkspaceModel`, which RootView then loads config + runs the scan from.
 struct StartupView: View {
     @Environment(WorkspaceModel.self) private var workspace
     @State private var choosingFolder = false

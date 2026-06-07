@@ -1,5 +1,5 @@
 //
-//  ImpactAuditModel.swift
+//  ImpactModel.swift
 //  SwiftFormatRuleStudio
 //
 
@@ -7,28 +7,28 @@ import Foundation
 import LintStudioCore
 import Observation
 
-/// Observable model for the impact audit (M5): run `swiftformat --lint` over a
+/// Observable model for the impact scan (M5): run `swiftformat --lint` over a
 /// workspace and rank rules by how much code each would change.
 ///
 /// In Core so the orchestration is unit-testable; the SwiftFormat heavy lifting
 /// is offloaded to the `SwiftFormatCLIActor`.
 @MainActor
 @Observable
-public final class ImpactAuditModel {
-    /// Lifecycle of an audit run.
-    public enum AuditState: Equatable, Sendable {
+public final class ImpactModel {
+    /// Lifecycle of a scan run.
+    public enum ScanState: Equatable, Sendable {
         case idle
         case running
         case completed
         case failed(String)
     }
 
-    /// The current audit state.
-    public private(set) var state: AuditState = .idle
-    /// The most recent report, or `nil` until an audit completes.
+    /// The current scan state.
+    public private(set) var state: ScanState = .idle
+    /// The most recent report, or `nil` until a scan completes.
     public private(set) var report: ImpactReport?
     /// The folder the report was produced from.
-    public private(set) var auditedPath: URL?
+    public private(set) var scannedPath: URL?
 
     /// Swift version passed as `--swift-version` (rules vary by version).
     public var swiftVersion: String?
@@ -38,25 +38,25 @@ public final class ImpactAuditModel {
     private let cli: any SwiftFormatCLIProtocol
 
     /// Memoized drill-down diffs, keyed by rule + file, so re-expanding a row in
-    /// the report doesn't re-run SwiftFormat. Cleared on each new audit.
+    /// the report doesn't re-run SwiftFormat. Cleared on each new scan.
     private var diffCache: [String: [PreviewDiffLine]] = [:]
 
     /// The config flags that pick *which* rules run. We strip these when isolating
     /// a single rule for the drill-down, keeping only the option flags.
     private static let ruleSelectionFlags: Set<String> = ["--enable", "--disable", "--rules"]
 
-    /// Creates an audit model backed by the given CLI.
+    /// Creates an impact model backed by the given CLI.
     public init(cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(), swiftVersion: String? = "5.10") {
         self.cli = cli
         self.swiftVersion = swiftVersion
     }
 
-    /// The arguments passed to `swiftformat <path>` for the audit.
+    /// The arguments passed to `swiftformat <path>` for the scan.
     ///
     /// No `--quiet`: we want SwiftFormat's `N/M files require formatting` summary
     /// on stderr (for the files-checked count). The JSON reporter still writes the
     /// findings to stdout, so dropping `--quiet` doesn't affect parsing.
-    var auditArguments: [String] {
+    var scanArguments: [String] {
         var arguments = ["--lint", "--reporter", "json"]
         if let swiftVersion, !swiftVersion.isEmpty {
             arguments += ["--swift-version", swiftVersion]
@@ -65,13 +65,13 @@ public final class ImpactAuditModel {
         return arguments
     }
 
-    /// Runs the audit over `path`, populating `report` and `state`.
-    public func runAudit(path: URL) async {
+    /// Runs the scan over `path`, populating `report` and `state`.
+    public func runScan(path: URL) async {
         state = .running
-        auditedPath = path
+        scannedPath = path
         diffCache.removeAll()
         do {
-            let result = try await cli.lint(path: path.path, arguments: auditArguments)
+            let result = try await cli.lint(path: path.path, arguments: scanArguments)
             let findings = LintReportParser.parse(result.reporterOutput)
             report = ImpactReport.from(
                 findings: findings,

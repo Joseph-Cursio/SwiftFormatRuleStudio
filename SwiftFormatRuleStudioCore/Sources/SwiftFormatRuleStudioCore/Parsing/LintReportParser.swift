@@ -12,7 +12,7 @@ import Foundation
 public enum LintReportParser {
     private struct RawFinding: Decodable {
         // `file` is absent when linting stdin (the live preview); present when
-        // linting on-disk files (the audit).
+        // linting on-disk files (the impact scan).
         let file: String?
         let line: Int
         let reason: String

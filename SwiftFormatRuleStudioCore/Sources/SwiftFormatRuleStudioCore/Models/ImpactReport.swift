@@ -26,7 +26,7 @@ public struct LintFinding: Equatable, Sendable {
 }
 
 /// One file a rule would change, with the lines its findings sit on. Backs the
-/// audit drill-down: a rule row expands to these, and each expands to a diff.
+/// impact drill-down: a rule row expands to these, and each expands to a diff.
 public struct FileImpact: Identifiable, Equatable, Sendable {
     /// Absolute path of the affected file.
     public let filePath: String
@@ -44,7 +44,7 @@ public struct FileImpact: Identifiable, Equatable, Sendable {
     public var id: String { filePath }
 }
 
-/// How much a single rule would change the audited workspace.
+/// How much a single rule would change the scanned workspace.
 public struct RuleImpact: Identifiable, Equatable, Sendable {
     /// The rule's name, e.g. `"indent"`.
     public let ruleID: String
@@ -66,7 +66,7 @@ public struct RuleImpact: Identifiable, Equatable, Sendable {
     public var id: String { ruleID }
 }
 
-/// The result of auditing a workspace: which rules would change the most code.
+/// The result of scanning a workspace: which rules would change the most code.
 public struct ImpactReport: Equatable, Sendable {
     /// Distinct files with at least one finding.
     public let filesAffected: Int
@@ -86,7 +86,7 @@ public struct ImpactReport: Equatable, Sendable {
         self.ruleImpacts = ruleImpacts
     }
 
-    /// Whether the audit found nothing to change.
+    /// Whether the scan found nothing to change.
     public var isClean: Bool {
         totalFindings == 0
     }

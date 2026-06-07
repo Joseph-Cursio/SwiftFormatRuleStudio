@@ -58,7 +58,7 @@ struct LiveCodePreviewView: View {
         // Rebuild the file list for the selected project, then restore the
         // remembered file (or clear the selection if it isn't in this project).
         .task(id: workspace.selectedFolder) { await loadProjectFiles() }
-        // A cross-link from the Audit tab can request a file; open it once the
+        // A cross-link from the Impact tab can request a file; open it once the
         // file list is loaded (consumePreviewRequest no-ops until it matches).
         .onChange(of: workspace.previewRequest) { _, _ in consumePreviewRequest() }
         .navigationTitle("Preview")
@@ -146,7 +146,7 @@ struct LiveCodePreviewView: View {
         projectFiles = files
         fileTree = Self.tree(from: files, root: folder)
 
-        // A pending cross-link from Audit wins over the remembered file. Otherwise
+        // A pending cross-link from Impact wins over the remembered file. Otherwise
         // reopen the remembered file if it belongs to this project, or drop any
         // stale selection. Load directly (not via the listSelection onChange, which
         // isn't armed yet at first appearance).
@@ -161,7 +161,7 @@ struct LiveCodePreviewView: View {
         }
     }
 
-    /// Opens the file requested by the Audit cross-link, if one is pending and
+    /// Opens the file requested by the Impact cross-link, if one is pending and
     /// present in this project, then clears the request. Returns whether it opened
     /// a file. No-ops (leaving the request intact) until the file list is loaded.
     @discardableResult

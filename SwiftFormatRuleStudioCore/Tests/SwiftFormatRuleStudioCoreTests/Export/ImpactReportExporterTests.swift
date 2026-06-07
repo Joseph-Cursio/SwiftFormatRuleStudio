@@ -43,8 +43,8 @@ struct ImpactReportExporterTests {
 
     @Test("Export format metadata")
     func formats() {
-        #expect(AuditExportFormat.csv.fileExtension == "csv")
-        #expect(AuditExportFormat.html.displayName == "HTML")
-        #expect(AuditExportFormat.allCases.count == 2)
+        #expect(ImpactExportFormat.csv.fileExtension == "csv")
+        #expect(ImpactExportFormat.html.displayName == "HTML")
+        #expect(ImpactExportFormat.allCases.count == 2)
     }
 }

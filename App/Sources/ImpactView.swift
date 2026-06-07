@@ -1,5 +1,5 @@
 //
-//  AuditView.swift
+//  ImpactView.swift
 //  SwiftFormatRuleStudio
 //
 
@@ -7,17 +7,17 @@ import SwiftFormatRuleStudioCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The impact audit (M5): pick a folder, run `swiftformat --lint` over it, and
+/// The impact scan (M5): pick a folder, run `swiftformat --lint` over it, and
 /// see which rules would change the most code. Thin binding over the tested
-/// `ImpactAuditModel`; reflects the active config.
-struct AuditView: View {
+/// `ImpactModel`; reflects the active config.
+struct ImpactView: View {
     @Environment(RuleStudioModel.self) private var catalog
     @Environment(ConfigModel.self) private var config
     @Environment(WorkspaceModel.self) private var workspace
-    @Environment(ImpactAuditModel.self) private var model
+    @Environment(ImpactModel.self) private var model
     @State private var choosingFolder = false
     @State private var exportDocument: TextExportDocument?
-    @State private var exportFormat: AuditExportFormat = .csv
+    @State private var exportFormat: ImpactExportFormat = .csv
     @State private var showingExporter = false
     /// Which rule rows are expanded. Owned here (not in the rows) so Back can
     /// re-expand a rule and scroll to it.
@@ -53,7 +53,7 @@ struct AuditView: View {
             ) { _ in }
     }
 
-    private func export(as format: AuditExportFormat) {
+    private func export(as format: ImpactExportFormat) {
         guard let report = model.report else { return }
         let stamp = Date.now.formatted(date: .abbreviated, time: .shortened)
         let text = ImpactReportExporter.export(
@@ -125,7 +125,7 @@ struct AuditView: View {
         }
         ToolbarItemGroup {
             Menu {
-                ForEach(AuditExportFormat.allCases) { format in
+                ForEach(ImpactExportFormat.allCases) { format in
                     Button("Export \(format.displayName)…") { export(as: format) }
                 }
             } label: {
@@ -135,7 +135,7 @@ struct AuditView: View {
 
             Button("Re-run") {
                 if let folder = workspace.selectedFolder {
-                    Task { await runAudit(folder) }
+                    Task { await runScan(folder) }
                 }
             }
             .disabled(workspace.selectedFolder == nil || model.state == .running)
@@ -166,7 +166,7 @@ struct AuditView: View {
                                     maxFileCount: report.ruleImpacts.first?.fileCount ?? 1,
                                     rule: rule(for: impact),
                                     optionLines: optionLines(for: impact),
-                                    auditRoot: model.auditedPath,
+                                    scanRoot: model.scannedPath,
                                     isExpanded: ruleExpansion(impact.ruleID),
                                     fileExpansion: { fileExpansion(impact.ruleID, $0) }
                                 )
@@ -178,10 +178,10 @@ struct AuditView: View {
                         }
                     }
                     // Back lands here: re-expand the rule (and file) and scroll to it.
-                    .onChange(of: workspace.auditRestore) { _, target in
+                    .onChange(of: workspace.impactRestore) { _, target in
                         restore(target, proxy: proxy)
                     }
-                    .task { restore(workspace.auditRestore, proxy: proxy) }
+                    .task { restore(workspace.impactRestore, proxy: proxy) }
                 }
             }
         }
@@ -189,14 +189,14 @@ struct AuditView: View {
 
     /// Expand/scroll to the rule (and optional file) the Back navigation targeted,
     /// then clear the request.
-    private func restore(_ target: WorkspaceModel.AuditTarget?, proxy: ScrollViewProxy) {
+    private func restore(_ target: WorkspaceModel.ImpactTarget?, proxy: ScrollViewProxy) {
         guard let target else { return }
         expandedRules.insert(target.ruleID)
         if let filePath = target.filePath {
             expandedFiles.insert(fileKey(target.ruleID, filePath))
         }
         proxy.scrollTo(target.ruleID, anchor: .top)
-        workspace.auditRestore = nil
+        workspace.impactRestore = nil
     }
 
     /// Stable key for a file row's expansion within a given rule.
@@ -263,20 +263,20 @@ struct AuditView: View {
         ruleOptionLines(forRule: impact.ruleID, catalog: catalog, config: config)
     }
 
-    private func runAudit(_ url: URL) async {
+    private func runScan(_ url: URL) async {
         model.extraArguments = config.commandLineArguments
-        await model.runAudit(path: url)
+        await model.runScan(path: url)
     }
 }
 
-/// A rule's row in the audit, expandable to the files it would change (each of
+/// A rule's row in the Impact tab, expandable to the files it would change (each of
 /// which expands to its before/after diff). The collapsed label is `ImpactRow`.
 struct RuleImpactRow: View {
     let impact: RuleImpact
     let maxFileCount: Int
     let rule: FormatRule?
     let optionLines: [String]
-    let auditRoot: URL?
+    let scanRoot: URL?
     @Binding var isExpanded: Bool
     /// Supplies the expansion binding for a given file path under this rule.
     let fileExpansion: (String) -> Binding<Bool>
@@ -287,7 +287,7 @@ struct RuleImpactRow: View {
                 FileImpactRow(
                     ruleID: impact.ruleID,
                     file: file,
-                    auditRoot: auditRoot,
+                    scanRoot: scanRoot,
                     isExpanded: fileExpansion(file.filePath)
                 )
             }
@@ -300,18 +300,18 @@ struct RuleImpactRow: View {
 /// One affected file under a rule, expandable to the rule's before/after diff for
 /// that file. The diff is loaded lazily (and cached by the model) on first expand.
 struct FileImpactRow: View {
-    @Environment(ImpactAuditModel.self) private var model
+    @Environment(ImpactModel.self) private var model
     @Environment(WorkspaceModel.self) private var workspace
     let ruleID: String
     let file: FileImpact
-    let auditRoot: URL?
+    let scanRoot: URL?
     @Binding var isExpanded: Bool
     @State private var diff: [PreviewDiffLine]?
     @State private var loading = false
 
-    /// File path relative to the audited folder, for a compact label.
+    /// File path relative to the scanned folder, for a compact label.
     private var displayPath: String {
-        guard let root = auditRoot?.path else { return file.filePath }
+        guard let root = scanRoot?.path else { return file.filePath }
         let prefix = root.hasSuffix("/") ? root : root + "/"
         return file.filePath.hasPrefix(prefix) ? String(file.filePath.dropFirst(prefix.count)) : file.filePath
     }
@@ -338,7 +338,7 @@ struct FileImpactRow: View {
                 Button {
                     workspace.openInPreview(
                         URL(fileURLWithPath: file.filePath),
-                        from: .audit(ruleID: ruleID, filePath: file.filePath)
+                        from: .impact(ruleID: ruleID, filePath: file.filePath)
                     )
                 } label: {
                     Image(systemName: "wand.and.stars")

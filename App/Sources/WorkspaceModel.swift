@@ -8,16 +8,16 @@ import Observation
 
 /// The project folder shared across tabs, plus the startup-screen state.
 ///
-/// Picking a folder in the startup screen, Config, or Audit updates this one
+/// Picking a folder in the startup screen, Config, or Impact updates this one
 /// source of truth, so the whole app operates on the same project (RootView
-/// reacts to a change: load that folder's `.swiftformat`, run its audit).
+/// reacts to a change: load that folder's `.swiftformat`, run its scan).
 @MainActor
 @Observable
 final class WorkspaceModel {
     /// The app's top-level tabs. Owned here (not as RootView state) so navigation
     /// — cross-links and Back — can switch tabs centrally.
     enum Tab: Hashable {
-        case rules, config, preview, audit
+        case rules, config, preview, impact
     }
 
     /// A place a cross-link came from, captured so Back can return and restore it.
@@ -25,12 +25,12 @@ final class WorkspaceModel {
     enum Location: Equatable {
         /// The Preview tab with a file loaded (`nil` for the scratchpad).
         case preview(file: URL?)
-        /// The Audit tab with a rule row expanded, optionally a file row under it.
-        case audit(ruleID: String, filePath: String?)
+        /// The Impact tab with a rule row expanded, optionally a file row under it.
+        case impact(ruleID: String, filePath: String?)
     }
 
-    /// What the Audit tab should re-expand and scroll to when Back lands on it.
-    struct AuditTarget: Equatable {
+    /// What the Impact tab should re-expand and scroll to when Back lands on it.
+    struct ImpactTarget: Equatable {
         let ruleID: String
         let filePath: String?
     }
@@ -45,7 +45,7 @@ final class WorkspaceModel {
     /// The currently selected tab. RootView binds the `TabView` to this.
     var selectedTab: Tab = .rules
 
-    /// A file the user asked to open in the Preview tab — set from the Audit
+    /// A file the user asked to open in the Preview tab — set from the Impact
     /// drill-down's "Open in Preview" (and by Back). The Preview tab loads the
     /// file and clears it.
     var previewRequest: URL?
@@ -54,9 +54,9 @@ final class WorkspaceModel {
     /// triggered-rules list (and by Back). The Rules tab selects it and clears it.
     var ruleRequest: String?
 
-    /// What the Audit tab should restore on Back (expand the rule/file, scroll to
-    /// it). The Audit tab consumes and clears it.
-    var auditRestore: AuditTarget?
+    /// What the Impact tab should restore on Back (expand the rule/file, scroll to
+    /// it). The Impact tab consumes and clears it.
+    var impactRestore: ImpactTarget?
 
     /// Locations to return to, most recent last. A cross-link pushes where it came
     /// from; Back pops and restores.
@@ -88,9 +88,9 @@ final class WorkspaceModel {
         case .preview(let file):
             selectedTab = .preview
             if let file { previewRequest = file }
-        case .audit(let ruleID, let filePath):
-            selectedTab = .audit
-            auditRestore = AuditTarget(ruleID: ruleID, filePath: filePath)
+        case .impact(let ruleID, let filePath):
+            selectedTab = .impact
+            impactRestore = ImpactTarget(ruleID: ruleID, filePath: filePath)
         }
     }
 

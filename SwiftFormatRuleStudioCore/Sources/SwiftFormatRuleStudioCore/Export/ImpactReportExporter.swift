@@ -7,7 +7,7 @@ import Foundation
 import LintStudioCore
 
 /// Output formats for an exported impact report.
-public enum AuditExportFormat: String, CaseIterable, Sendable, Identifiable {
+public enum ImpactExportFormat: String, CaseIterable, Sendable, Identifiable {
     case csv
     case html
 
@@ -25,7 +25,7 @@ public enum ImpactReportExporter {
     /// caller (Core stays free of `Date.now` for testability).
     public static func export(
         _ report: ImpactReport,
-        as format: AuditExportFormat,
+        as format: ImpactExportFormat,
         workspaceName: String,
         timestamp: String
     ) -> String {

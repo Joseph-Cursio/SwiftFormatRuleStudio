@@ -1,5 +1,5 @@
 //
-//  ImpactAuditModelTests.swift
+//  ImpactModelTests.swift
 //  SwiftFormatRuleStudioCoreTests
 //
 
@@ -8,9 +8,9 @@ import Foundation
 import SwiftFormatRuleStudioCoreTestSupport
 import Testing
 
-@Suite("ImpactAuditModel")
+@Suite("ImpactModel")
 @MainActor
-struct ImpactAuditModelTests {
+struct ImpactModelTests {
     private static let json = """
     [
       { "file": "/ws/A.swift", "line": 1, "reason": "", "rule_id": "indent" },
@@ -21,39 +21,39 @@ struct ImpactAuditModelTests {
 
     @Test("Starts idle")
     func initialState() {
-        let model = ImpactAuditModel(cli: MockSwiftFormatCLI())
+        let model = ImpactModel(cli: MockSwiftFormatCLI())
         #expect(model.state == .idle)
         #expect(model.report == nil)
     }
 
-    @Test("runAudit lints, parses, and aggregates")
-    func runsAudit() async {
+    @Test("runScan lints, parses, and aggregates")
+    func runsScan() async {
         let cli = MockSwiftFormatCLI(
             lintOutput: Self.json,
             lintSummary: "2/7 files require formatting, 1 file skipped."
         )
-        let model = ImpactAuditModel(cli: cli)
-        await model.runAudit(path: URL(fileURLWithPath: "/ws"))
+        let model = ImpactModel(cli: cli)
+        await model.runScan(path: URL(fileURLWithPath: "/ws"))
 
         #expect(model.state == .completed)
         #expect(model.report?.filesAffected == 2)
         #expect(model.report?.filesChecked == 7) // from the run summary denominator
         #expect(model.report?.totalFindings == 3)
         #expect(model.report?.ruleImpacts.first?.ruleID == "indent")
-        #expect(model.auditedPath?.path == "/ws")
+        #expect(model.scannedPath?.path == "/ws")
     }
 
     @Test("filesChecked falls back to affected files when no summary is present")
     func filesCheckedFallback() async {
-        let model = ImpactAuditModel(cli: MockSwiftFormatCLI(lintOutput: Self.json))
-        await model.runAudit(path: URL(fileURLWithPath: "/ws"))
+        let model = ImpactModel(cli: MockSwiftFormatCLI(lintOutput: Self.json))
+        await model.runScan(path: URL(fileURLWithPath: "/ws"))
         #expect(model.report?.filesChecked == 2) // == filesAffected
     }
 
-    @Test("Audit failure surfaces .failed and clears the report")
-    func auditFails() async {
-        let model = ImpactAuditModel(cli: MockSwiftFormatCLI(failWith: .notFound))
-        await model.runAudit(path: URL(fileURLWithPath: "/ws"))
+    @Test("Scan failure surfaces .failed and clears the report")
+    func scanFails() async {
+        let model = ImpactModel(cli: MockSwiftFormatCLI(failWith: .notFound))
+        await model.runScan(path: URL(fileURLWithPath: "/ws"))
 
         guard case .failed = model.state else {
             Issue.record("expected .failed, got \(model.state)")
@@ -70,7 +70,7 @@ struct ImpactAuditModelTests {
         defer { try? FileManager.default.removeItem(at: file) }
 
         let cli = MockSwiftFormatCLI(formatOverride: "let x = 1\n")
-        let model = ImpactAuditModel(cli: cli, swiftVersion: "5.10")
+        let model = ImpactModel(cli: cli, swiftVersion: "5.10")
         model.extraArguments = ["--indent", "4", "--disable", "redundantSelf", "--enable", "isEmpty"]
 
         let diff = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: file.path)
@@ -96,7 +96,7 @@ struct ImpactAuditModelTests {
         defer { try? FileManager.default.removeItem(at: file) }
 
         let cli = MockSwiftFormatCLI(formatOverride: "let x = 1\n")
-        let model = ImpactAuditModel(cli: cli)
+        let model = ImpactModel(cli: cli)
 
         _ = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: file.path)
         _ = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: file.path)
@@ -105,17 +105,17 @@ struct ImpactAuditModelTests {
 
     @Test("ruleDiff returns empty when the file can't be read")
     func ruleDiffMissingFile() async {
-        let model = ImpactAuditModel(cli: MockSwiftFormatCLI(formatOverride: "changed"))
+        let model = ImpactModel(cli: MockSwiftFormatCLI(formatOverride: "changed"))
         let diff = await model.ruleDiff(ruleID: "indent", filePath: "/no/such/file.swift")
         #expect(diff.isEmpty)
     }
 
-    @Test("auditArguments include the lint flags, swift version and config")
-    func auditArguments() async {
+    @Test("scanArguments include the lint flags, swift version and config")
+    func scanArguments() async {
         let cli = MockSwiftFormatCLI(lintOutput: "[]")
-        let model = ImpactAuditModel(cli: cli, swiftVersion: "5.10")
+        let model = ImpactModel(cli: cli, swiftVersion: "5.10")
         model.extraArguments = ["--disable", "redundantSelf"]
-        await model.runAudit(path: URL(fileURLWithPath: "/ws"))
+        await model.runScan(path: URL(fileURLWithPath: "/ws"))
 
         let args = await cli.lastLintArguments
         #expect(args == [
@@ -127,11 +127,11 @@ struct ImpactAuditModelTests {
 
 /// Exercises the real `swiftformat --lint --reporter json` end-to-end.
 /// Skips cleanly when SwiftFormat is not installed.
-@Suite("ImpactAudit Integration")
-struct ImpactAuditIntegrationTests {
+@Suite("Impact Integration")
+struct ImpactIntegrationTests {
     @MainActor
-    @Test("Audits a temp workspace via the real binary")
-    func auditsRealWorkspace() async throws {
+    @Test("Scans a temp workspace via the real binary")
+    func scansRealWorkspace() async throws {
         let actor = SwiftFormatCLIActor()
         do {
             _ = try await actor.detectPath()
@@ -140,7 +140,7 @@ struct ImpactAuditIntegrationTests {
         }
 
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("SFRSAudit-\(UUID().uuidString)")
+            .appendingPathComponent("SFRSScan-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         try "struct  Foo{\nlet x=1\n}\n".write(
@@ -149,8 +149,8 @@ struct ImpactAuditIntegrationTests {
             encoding: .utf8
         )
 
-        let model = ImpactAuditModel(cli: actor)
-        await model.runAudit(path: directory)
+        let model = ImpactModel(cli: actor)
+        await model.runScan(path: directory)
 
         #expect(model.state == .completed)
         let report = try #require(model.report)

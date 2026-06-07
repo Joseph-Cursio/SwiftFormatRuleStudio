@@ -55,7 +55,7 @@ struct ImpactReportTests {
         #expect(spaces?.files.map(\.filePath) == ["/ws/A.swift", "/ws/C.swift"])
     }
 
-    @Test("An empty audit is clean")
+    @Test("An empty report is clean")
     func emptyIsClean() {
         let report = ImpactReport.from(findings: [])
         #expect(report.isClean)

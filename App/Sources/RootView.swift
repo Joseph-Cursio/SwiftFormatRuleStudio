@@ -13,7 +13,7 @@ struct RootView: View {
     @State private var catalog = RuleStudioModel()
     @State private var config = ConfigModel()
     @State private var workspace = WorkspaceModel()
-    @State private var audit = ImpactAuditModel()
+    @State private var impact = ImpactModel()
     @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
     var body: some View {
@@ -28,18 +28,18 @@ struct RootView: View {
         .environment(catalog)
         .environment(config)
         .environment(workspace)
-        .environment(audit)
+        .environment(impact)
         .task {
             await catalog.load()
         }
         // One source of truth for the project: when the shared folder changes,
-        // load its config and run its audit so both tabs reflect it. Driven from
+        // load its config and run its scan so both tabs reflect it. Driven from
         // RootView (always alive) so it fires once per change, not on tab switches.
         .onChange(of: workspace.selectedFolder) { _, folder in
             guard let folder else { return }
             config.load(from: folder.appendingPathComponent(".swiftformat"))
-            audit.extraArguments = config.commandLineArguments
-            Task { await audit.runAudit(path: folder) }
+            impact.extraArguments = config.commandLineArguments
+            Task { await impact.runScan(path: folder) }
         }
     }
 
@@ -71,12 +71,12 @@ struct RootView: View {
                         Label("Preview", systemImage: "wand.and.stars")
                     }
                     .tag(WorkspaceModel.Tab.preview)
-                AuditView()
+                ImpactView()
                     .modifier(backToolbar)
                     .tabItem {
                         Label("Impact", systemImage: "chart.bar.doc.horizontal")
                     }
-                    .tag(WorkspaceModel.Tab.audit)
+                    .tag(WorkspaceModel.Tab.impact)
             }
             Divider()
             StatusBar(catalog: catalog)
