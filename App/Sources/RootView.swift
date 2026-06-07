@@ -45,7 +45,7 @@ struct RootView: View {
 
     /// Binds the TabView to the shared selection so cross-links and Back can switch
     /// tabs centrally. A bound selection also keeps the active tab stable when a
-    /// `.fileImporter` is presented from Config or Audit.
+    /// `.fileImporter` is presented from Config or Impact.
     private var tabSelection: Binding<WorkspaceModel.Tab> {
         Binding(get: { workspace.selectedTab }, set: { workspace.selectedTab = $0 })
     }
