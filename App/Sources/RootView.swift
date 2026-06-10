@@ -14,6 +14,7 @@ struct RootView: View {
     @State private var config = ConfigModel()
     @State private var workspace = WorkspaceModel()
     @State private var impact = ImpactModel()
+    @State private var tune = TuneModel()
     @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
     var body: some View {
@@ -29,6 +30,7 @@ struct RootView: View {
         .environment(config)
         .environment(workspace)
         .environment(impact)
+        .environment(tune)
         .task {
             await catalog.load()
         }
@@ -40,6 +42,9 @@ struct RootView: View {
             config.load(from: folder.appendingPathComponent(".swiftformat"))
             impact.extraArguments = config.commandLineArguments
             Task { await impact.runScan(path: folder) }
+            // Tune scans on demand (it's far heavier), so just clear stale results
+            // here; the Tune tab kicks off its own scan when asked.
+            tune.reset()
         }
     }
 
