@@ -295,9 +295,15 @@ struct RuleImpactRow: View {
     let loadDiff: (String, String) async -> [PreviewDiffLine]
     /// Optional "open in Preview" action for an affected file; hidden when nil.
     var onOpenInPreview: ((FileImpact) -> Void)?
+    /// Optional content shown at the top of the expanded section, above the files
+    /// — the Tune tab puts its option-sweep panel here; Impact leaves it nil.
+    var expandedHeader: AnyView?
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
+            if let expandedHeader {
+                expandedHeader
+            }
             ForEach(impact.files) { file in
                 FileImpactRow(
                     ruleID: impact.ruleID,

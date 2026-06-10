@@ -198,13 +198,35 @@ struct TuneView: View {
                     fileExpansion: { fileExpansion(impact.ruleID, $0) },
                     loadDiff: { ruleID, filePath in
                         await model.ruleDiff(ruleID: ruleID, filePath: filePath)
-                    }
+                    },
+                    expandedHeader: optionsPanel(for: impact.ruleID)
                 )
                 .padding(.horizontal, 14)
                 .padding(.vertical, 4)
                 Divider()
             }
         }
+    }
+
+    /// The options-layer panel for a churn rule — `nil` (no panel, no sweep) when
+    /// the rule has no boolean/enum options to try.
+    private func optionsPanel(for ruleID: String) -> AnyView? {
+        guard hasSweepableOptions(ruleID), let path = model.scannedPath else { return nil }
+        let options = catalog.options
+        let currentValues = config.config.options
+        return AnyView(
+            RuleOptionsPanel(
+                loadSweeps: {
+                    await model.sweepOptions(
+                        forRule: ruleID,
+                        path: path,
+                        allOptions: options,
+                        currentValues: currentValues
+                    )
+                },
+                adopt: { sweep, value in adoptOption(rule: ruleID, sweep: sweep, value: value) }
+            )
+        )
     }
 
     private func freeWinRow(_ impact: RuleImpact) -> some View {
@@ -321,6 +343,20 @@ struct TuneView: View {
         config.setOption(key: "swift-version", value: version)
     }
 
+    /// Adopts a churn rule at a chosen option value: enables the rule, sets the
+    /// option (clearing it when the value is the default, to keep the config
+    /// minimal), and saves. The rule then drops off the Needs-review list.
+    private func adoptOption(rule ruleID: String, sweep: OptionSweep, value: OptionValueImpact) {
+        persistScanSwiftVersion()
+        if value.value == sweep.defaultValue {
+            config.removeOption(key: sweep.optionKey)
+        } else {
+            config.setOption(key: sweep.optionKey, value: value.value)
+        }
+        config.setRuleEnabled(ruleID, enabled: true, isOptIn: isOptIn(ruleID))
+        config.save()
+    }
+
     // MARK: - Catalog lookups
 
     private func rule(named name: String) -> FormatRule? {
@@ -333,5 +369,118 @@ struct TuneView: View {
 
     private func optionLines(for impact: RuleImpact) -> [String] {
         ruleOptionLines(forRule: impact.ruleID, catalog: catalog, config: config)
+    }
+
+    /// Whether `ruleID` has at least one boolean/enum option worth sweeping (one
+    /// with a finite set of values). Integer/list/string options aren't sweepable.
+    private func hasSweepableOptions(_ ruleID: String) -> Bool {
+        OptionRuleUsage.optionKeys(forRule: ruleID).contains { key in
+            guard let option = catalog.options.first(where: { $0.key == key }) else { return false }
+            return option.kind == .boolean || option.kind == .enumeration
+        }
+    }
+}
+
+/// The options layer (docs/audit-redesign.md): inside a Needs-review rule's
+/// drill-down, lazily sweep the rule's boolean/enum options and show the churn at
+/// each value — so a rule that's churn at the default can be adopted at a zero- or
+/// lower-churn value (e.g. `braces` is free once `--allman true` is set). The
+/// sweep runs on first expand (and is cached by the model).
+private struct RuleOptionsPanel: View {
+    let loadSweeps: () async -> [OptionSweep]
+    let adopt: (OptionSweep, OptionValueImpact) -> Void
+    @State private var sweeps: [OptionSweep]?
+
+    var body: some View {
+        Group {
+            if let sweeps {
+                if !sweeps.isEmpty {
+                    content(sweeps)
+                }
+            } else {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Checking option values…")
+                        .scaledFont(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .task { if sweeps == nil { sweeps = await loadSweeps() } }
+    }
+
+    private func content(_ sweeps: [OptionSweep]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(sweeps) { sweep in
+                optionBlock(sweep)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.vertical, 4)
+    }
+
+    private func optionBlock(_ sweep: OptionSweep) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: "slider.horizontal.3")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                Text(sweep.optionFlag)
+                    .scaledFont(.caption, design: .monospaced)
+                if sweep.hasImprovement, let best = sweep.bestValue {
+                    Text(best.findingCount == 0 ? "free win available" : "less churn available")
+                        .scaledFont(.caption2, weight: .semibold)
+                        .foregroundStyle(best.findingCount == 0 ? .green : .orange)
+                }
+            }
+            ForEach(sweep.values) { value in
+                valueRow(sweep, value)
+            }
+        }
+    }
+
+    private func valueRow(_ sweep: OptionSweep, _ value: OptionValueImpact) -> some View {
+        let isCurrent = value.value == sweep.effectiveValue
+        let isBest = value.value == sweep.bestValue?.value
+        let improves = !isCurrent && value.findingCount < (sweep.currentImpact?.findingCount ?? .max)
+        return HStack(spacing: 8) {
+            Text(value.value)
+                .scaledFont(.caption, design: .monospaced)
+                .foregroundStyle(isBest ? .primary : .secondary)
+            Text(churnText(value))
+                .scaledFont(.caption2)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            if isCurrent {
+                badge("current", .secondary)
+            } else if isBest, sweep.hasImprovement {
+                // Only flag the best value when it actually beats the current one
+                // — not when it merely ties it.
+                badge(value.findingCount == 0 ? "free" : "best", value.findingCount == 0 ? .green : .orange)
+            }
+            Spacer()
+            if improves {
+                Button("Adopt") { adopt(sweep, value) }
+                    .controlSize(.small)
+                    .accessibilityLabel("Adopt \(sweep.optionFlag) \(value.value)")
+            }
+        }
+    }
+
+    private func churnText(_ value: OptionValueImpact) -> String {
+        guard value.findingCount > 0 else { return "no changes" }
+        let changes = "\(value.findingCount) change\(value.findingCount == 1 ? "" : "s")"
+        let files = "\(value.fileCount) file\(value.fileCount == 1 ? "" : "s")"
+        return "\(changes) · \(files)"
+    }
+
+    private func badge(_ text: String, _ color: Color) -> some View {
+        Text(text)
+            .scaledFont(.caption2, weight: .medium)
+            .foregroundStyle(color)
     }
 }
