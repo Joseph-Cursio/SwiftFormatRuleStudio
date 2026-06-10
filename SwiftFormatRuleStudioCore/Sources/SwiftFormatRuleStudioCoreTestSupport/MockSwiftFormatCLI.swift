@@ -17,6 +17,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     private let failWith: SwiftFormatError?
     private let formatOverride: String?
     private let lintOutput: String
+    private let lintOutputForArguments: (@Sendable ([String]) -> String)?
     private let lintSummary: String
 
     public private(set) var versionCallCount = 0
@@ -37,6 +38,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         failWith: SwiftFormatError? = nil,
         formatOverride: String? = nil,
         lintOutput: String = "[]",
+        lintOutputForArguments: (@Sendable ([String]) -> String)? = nil,
         lintSummary: String = ""
     ) {
         self.versionValue = version
@@ -47,6 +49,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         self.failWith = failWith
         self.formatOverride = formatOverride
         self.lintOutput = lintOutput
+        self.lintOutputForArguments = lintOutputForArguments
         self.lintSummary = lintSummary
     }
 
@@ -98,6 +101,9 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         lintCallCount += 1
         lastLintArguments = arguments
         if let failWith { throw failWith }
-        return LintRun(reporterOutput: lintOutput, summary: lintSummary)
+        // Per-argument output (e.g. different churn per swept option value) wins
+        // over the fixed `lintOutput` when a closure is supplied.
+        let output = lintOutputForArguments?(arguments) ?? lintOutput
+        return LintRun(reporterOutput: output, summary: lintSummary)
     }
 }

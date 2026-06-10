@@ -44,6 +44,7 @@ public final class TuneModel {
 
     private let cli: any SwiftFormatCLIProtocol
     private var diffCache: [String: [PreviewDiffLine]] = [:]
+    private var sweepCache: [String: [OptionSweep]] = [:]
     private static let ruleSelectionFlags: Set<String> = ["--enable", "--disable", "--rules"]
 
     /// Creates a tune model backed by the given CLI.
@@ -74,6 +75,7 @@ public final class TuneModel {
         results = []
         scannedPath = nil
         diffCache.removeAll()
+        sweepCache.removeAll()
     }
 
     /// Runs an isolated lint pass for each candidate rule over `path`, updating
@@ -81,6 +83,7 @@ public final class TuneModel {
     public func runScan(path: URL, candidateRuleNames: [String]) async {
         scannedPath = path
         diffCache.removeAll()
+        sweepCache.removeAll()
         results = []
         let total = candidateRuleNames.count
         state = .running(scanned: 0, total: total)
@@ -110,14 +113,67 @@ public final class TuneModel {
         return RuleImpact(ruleID: ruleName, fileCount: byFile.count, findingCount: findings.count, files: files)
     }
 
-    private func lintIsolated(ruleName: String, path: URL) async throws -> [LintFinding] {
+    private func lintIsolated(
+        ruleName: String,
+        path: URL,
+        extraOptions: [String] = []
+    ) async throws -> [LintFinding] {
         var arguments = ["--lint", "--reporter", "json", "--rules", ruleName]
         if let swiftVersion, !swiftVersion.isEmpty {
             arguments += ["--swift-version", swiftVersion]
         }
         arguments += optionArguments
+        // Appended last so a swept option value wins over the config's own.
+        arguments += extraOptions
         let result = try await cli.lint(path: path.path, arguments: arguments)
         return LintReportParser.parse(result.reporterOutput)
+    }
+
+    /// Sweeps each of `ruleID`'s boolean/enum options across its candidate values,
+    /// measuring the churn enabling the rule would cause at each — the options
+    /// layer (docs/audit-redesign.md). Surfaces the value (if any) that reformats
+    /// nothing, i.e. the option that turns a churn rule into a free win (`braces`
+    /// is free on Allman code once `--allman true` is set). Options with no finite
+    /// value set (integers, lists) are skipped. Cached for the current scan.
+    ///
+    /// `allOptions` is the global option catalog; `currentValues` maps an option
+    /// key to its active config value (absent = at SwiftFormat's default).
+    public func sweepOptions(
+        forRule ruleID: String,
+        path: URL,
+        allOptions: [FormatOption],
+        currentValues: [String: String]
+    ) async -> [OptionSweep] {
+        if let cached = sweepCache[ruleID] { return cached }
+
+        let optionsByKey = Dictionary(allOptions.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first })
+        var sweeps: [OptionSweep] = []
+        for key in OptionRuleUsage.optionKeys(forRule: ruleID) {
+            guard let option = optionsByKey[key],
+                  option.kind == .boolean || option.kind == .enumeration,
+                  !option.allowedValues.isEmpty else { continue }
+
+            var impacts: [OptionValueImpact] = []
+            for value in option.allowedValues {
+                let findings = (try? await lintIsolated(
+                    ruleName: ruleID, path: path, extraOptions: [option.name, value]
+                )) ?? []
+                let fileCount = Set(findings.map(\.filePath)).count
+                impacts.append(OptionValueImpact(
+                    value: value, findingCount: findings.count, fileCount: fileCount
+                ))
+            }
+            sweeps.append(OptionSweep(
+                ruleID: ruleID,
+                optionKey: key,
+                optionFlag: option.name,
+                defaultValue: option.defaultValue,
+                currentValue: currentValues[key],
+                values: impacts
+            ))
+        }
+        sweepCache[ruleID] = sweeps
+        return sweeps
     }
 
     /// The before/after diff for one candidate rule applied to one file, for the

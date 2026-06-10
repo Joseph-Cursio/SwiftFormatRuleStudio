@@ -96,4 +96,120 @@ struct TuneModelTests {
         #expect(model.results.count == 3)
         #expect(await cli.lintCallCount == 3)
     }
+
+    // MARK: - Option sweep
+
+    /// The churn `braces` causes at `--allman false` (three findings, two files).
+    private static let allmanFalseChurn = """
+    [
+      { "file": "/ws/A.swift", "line": 1, "reason": "", "rule_id": "braces" },
+      { "file": "/ws/B.swift", "line": 1, "reason": "", "rule_id": "braces" },
+      { "file": "/ws/A.swift", "line": 2, "reason": "", "rule_id": "braces" }
+    ]
+    """
+
+    private static let allmanOption = FormatOption(
+        name: "--allman",
+        summary: "Use Allman indentation style",
+        kind: .boolean,
+        allowedValues: ["true", "false"],
+        defaultValue: "false"
+    )
+
+    /// An Allman-styled project: `braces` is churn at the default `false`, free at
+    /// `true`.
+    private func allmanAwareCLI() -> MockSwiftFormatCLI {
+        let churn = Self.allmanFalseChurn // capture the Sendable value, not the isolated static
+        return MockSwiftFormatCLI(lintOutputForArguments: { args in
+            args.contains("true") ? "[]" : churn
+        })
+    }
+
+    @Test("Sweeps an option's values and finds the zero-churn value")
+    func sweepFindsZeroChurnValue() async {
+        let cli = allmanAwareCLI()
+        let model = TuneModel(cli: cli)
+        let sweeps = await model.sweepOptions(
+            forRule: "braces",
+            path: URL(fileURLWithPath: "/ws"),
+            allOptions: [Self.allmanOption],
+            currentValues: [:]
+        )
+        #expect(sweeps.count == 1)
+        let sweep = try! #require(sweeps.first)
+        #expect(sweep.optionKey == "allman")
+        #expect(sweep.optionFlag == "--allman")
+        #expect(sweep.values.map(\.value) == ["true", "false"]) // option's listed order
+        #expect(sweep.values.first { $0.value == "true" }?.findingCount == 0)
+        let falseImpact = try! #require(sweep.values.first { $0.value == "false" })
+        #expect(falseImpact.findingCount == 3)
+        #expect(falseImpact.fileCount == 2)
+        #expect(sweep.zeroChurnValue?.value == "true")
+        #expect(sweep.bestValue?.value == "true")
+        #expect(sweep.effectiveValue == "false") // no override → default
+        #expect(sweep.currentImpact?.findingCount == 3)
+        #expect(sweep.hasImprovement)
+    }
+
+    @Test("Skips options with no finite value set (integers, lists)")
+    func sweepSkipsNonSweepableOptions() async {
+        let cli = MockSwiftFormatCLI(lintOutput: "[]")
+        let model = TuneModel(cli: cli)
+        let intOption = FormatOption(
+            name: "--allman", summary: "", kind: .integer, allowedValues: [], defaultValue: "0"
+        )
+        let sweeps = await model.sweepOptions(
+            forRule: "braces",
+            path: URL(fileURLWithPath: "/ws"),
+            allOptions: [intOption],
+            currentValues: [:]
+        )
+        #expect(sweeps.isEmpty)
+        #expect(await cli.lintCallCount == 0) // nothing measured
+    }
+
+    @Test("No improvement when the current value is already the lowest-churn one")
+    func sweepNoImprovementAtBestCurrent() async {
+        let cli = allmanAwareCLI()
+        let model = TuneModel(cli: cli)
+        let sweeps = await model.sweepOptions(
+            forRule: "braces",
+            path: URL(fileURLWithPath: "/ws"),
+            allOptions: [Self.allmanOption],
+            currentValues: ["allman": "true"] // already Allman in config
+        )
+        let sweep = try! #require(sweeps.first)
+        #expect(sweep.currentValue == "true")
+        #expect(sweep.effectiveValue == "true")
+        #expect(sweep.currentImpact?.findingCount == 0)
+        #expect(!sweep.hasImprovement)
+    }
+
+    @Test("Sweep results are cached for the scan")
+    func sweepIsCached() async {
+        let cli = allmanAwareCLI()
+        let model = TuneModel(cli: cli)
+        let path = URL(fileURLWithPath: "/ws")
+        _ = await model.sweepOptions(forRule: "braces", path: path, allOptions: [Self.allmanOption], currentValues: [:])
+        let firstCount = await cli.lintCallCount
+        #expect(firstCount == 2) // one lint per candidate value
+        _ = await model.sweepOptions(forRule: "braces", path: path, allOptions: [Self.allmanOption], currentValues: [:])
+        #expect(await cli.lintCallCount == firstCount) // served from cache
+    }
+
+    @Test("The swept value is appended as an option override on the lint args")
+    func sweepAppendsOptionOverride() async {
+        let cli = MockSwiftFormatCLI(lintOutput: "[]")
+        let model = TuneModel(cli: cli)
+        _ = await model.sweepOptions(
+            forRule: "braces",
+            path: URL(fileURLWithPath: "/ws"),
+            allOptions: [Self.allmanOption],
+            currentValues: [:]
+        )
+        let args = await cli.lastLintArguments
+        #expect(args.contains("--rules"))
+        #expect(args.contains("braces"))
+        #expect(args.contains("--allman"))
+    }
 }
