@@ -298,15 +298,27 @@ struct TuneView: View {
     /// Enables one rule in the config and saves (a timestamped backup is written,
     /// so it's reversible). The row drops off the list once `isRuleEnabled` is true.
     private func enable(_ ruleID: String) {
+        persistScanSwiftVersion()
         config.setRuleEnabled(ruleID, enabled: true, isOptIn: isOptIn(ruleID))
         config.save()
     }
 
     private func enableAll(_ impacts: [RuleImpact]) {
+        persistScanSwiftVersion()
         for impact in impacts {
             config.setRuleEnabled(impact.ruleID, enabled: true, isOptIn: isOptIn(impact.ruleID))
         }
         config.save()
+    }
+
+    /// Records the Swift version the scan ran under as a `--swift-version` line,
+    /// so the rules we just adopted behave identically on the CLI (SwiftFormat
+    /// warns, and disables some rules, when it isn't set). Leaves any version the
+    /// user already configured untouched.
+    private func persistScanSwiftVersion() {
+        guard let version = model.swiftVersion, !version.isEmpty else { return }
+        guard config.config.options["swift-version"] == nil else { return }
+        config.setOption(key: "swift-version", value: version)
     }
 
     // MARK: - Catalog lookups
