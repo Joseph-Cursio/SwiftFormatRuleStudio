@@ -168,7 +168,16 @@ struct ImpactView: View {
                                     optionLines: optionLines(for: impact),
                                     scanRoot: model.scannedPath,
                                     isExpanded: ruleExpansion(impact.ruleID),
-                                    fileExpansion: { fileExpansion(impact.ruleID, $0) }
+                                    fileExpansion: { fileExpansion(impact.ruleID, $0) },
+                                    loadDiff: { ruleID, filePath in
+                                        await model.ruleDiff(ruleID: ruleID, filePath: filePath)
+                                    },
+                                    onOpenInPreview: { file in
+                                        workspace.openInPreview(
+                                            URL(fileURLWithPath: file.filePath),
+                                            from: .impact(ruleID: impact.ruleID, filePath: file.filePath)
+                                        )
+                                    }
                                 )
                                 .id(impact.ruleID)
                                 .padding(.horizontal, 14)
@@ -269,8 +278,10 @@ struct ImpactView: View {
     }
 }
 
-/// A rule's row in the Impact tab, expandable to the files it would change (each of
-/// which expands to its before/after diff). The collapsed label is `ImpactRow`.
+/// A rule's row, expandable to the files it would change (each of which expands to
+/// its before/after diff). The collapsed label is `ImpactRow`. Decoupled from any
+/// one model: the diff loader and optional Preview action are passed in, so both
+/// the Impact and Tune tabs reuse it.
 struct RuleImpactRow: View {
     let impact: RuleImpact
     let maxFileCount: Int
@@ -280,6 +291,10 @@ struct RuleImpactRow: View {
     @Binding var isExpanded: Bool
     /// Supplies the expansion binding for a given file path under this rule.
     let fileExpansion: (String) -> Binding<Bool>
+    /// Loads the rule's before/after diff for one file path (cached by the caller).
+    let loadDiff: (String, String) async -> [PreviewDiffLine]
+    /// Optional "open in Preview" action for an affected file; hidden when nil.
+    var onOpenInPreview: ((FileImpact) -> Void)?
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -288,7 +303,9 @@ struct RuleImpactRow: View {
                     ruleID: impact.ruleID,
                     file: file,
                     scanRoot: scanRoot,
-                    isExpanded: fileExpansion(file.filePath)
+                    isExpanded: fileExpansion(file.filePath),
+                    loadDiff: loadDiff,
+                    onOpenInPreview: onOpenInPreview.map { action in { action(file) } }
                 )
             }
         } label: {
@@ -298,14 +315,16 @@ struct RuleImpactRow: View {
 }
 
 /// One affected file under a rule, expandable to the rule's before/after diff for
-/// that file. The diff is loaded lazily (and cached by the model) on first expand.
+/// that file. The diff is loaded lazily (and cached by the caller) on first expand.
 struct FileImpactRow: View {
-    @Environment(ImpactModel.self) private var model
-    @Environment(WorkspaceModel.self) private var workspace
     let ruleID: String
     let file: FileImpact
     let scanRoot: URL?
     @Binding var isExpanded: Bool
+    /// Loads the before/after diff for `(ruleID, filePath)`.
+    let loadDiff: (String, String) async -> [PreviewDiffLine]
+    /// Optional "open in Preview" action; the button is hidden when nil.
+    var onOpenInPreview: (() -> Void)?
     @State private var diff: [PreviewDiffLine]?
     @State private var loading = false
 
@@ -335,17 +354,16 @@ struct FileImpactRow: View {
                     .scaledFont(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                Button {
-                    workspace.openInPreview(
-                        URL(fileURLWithPath: file.filePath),
-                        from: .impact(ruleID: ruleID, filePath: file.filePath)
-                    )
-                } label: {
-                    Image(systemName: "wand.and.stars")
+                if let onOpenInPreview {
+                    Button {
+                        onOpenInPreview()
+                    } label: {
+                        Image(systemName: "wand.and.stars")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Open in Preview")
+                    .accessibilityLabel("Open \(displayPath) in Preview")
                 }
-                .buttonStyle(.borderless)
-                .help("Open in Preview")
-                .accessibilityLabel("Open \(displayPath) in Preview")
             }
         }
         // Load on user expand, and on appear when restored already-expanded (the
@@ -374,7 +392,7 @@ struct FileImpactRow: View {
     private func load() async {
         guard diff == nil, !loading else { return }
         loading = true
-        diff = await model.ruleDiff(ruleID: ruleID, filePath: file.filePath)
+        diff = await loadDiff(ruleID, file.filePath)
         loading = false
     }
 }
