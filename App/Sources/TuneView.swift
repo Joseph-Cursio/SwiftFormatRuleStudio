@@ -20,6 +20,8 @@ struct TuneView: View {
     @State private var expandedRules: Set<String> = []
     /// Which file rows are expanded, keyed by `fileKey(rule, path)`.
     @State private var expandedFiles: Set<String> = []
+    /// The post-scan option-opportunity pass, cancelled when a new scan starts.
+    @State private var opportunityTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -182,10 +184,19 @@ struct TuneView: View {
     @ViewBuilder
     private var churnSection: some View {
         if !pendingChurn.isEmpty {
-            sectionHeader("Needs review", "These would reformat code — expand to see what changes.")
-                .padding(.horizontal, 14)
-                .padding(.top, 16)
-                .padding(.bottom, 4)
+            HStack(spacing: 8) {
+                sectionHeader("Needs review", "These would reformat code — expand to see what changes.")
+                if model.isFindingOpportunities {
+                    ProgressView().controlSize(.small)
+                    Text("checking option fixes…")
+                        .scaledFont(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
 
             ForEach(pendingChurn) { impact in
                 RuleImpactRow(
@@ -199,13 +210,26 @@ struct TuneView: View {
                     loadDiff: { ruleID, filePath in
                         await model.ruleDiff(ruleID: ruleID, filePath: filePath)
                     },
-                    expandedHeader: optionsPanel(for: impact.ruleID)
+                    expandedHeader: optionsPanel(for: impact.ruleID),
+                    labelAccessory: opportunityBadge(for: impact.ruleID)
                 )
                 .padding(.horizontal, 14)
                 .padding(.vertical, 4)
                 Divider()
             }
         }
+    }
+
+    /// The "free win available at …" badge for a churn row, or `nil` until the
+    /// background pass finds an option opportunity for the rule.
+    private func opportunityBadge(for ruleID: String) -> AnyView? {
+        guard let opportunity = model.optionOpportunities[ruleID] else { return nil }
+        return AnyView(
+            OptionOpportunityBadge(
+                opportunity: opportunity,
+                adopt: { adoptRule(ruleID, improving: opportunity.sweeps) }
+            )
+        )
     }
 
     /// The options-layer panel for a churn rule — `nil` (no panel, no sweep) when
@@ -216,6 +240,7 @@ struct TuneView: View {
         let currentValues = config.config.options
         return AnyView(
             RuleOptionsPanel(
+                ruleID: ruleID,
                 loadSweeps: {
                     await model.sweepOptions(
                         forRule: ruleID,
@@ -224,9 +249,43 @@ struct TuneView: View {
                         currentValues: currentValues
                     )
                 },
-                adopt: { sweep, value in adoptOption(rule: ruleID, sweep: sweep, value: value) }
+                measureJoint: { sweeps in
+                    await model.ruleImpact(
+                        forRule: ruleID,
+                        path: path,
+                        optionOverrides: bestOverrides(sweeps)
+                    )
+                },
+                adopt: { sweeps in adoptRule(ruleID, improving: sweeps) }
             )
         )
+    }
+
+    /// `[--flag: bestValue]` for the given sweeps — the option set adopting the
+    /// rule would write.
+    private func bestOverrides(_ sweeps: [OptionSweep]) -> [String: String] {
+        var overrides: [String: String] = [:]
+        for sweep in sweeps {
+            if let best = sweep.bestValue { overrides[sweep.optionFlag] = best.value }
+        }
+        return overrides
+    }
+
+    /// Adopts a churn rule at every option's best value at once: sets each option
+    /// (clearing it when the best value is the default, to keep the config
+    /// minimal), enables the rule, and saves. The rule then leaves the list.
+    private func adoptRule(_ ruleID: String, improving sweeps: [OptionSweep]) {
+        persistScanSwiftVersion()
+        for sweep in sweeps {
+            guard let best = sweep.bestValue else { continue }
+            if best.value == sweep.defaultValue {
+                config.removeOption(key: sweep.optionKey)
+            } else {
+                config.setOption(key: sweep.optionKey, value: best.value)
+            }
+        }
+        config.setRuleEnabled(ruleID, enabled: true, isOptIn: isOptIn(ruleID))
+        config.save()
     }
 
     private func freeWinRow(_ impact: RuleImpact) -> some View {
@@ -313,8 +372,16 @@ struct TuneView: View {
         guard let folder = workspace.selectedFolder else { return }
         expandedRules.removeAll()
         expandedFiles.removeAll()
+        opportunityTask?.cancel()
         model.extraArguments = config.commandLineArguments
         await model.runScan(path: folder, candidateRuleNames: candidateRuleNames)
+        // Then, in the background, sweep the churn rules' options so rows can flag
+        // a hidden free win. Cancellable so a re-scan doesn't leave a stale pass.
+        let options = catalog.options
+        let currentValues = config.config.options
+        opportunityTask = Task {
+            await model.findOptionOpportunities(allOptions: options, currentValues: currentValues)
+        }
     }
 
     /// Enables one rule in the config and saves (a timestamped backup is written,
@@ -341,20 +408,6 @@ struct TuneView: View {
         guard let version = model.swiftVersion, !version.isEmpty else { return }
         guard config.config.options["swift-version"] == nil else { return }
         config.setOption(key: "swift-version", value: version)
-    }
-
-    /// Adopts a churn rule at a chosen option value: enables the rule, sets the
-    /// option (clearing it when the value is the default, to keep the config
-    /// minimal), and saves. The rule then drops off the Needs-review list.
-    private func adoptOption(rule ruleID: String, sweep: OptionSweep, value: OptionValueImpact) {
-        persistScanSwiftVersion()
-        if value.value == sweep.defaultValue {
-            config.removeOption(key: sweep.optionKey)
-        } else {
-            config.setOption(key: sweep.optionKey, value: value.value)
-        }
-        config.setRuleEnabled(ruleID, enabled: true, isOptIn: isOptIn(ruleID))
-        config.save()
     }
 
     // MARK: - Catalog lookups
@@ -384,12 +437,20 @@ struct TuneView: View {
 /// The options layer (docs/audit-redesign.md): inside a Needs-review rule's
 /// drill-down, lazily sweep the rule's boolean/enum options and show the churn at
 /// each value — so a rule that's churn at the default can be adopted at a zero- or
-/// lower-churn value (e.g. `braces` is free once `--allman true` is set). The
-/// sweep runs on first expand (and is cached by the model).
+/// lower-churn value (e.g. `braces` is free once `--allman true` is set). When more
+/// than one option helps, a single Adopt sets them all to their best value at
+/// once; the joint churn it would actually cause is measured (not summed from the
+/// per-option sweeps). The sweep runs on first expand (and is cached by the model).
 private struct RuleOptionsPanel: View {
+    let ruleID: String
     let loadSweeps: () async -> [OptionSweep]
-    let adopt: (OptionSweep, OptionValueImpact) -> Void
+    let measureJoint: ([OptionSweep]) async -> RuleImpact
+    let adopt: ([OptionSweep]) -> Void
     @State private var sweeps: [OptionSweep]?
+    @State private var jointImpact: RuleImpact?
+
+    /// The options whose best value beats the current one — the set Adopt writes.
+    private var improving: [OptionSweep] { (sweeps ?? []).filter(\.hasImprovement) }
 
     var body: some View {
         Group {
@@ -407,13 +468,24 @@ private struct RuleOptionsPanel: View {
                 .padding(.vertical, 4)
             }
         }
-        .task { if sweeps == nil { sweeps = await loadSweeps() } }
+        .task {
+            guard sweeps == nil else { return }
+            let loaded = await loadSweeps()
+            sweeps = loaded
+            let improvers = loaded.filter(\.hasImprovement)
+            if !improvers.isEmpty {
+                jointImpact = await measureJoint(improvers)
+            }
+        }
     }
 
     private func content(_ sweeps: [OptionSweep]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             ForEach(sweeps) { sweep in
                 optionBlock(sweep)
+            }
+            if !improving.isEmpty {
+                adoptSection
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -446,7 +518,6 @@ private struct RuleOptionsPanel: View {
     private func valueRow(_ sweep: OptionSweep, _ value: OptionValueImpact) -> some View {
         let isCurrent = value.value == sweep.effectiveValue
         let isBest = value.value == sweep.bestValue?.value
-        let improves = !isCurrent && value.findingCount < (sweep.currentImpact?.findingCount ?? .max)
         return HStack(spacing: 8) {
             Text(value.value)
                 .scaledFont(.caption, design: .monospaced)
@@ -463,12 +534,46 @@ private struct RuleOptionsPanel: View {
                 badge(value.findingCount == 0 ? "free" : "best", value.findingCount == 0 ? .green : .orange)
             }
             Spacer()
-            if improves {
-                Button("Adopt") { adopt(sweep, value) }
+        }
+    }
+
+    /// A single Adopt that sets every improving option to its best value at once,
+    /// labelled with the joint churn that combination actually causes.
+    private var adoptSection: some View {
+        let changes = improving.compactMap { sweep -> String? in
+            guard let best = sweep.bestValue else { return nil }
+            return "\(sweep.optionFlag) \(best.value)"
+        }
+        return VStack(alignment: .leading, spacing: 6) {
+            Divider()
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(adoptHeadline)
+                        .scaledFont(.caption, weight: .semibold)
+                        .foregroundStyle(jointIsFreeWin ? .green : .primary)
+                    Text("Sets \(changes.joined(separator: ", "))")
+                        .scaledFont(.caption2, design: .monospaced)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Button("Adopt") { adopt(improving) }
                     .controlSize(.small)
-                    .accessibilityLabel("Adopt \(sweep.optionFlag) \(value.value)")
+                    .accessibilityLabel("Adopt \(ruleID) with its best option values")
             }
         }
+    }
+
+    private var jointIsFreeWin: Bool { jointImpact?.findingCount == 0 }
+
+    private var adoptHeadline: String {
+        guard let joint = jointImpact else { return "Adopt \(ruleID) with its best options" }
+        if joint.findingCount == 0 {
+            return "Adopt \(ruleID) — free win, 0 changes"
+        }
+        let changes = "\(joint.findingCount) change\(joint.findingCount == 1 ? "" : "s")"
+        let files = "\(joint.fileCount) file\(joint.fileCount == 1 ? "" : "s")"
+        return "Adopt \(ruleID) — \(changes) · \(files)"
     }
 
     private func churnText(_ value: OptionValueImpact) -> String {
@@ -482,5 +587,42 @@ private struct RuleOptionsPanel: View {
         Text(text)
             .scaledFont(.caption2, weight: .medium)
             .foregroundStyle(color)
+    }
+}
+
+/// The row-level flag the background pass produces: a churn rule that an option
+/// change would make cheaper (or free), shown right under the collapsed rule with
+/// a one-click Adopt that applies the whole recommended option set at once — so
+/// the hidden free win isn't buried in the drill-down.
+private struct OptionOpportunityBadge: View {
+    let opportunity: OptionOpportunity
+    let adopt: () -> Void
+
+    private var tint: Color { opportunity.isFreeWin ? .green : .orange }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .scaledFont(.caption2)
+                .foregroundStyle(tint)
+                .accessibilityHidden(true)
+            Text(headline)
+                .scaledFont(.caption2, weight: .semibold)
+                .foregroundStyle(tint)
+            Text(opportunity.optionSummary)
+                .scaledFont(.caption2, design: .monospaced)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Button("Adopt") { adopt() }
+                .controlSize(.small)
+                .accessibilityLabel("Adopt \(opportunity.ruleID) with \(opportunity.optionSummary)")
+        }
+    }
+
+    private var headline: String {
+        guard !opportunity.isFreeWin else { return "free win available —" }
+        let count = opportunity.jointFindingCount
+        return "down to \(count) change\(count == 1 ? "" : "s") —"
     }
 }

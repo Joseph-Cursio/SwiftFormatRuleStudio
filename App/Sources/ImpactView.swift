@@ -298,6 +298,9 @@ struct RuleImpactRow: View {
     /// Optional content shown at the top of the expanded section, above the files
     /// — the Tune tab puts its option-sweep panel here; Impact leaves it nil.
     var expandedHeader: AnyView?
+    /// Optional accessory shown under the collapsed label — the Tune tab puts its
+    /// "free win available at …" badge here; Impact leaves it nil.
+    var labelAccessory: AnyView?
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -315,7 +318,12 @@ struct RuleImpactRow: View {
                 )
             }
         } label: {
-            ImpactRow(impact: impact, maxFileCount: maxFileCount, rule: rule, optionLines: optionLines)
+            VStack(alignment: .leading, spacing: 4) {
+                ImpactRow(impact: impact, maxFileCount: maxFileCount, rule: rule, optionLines: optionLines)
+                if let labelAccessory {
+                    labelAccessory
+                }
+            }
         }
     }
 }
