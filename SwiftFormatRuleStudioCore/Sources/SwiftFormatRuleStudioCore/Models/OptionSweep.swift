@@ -89,3 +89,38 @@ public struct OptionSweep: Sendable, Equatable, Identifiable {
         return best.findingCount < current.findingCount && best.value != effectiveValue
     }
 }
+
+/// A churn rule that an option change would make cheaper — the row-level summary
+/// the background pass produces, so "Needs review" can flag *"free win available
+/// at `--property-types inferred`"* without the user expanding the rule. Bundles
+/// the improving option sweeps with the real *joint* churn adopting them all at
+/// once would cause.
+public struct OptionOpportunity: Sendable, Equatable, Identifiable {
+    public let ruleID: String
+    /// The options that help, each adoptable at its `bestValue`.
+    public let sweeps: [OptionSweep]
+    /// Findings remaining once every improving option is at its best value.
+    public let jointFindingCount: Int
+    /// Files touched at that combination.
+    public let jointFileCount: Int
+
+    public init(ruleID: String, sweeps: [OptionSweep], jointFindingCount: Int, jointFileCount: Int) {
+        self.ruleID = ruleID
+        self.sweeps = sweeps
+        self.jointFindingCount = jointFindingCount
+        self.jointFileCount = jointFileCount
+    }
+
+    public var id: String { ruleID }
+
+    /// The combination reformats nothing — adopting the rule with these options
+    /// is a true free win.
+    public var isFreeWin: Bool { jointFindingCount == 0 }
+
+    /// The option changes as CLI fragments, e.g. `"--property-types inferred"`.
+    public var optionSummary: String {
+        sweeps
+            .compactMap { sweep in sweep.bestValue.map { "\(sweep.optionFlag) \($0.value)" } }
+            .joined(separator: ", ")
+    }
+}

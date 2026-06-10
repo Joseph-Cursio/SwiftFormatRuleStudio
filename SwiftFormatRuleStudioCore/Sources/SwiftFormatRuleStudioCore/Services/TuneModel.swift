@@ -35,6 +35,13 @@ public final class TuneModel {
     /// The folder the results were produced from.
     public private(set) var scannedPath: URL?
 
+    /// Churn rules a single option change would make cheaper, keyed by rule —
+    /// filled in by `findOptionOpportunities` after a scan so rows can flag a
+    /// hidden free win without the user expanding them.
+    public private(set) var optionOpportunities: [String: OptionOpportunity] = [:]
+    /// Whether the post-scan option pass is still running.
+    public private(set) var isFindingOpportunities = false
+
     /// Swift version passed as `--swift-version` (rules vary by version).
     public var swiftVersion: String?
     /// Extra arguments — typically the active config's `commandLineArguments`.
@@ -74,6 +81,8 @@ public final class TuneModel {
         state = .idle
         results = []
         scannedPath = nil
+        optionOpportunities = [:]
+        isFindingOpportunities = false
         diffCache.removeAll()
         sweepCache.removeAll()
     }
@@ -84,6 +93,7 @@ public final class TuneModel {
         scannedPath = path
         diffCache.removeAll()
         sweepCache.removeAll()
+        optionOpportunities = [:]
         results = []
         let total = candidateRuleNames.count
         state = .running(scanned: 0, total: total)
@@ -102,6 +112,26 @@ public final class TuneModel {
     /// `ruleName` enabled and aggregate the findings into a `RuleImpact`.
     private func scanRule(ruleName: String, path: URL) async -> RuleImpact {
         let findings = (try? await lintIsolated(ruleName: ruleName, path: path)) ?? []
+        return Self.aggregate(ruleID: ruleName, findings: findings)
+    }
+
+    /// The churn `ruleID` would cause with `optionOverrides` (flag → value)
+    /// applied together on top of the config — the real *joint* result of, say,
+    /// putting every option at its best value, rather than the sum of the
+    /// marginal sweeps. Lets the UI show what adopting a rule with its whole
+    /// recommended option set actually does.
+    public func ruleImpact(
+        forRule ruleID: String,
+        path: URL,
+        optionOverrides: [String: String]
+    ) async -> RuleImpact {
+        let extra = optionOverrides.flatMap { [$0.key, $0.value] }
+        let findings = (try? await lintIsolated(ruleName: ruleID, path: path, extraOptions: extra)) ?? []
+        return Self.aggregate(ruleID: ruleID, findings: findings)
+    }
+
+    /// Groups findings by file into a ranked `RuleImpact`.
+    private static func aggregate(ruleID: String, findings: [LintFinding]) -> RuleImpact {
         let byFile = Dictionary(grouping: findings, by: \.filePath)
         let files = byFile.map { filePath, items in
             FileImpact(filePath: filePath, findingCount: items.count, lines: items.map(\.line).sorted())
@@ -110,7 +140,7 @@ public final class TuneModel {
             if lhs.findingCount != rhs.findingCount { return lhs.findingCount > rhs.findingCount }
             return lhs.filePath < rhs.filePath
         }
-        return RuleImpact(ruleID: ruleName, fileCount: byFile.count, findingCount: findings.count, files: files)
+        return RuleImpact(ruleID: ruleID, fileCount: byFile.count, findingCount: findings.count, files: files)
     }
 
     private func lintIsolated(
@@ -174,6 +204,62 @@ public final class TuneModel {
         }
         sweepCache[ruleID] = sweeps
         return sweeps
+    }
+
+    /// Post-scan background pass: sweep every churn rule's options and, for each
+    /// rule a value change would help, record an `OptionOpportunity` (with the
+    /// real joint churn) so its row can flag "free win available at …". Updates
+    /// `optionOpportunities` incrementally — cheapest rules first, so badges
+    /// appear fast — and warms the sweep cache so expanding a rule is instant.
+    ///
+    /// Honours cancellation and bails if the scan changes underneath it (a new
+    /// scan or folder switch), so stale results never land. Awaitable for tests;
+    /// the UI fires it in a cancellable task after `runScan`.
+    public func findOptionOpportunities(
+        allOptions: [FormatOption],
+        currentValues: [String: String]
+    ) async {
+        guard case .completed = state, let path = scannedPath else { return }
+        isFindingOpportunities = true
+        defer { isFindingOpportunities = false }
+
+        // Fewest sweepable options first → quick wins surface before the
+        // many-option rules (e.g. organizeDeclarations) finish.
+        let order = churn
+            .map(\.ruleID)
+            .sorted { sweepableOptionCount($0, in: allOptions) < sweepableOptionCount($1, in: allOptions) }
+
+        for ruleID in order {
+            if Task.isCancelled || scannedPath != path { return }
+            let sweeps = await sweepOptions(
+                forRule: ruleID, path: path, allOptions: allOptions, currentValues: currentValues
+            )
+            let improving = sweeps.filter(\.hasImprovement)
+            guard !improving.isEmpty else { continue }
+
+            var overrides: [String: String] = [:]
+            for sweep in improving {
+                if let best = sweep.bestValue { overrides[sweep.optionFlag] = best.value }
+            }
+            let joint = await ruleImpact(forRule: ruleID, path: path, optionOverrides: overrides)
+            if Task.isCancelled || scannedPath != path { return }
+            optionOpportunities[ruleID] = OptionOpportunity(
+                ruleID: ruleID,
+                sweeps: improving,
+                jointFindingCount: joint.findingCount,
+                jointFileCount: joint.fileCount
+            )
+        }
+    }
+
+    /// How many boolean/enum options a rule has — used to order the opportunity
+    /// pass so cheap rules report first.
+    private func sweepableOptionCount(_ ruleID: String, in allOptions: [FormatOption]) -> Int {
+        let byKey = Dictionary(allOptions.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first })
+        return OptionRuleUsage.optionKeys(forRule: ruleID).count { key in
+            guard let option = byKey[key] else { return false }
+            return option.kind == .boolean || option.kind == .enumeration
+        }
     }
 
     /// The before/after diff for one candidate rule applied to one file, for the

@@ -212,4 +212,51 @@ struct TuneModelTests {
         #expect(args.contains("braces"))
         #expect(args.contains("--allman"))
     }
+
+    @Test("Joint impact applies the given option overrides together")
+    func ruleImpactAppliesOverrides() async {
+        let cli = allmanAwareCLI()
+        let model = TuneModel(cli: cli)
+        let path = URL(fileURLWithPath: "/ws")
+
+        let free = await model.ruleImpact(forRule: "braces", path: path, optionOverrides: ["--allman": "true"])
+        #expect(free.findingCount == 0)
+
+        let churn = await model.ruleImpact(forRule: "braces", path: path, optionOverrides: ["--allman": "false"])
+        #expect(churn.findingCount == 3)
+        #expect(churn.fileCount == 2)
+
+        let args = await cli.lastLintArguments
+        #expect(args.contains("braces"))
+        #expect(args.contains("--allman"))
+    }
+
+    // MARK: - Option opportunities (post-scan background pass)
+
+    @Test("The background pass flags a churn rule's hidden free-win option")
+    func findsOptionOpportunity() async {
+        let cli = allmanAwareCLI()
+        let model = TuneModel(cli: cli)
+        let path = URL(fileURLWithPath: "/ws")
+        await model.runScan(path: path, candidateRuleNames: ["braces"])
+        #expect(model.churn.map(\.ruleID) == ["braces"]) // churn at the default --allman false
+
+        await model.findOptionOpportunities(allOptions: [Self.allmanOption], currentValues: [:])
+        let opportunity = try! #require(model.optionOpportunities["braces"])
+        #expect(opportunity.isFreeWin)
+        #expect(opportunity.jointFindingCount == 0)
+        #expect(opportunity.optionSummary == "--allman true")
+        #expect(!model.isFindingOpportunities) // settled after awaiting
+    }
+
+    @Test("No opportunity is recorded when no option value helps")
+    func noOpportunityWhenNoOptionHelps() async {
+        // Every value lints the same — the option doesn't move the churn.
+        let cli = MockSwiftFormatCLI(lintOutput: Self.allmanFalseChurn)
+        let model = TuneModel(cli: cli)
+        let path = URL(fileURLWithPath: "/ws")
+        await model.runScan(path: path, candidateRuleNames: ["braces"])
+        await model.findOptionOpportunities(allOptions: [Self.allmanOption], currentValues: [:])
+        #expect(model.optionOpportunities.isEmpty)
+    }
 }
