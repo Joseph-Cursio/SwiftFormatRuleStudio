@@ -120,9 +120,9 @@ struct TuneModelTests {
     /// `true`.
     private func allmanAwareCLI() -> MockSwiftFormatCLI {
         let churn = Self.allmanFalseChurn // capture the Sendable value, not the isolated static
-        return MockSwiftFormatCLI(lintOutputForArguments: { args in
+        return MockSwiftFormatCLI { args in
             args.contains("true") ? "[]" : churn
-        })
+        }
     }
 
     @Test("Sweeps an option's values and finds the zero-churn value")

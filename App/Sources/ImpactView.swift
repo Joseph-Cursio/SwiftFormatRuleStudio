@@ -157,43 +157,51 @@ struct ImpactView: View {
                 // nested horizontal ScrollView, which a List's NSTableView backing
                 // would stop the wheel from scrolling past. This matches the Rules
                 // tab, where the same diff view nests in a vertical ScrollView.
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(report.ruleImpacts) { impact in
-                                RuleImpactRow(
-                                    impact: impact,
-                                    maxFileCount: report.ruleImpacts.first?.fileCount ?? 1,
-                                    rule: rule(for: impact),
-                                    optionLines: optionLines(for: impact),
-                                    scanRoot: model.scannedPath,
-                                    isExpanded: ruleExpansion(impact.ruleID),
-                                    fileExpansion: { fileExpansion(impact.ruleID, $0) },
-                                    loadDiff: { ruleID, filePath in
-                                        await model.ruleDiff(ruleID: ruleID, filePath: filePath)
-                                    },
-                                    onOpenInPreview: { file in
-                                        workspace.openInPreview(
-                                            URL(fileURLWithPath: file.filePath),
-                                            from: .impact(ruleID: impact.ruleID, filePath: file.filePath)
-                                        )
-                                    }
-                                )
-                                .id(impact.ruleID)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 4)
-                                Divider()
-                            }
-                        }
-                    }
-                    // Back lands here: re-expand the rule (and file) and scroll to it.
-                    .onChange(of: workspace.impactRestore) { _, target in
-                        restore(target, proxy: proxy)
-                    }
-                    .task { restore(workspace.impactRestore, proxy: proxy) }
-                }
+                ruleList(report)
             }
         }
+    }
+
+    private func ruleList(_ report: ImpactReport) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(report.ruleImpacts) { impact in
+                        ruleRow(impact, in: report)
+                            .id(impact.ruleID)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 4)
+                        Divider()
+                    }
+                }
+            }
+            // Back lands here: re-expand the rule (and file) and scroll to it.
+            .onChange(of: workspace.impactRestore) { _, target in
+                restore(target, proxy: proxy)
+            }
+            .task { restore(workspace.impactRestore, proxy: proxy) }
+        }
+    }
+
+    private func ruleRow(_ impact: RuleImpact, in report: ImpactReport) -> some View {
+        RuleImpactRow(
+            impact: impact,
+            maxFileCount: report.ruleImpacts.first?.fileCount ?? 1,
+            rule: rule(for: impact),
+            optionLines: optionLines(for: impact),
+            scanRoot: model.scannedPath,
+            isExpanded: ruleExpansion(impact.ruleID),
+            fileExpansion: { fileExpansion(impact.ruleID, $0) },
+            loadDiff: { ruleID, filePath in
+                await model.ruleDiff(ruleID: ruleID, filePath: filePath)
+            },
+            onOpenInPreview: { file in
+                workspace.openInPreview(
+                    URL(fileURLWithPath: file.filePath),
+                    from: .impact(ruleID: impact.ruleID, filePath: file.filePath)
+                )
+            }
+        )
     }
 
     /// Expand/scroll to the rule (and optional file) the Back navigation targeted,

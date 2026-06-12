@@ -30,32 +30,7 @@ struct StartupView: View {
                     .foregroundStyle(.secondary)
             }
 
-            VStack(spacing: 12) {
-                Button {
-                    choosingFolder = true
-                } label: {
-                    Label("Open Project Folder…", systemImage: "folder")
-                        .frame(maxWidth: 280)
-                }
-                .controlSize(.large)
-                .buttonStyle(.borderedProminent)
-
-                if let recent = workspace.lastFolder {
-                    Button {
-                        workspace.open(recent)
-                    } label: {
-                        Label("Reopen “\(recent.lastPathComponent)”", systemImage: "clock.arrow.circlepath")
-                            .frame(maxWidth: 280)
-                    }
-                    .controlSize(.large)
-                }
-
-                Button("Browse rules without a project") {
-                    workspace.browseWithoutProject()
-                }
-                .buttonStyle(.link)
-                .padding(.top, 4)
-            }
+            actionButtons
 
             Spacer()
         }
@@ -66,6 +41,35 @@ struct StartupView: View {
                 _ = url.startAccessingSecurityScopedResource()
                 workspace.open(url)
             }
+        }
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 12) {
+            Button {
+                choosingFolder = true
+            } label: {
+                Label("Open Project Folder…", systemImage: "folder")
+                    .frame(maxWidth: 280)
+            }
+            .controlSize(.large)
+            .buttonStyle(.borderedProminent)
+
+            if let recent = workspace.lastFolder {
+                Button {
+                    workspace.open(recent)
+                } label: {
+                    Label("Reopen “\(recent.lastPathComponent)”", systemImage: "clock.arrow.circlepath")
+                        .frame(maxWidth: 280)
+                }
+                .controlSize(.large)
+            }
+
+            Button("Browse rules without a project") {
+                workspace.browseWithoutProject()
+            }
+            .buttonStyle(.link)
+            .padding(.top, 4)
         }
     }
 }

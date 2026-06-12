@@ -41,10 +41,10 @@ struct LiveCodePreviewView: View {
             VSplitView {
                 editor
                     .frame(minHeight: 120)
-                changesList
+                PreviewChangesView(model: model, selectedFile: selectedFile)
                     .frame(minHeight: 100)
             }
-            result
+            PreviewResultView(model: model)
         }
         .task {
             model.producesChangeList = true
@@ -68,7 +68,7 @@ struct LiveCodePreviewView: View {
 
     private var fileList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            paneHeader("Project files", systemImage: "folder")
+            previewPaneHeader("Project files", systemImage: "folder")
             Divider()
             TextField("Filter", text: $fileFilter)
                 .textFieldStyle(.roundedBorder)
@@ -153,7 +153,8 @@ struct LiveCodePreviewView: View {
         // isn't armed yet at first appearance).
         if consumePreviewRequest() {
             return
-        } else if let remembered = files.first(where: { $0.path == savedFilePath }) {
+        }
+        if let remembered = files.first(where: { $0.path == savedFilePath }) {
             listSelection = remembered
             selectedFile = remembered
             loadFile(remembered)
@@ -272,7 +273,7 @@ struct LiveCodePreviewView: View {
 
     private var editor: some View {
         VStack(alignment: .leading, spacing: 0) {
-            paneHeader(
+            previewPaneHeader(
                 selectedFile.map(relativePath) ?? "Enter your own source",
                 systemImage: selectedFile == nil ? "pencil.line" : "doc.text"
             )
@@ -286,236 +287,10 @@ struct LiveCodePreviewView: View {
             } else {
                 // A loaded project file: read-only, syntax-highlighted, with line
                 // numbers like the editable editor (no editable-field background).
-                readOnlyCode(model.source, showsLineNumbers: true)
+                previewReadOnlyCode(model.source, showsLineNumbers: true)
             }
         }
         .frame(minWidth: 300)
-    }
-
-    // MARK: - Changes (which rule changed which line)
-
-    private var changesList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                paneHeader("SwiftFormat rules triggered", systemImage: "list.bullet.rectangle")
-                Spacer()
-                if !model.changes.isEmpty {
-                    Text(rulesSummary)
-                        .scaledFont(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.trailing, 10)
-                }
-            }
-            Divider()
-            if model.changes.isEmpty {
-                Text("No changes — your code already matches the current rules.")
-                    .scaledFont(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(10)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            } else {
-                List(Array(model.changes.enumerated()), id: \.offset) { _, change in
-                    changeRow(change)
-                }
-                .listStyle(.plain)
-            }
-        }
-        .frame(minWidth: 300)
-        .textSelection(.enabled)
-    }
-
-    /// e.g. "5 rules · 11 occurrences" — distinct rules vs total occurrences.
-    private var rulesSummary: String {
-        let occurrences = model.changes.count
-        let rules = Set(model.changes.map(\.ruleID)).count
-        return "\(rules) rule\(rules == 1 ? "" : "s") · "
-            + "\(occurrences) occurrence\(occurrences == 1 ? "" : "s")"
-    }
-
-    /// The options that tune a rule, each as `--flag = value` (the value being the
-    /// config override or SwiftFormat's default) — shown under each triggered rule
-    /// so it's clear which knobs governed the change.
-    private func optionLines(for ruleID: String) -> [String] {
-        ruleOptionLines(forRule: ruleID, catalog: catalog, config: config)
-    }
-
-    private func changeRow(_ change: LintFinding) -> some View {
-        // Gutter geometry matches CodeTextEditor's ruler: a 40pt-wide column
-        // (number right-aligned with a 4pt trailing margin) then the divider.
-        HStack(alignment: .top, spacing: 0) {
-            Text("\(change.line)")
-                .scaledFont(.subheadline, design: .monospaced)
-                .monospacedDigit()
-                .foregroundStyle(.tertiary)
-                .frame(width: 36, alignment: .trailing)
-                .padding(.trailing, 4)
-            Divider()
-            VStack(alignment: .leading, spacing: 1) {
-                Text(change.ruleID)
-                    .scaledFont(.body, design: .monospaced)
-                let options = optionLines(for: change.ruleID)
-                if options.isEmpty {
-                    Text("No options")
-                        .scaledFont(.caption)
-                        .foregroundStyle(.tertiary)
-                } else {
-                    ForEach(options, id: \.self) { line in
-                        Text(line)
-                            .scaledFont(.caption, design: .monospaced)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.leading, 8)
-            Spacer(minLength: 8)
-            Button {
-                showRuleInRulesTab(change.ruleID)
-            } label: {
-                Image(systemName: "arrow.up.forward")
-            }
-            .buttonStyle(.borderless)
-            .help("Show “\(change.ruleID)” in the Rules tab")
-            .accessibilityLabel("Show \(change.ruleID) in the Rules tab")
-        }
-        .padding(.vertical, 2)
-        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 8))
-        .listRowSeparator(.hidden)
-        .contextMenu {
-            Button("Show in Rules Tab") { showRuleInRulesTab(change.ruleID) }
-        }
-    }
-
-    /// Opens `ruleID` in the Rules tab, remembering this Preview location so Back
-    /// returns here. Shared by the row's reveal button and its context menu.
-    private func showRuleInRulesTab(_ ruleID: String) {
-        workspace.openInRules(ruleID, from: .preview(file: selectedFile))
-    }
-
-    // MARK: - Result
-
-    private var result: some View {
-        VSplitView {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    paneHeader("Diff", systemImage: "plusminus")
-                    Spacer()
-                    statusLabel
-                        .padding(.trailing, 10)
-                }
-                Divider()
-                resultBody
-            }
-            .frame(minHeight: 100)
-
-            VStack(alignment: .leading, spacing: 0) {
-                paneHeader("Formatted output", systemImage: "wand.and.stars")
-                Divider()
-                formattedOutput
-            }
-            .frame(minHeight: 100)
-        }
-        .frame(minWidth: 300)
-    }
-
-    /// The clean formatted result (no diff markers), syntax-highlighted. Its line
-    /// numbers line up with the diff's "new" column.
-    @ViewBuilder
-    private var formattedOutput: some View {
-        readOnlyCode(model.formattedSource, showsLineNumbers: true)
-    }
-
-    /// A read-only, syntax-highlighted rendering of Swift source. Used for the
-    /// formatted output and for a loaded project file (which shouldn't be edited).
-    /// `showsLineNumbers` adds a gutter, matching the editable editor.
-    @ViewBuilder
-    private func readOnlyCode(_ source: String, showsLineNumbers: Bool = false) -> some View {
-        let lines = source.components(separatedBy: "\n")
-        let gutterWidth = CGFloat(String(max(lines.count, 1)).count) * 9 + 6
-        GeometryReader { geometry in
-            ScrollView([.vertical, .horizontal]) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                        HStack(alignment: .top, spacing: 8) {
-                            if showsLineNumbers {
-                                Text("\(index + 1)")
-                                    .scaledFont(.body, design: .monospaced)
-                                    .monospacedDigit()
-                                    .foregroundStyle(.tertiary)
-                                    .frame(width: gutterWidth, alignment: .trailing)
-                                Divider()
-                            }
-                            Text(SwiftCodeColor.attributed(line))
-                                .scaledFont(.body, design: .monospaced)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 10)
-                    }
-                }
-                .padding(.vertical, 4)
-                .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
-            }
-        }
-        .textSelection(.enabled)
-    }
-
-    @ViewBuilder
-    private var statusLabel: some View {
-        switch model.state {
-        case .idle:
-            EmptyView()
-        case .formatting:
-            ProgressView().controlSize(.small)
-        case .formatted:
-            Text(model.hasChanges ? changeSummary : "No changes")
-                .scaledFont(.caption)
-                .foregroundStyle(.secondary)
-        case .failed:
-            Label("Error", systemImage: "exclamationmark.triangle")
-                .scaledFont(.caption)
-                .foregroundStyle(.red)
-        }
-    }
-
-    private var addedCount: Int { model.diff.filter { $0.change == .added }.count }
-    private var removedCount: Int { model.diff.filter { $0.change == .removed }.count }
-
-    /// e.g. "11 line changes: 6 insertions + 5 deletions".
-    private var changeSummary: String {
-        let total = addedCount + removedCount
-        return "\(total) line \(total == 1 ? "change" : "changes"): "
-            + "\(addedCount) insertion\(addedCount == 1 ? "" : "s") + "
-            + "\(removedCount) deletion\(removedCount == 1 ? "" : "s")"
-    }
-
-    @ViewBuilder
-    private var resultBody: some View {
-        switch model.state {
-        case .failed(let message):
-            ContentUnavailableView {
-                Label("Couldn’t format", systemImage: "exclamationmark.triangle")
-            } description: {
-                Text(message)
-            }
-        default:
-            if model.hasChanges {
-                PreviewDiffView(lines: model.diff, showsLineNumbers: true)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            } else if model.state == .formatted {
-                ContentUnavailableView(
-                    "Already formatted",
-                    systemImage: "checkmark.seal",
-                    description: Text("This code already matches the current formatting rules.")
-                )
-            } else {
-                Color.clear
-            }
-        }
-    }
-
-    private func paneHeader(_ title: String, systemImage: String) -> some View {
-        Label(title, systemImage: systemImage)
-            .scaledFont(.headline, weight: .semibold)
-            .padding(8)
     }
 
     static let sampleSource = """
@@ -532,107 +307,3 @@ struct LiveCodePreviewView: View {
 
 /// A node in the project file outline: a directory (with `children`) or a file
 /// leaf (`children == nil`). Leaves carry the file's real URL.
-private struct FileNode: Identifiable, Hashable {
-    let url: URL
-    let name: String
-    let children: [FileNode]?
-    var id: URL { url }
-    var isDirectory: Bool { children != nil }
-}
-
-/// One outline row, recursive over its children. Directories are `DisclosureGroup`s
-/// whose expansion is persisted via `expansion(path)`; files are selectable leaves
-/// (tagged by URL for the enclosing `List`'s selection).
-private struct FileRow: View {
-    let node: FileNode
-    let expansion: (String) -> Binding<Bool>
-
-    var body: some View {
-        if let children = node.children {
-            DisclosureGroup(isExpanded: expansion(node.url.path)) {
-                ForEach(children) { child in
-                    FileRow(node: child, expansion: expansion)
-                }
-            } label: {
-                Label(node.name, systemImage: "folder")
-                    .scaledFont(.callout, design: .monospaced)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-        } else {
-            Label(node.name, systemImage: "swift")
-                .scaledFont(.callout, design: .monospaced)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .tag(node.url)
-        }
-    }
-}
-
-/// Renders `[PreviewDiffLine]` as a colored unified diff. With `showsLineNumbers`,
-/// a two-column gutter shows old and new line numbers (git/GitHub style) so moves
-/// are legible: a removed line numbers the old side, an added line the new side.
-struct PreviewDiffView: View {
-    let lines: [PreviewDiffLine]
-    var showsLineNumbers = false
-
-    var body: some View {
-        let rows = lines.numbered()
-        let oldWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.oldNumber).max() ?? 0)
-        let newWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.newNumber).max() ?? 0)
-        // GeometryReader + minWidth/minHeight pins content to the top-left: a 2D
-        // ScrollView otherwise centers content smaller than its viewport.
-        GeometryReader { geometry in
-            ScrollView([.vertical, .horizontal]) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(rows) { row in
-                        HStack(alignment: .top, spacing: 8) {
-                            if showsLineNumbers {
-                                lineNumberGutter(row.oldNumber, width: oldWidth)
-                                lineNumberGutter(row.newNumber, width: newWidth)
-                                Divider()
-                            }
-                            HStack(alignment: .top, spacing: 8) {
-                                Text(symbol(for: row.line.change))
-                                    .frame(width: 10, alignment: .leading)
-                                Text(row.line.text.isEmpty ? " " : row.line.text)
-                            }
-                            .foregroundStyle(foreground(for: row.line.change))
-                        }
-                        .scaledFont(.body, design: .monospaced)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 1)
-                        .background(background(for: row.line.change))
-                    }
-                }
-                .padding(.vertical, 4)
-                .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
-            }
-        }
-    }
-
-    private func symbol(for change: PreviewDiffLine.Change) -> String {
-        switch change {
-        case .added: "+"
-        case .removed: "-"
-        case .unchanged: " "
-        }
-    }
-
-    private func foreground(for change: PreviewDiffLine.Change) -> Color {
-        switch change {
-        case .added: .green
-        case .removed: .red
-        case .unchanged: .primary
-        }
-    }
-
-    private func background(for change: PreviewDiffLine.Change) -> Color {
-        switch change {
-        case .added: Color.green.opacity(0.12)
-        case .removed: Color.red.opacity(0.12)
-        case .unchanged: .clear
-        }
-    }
-}

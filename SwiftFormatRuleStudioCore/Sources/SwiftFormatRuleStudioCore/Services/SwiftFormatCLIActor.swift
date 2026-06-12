@@ -16,7 +16,7 @@ public typealias SwiftFormatFileExists = @Sendable (String) async -> Bool
 /// The result of a `swiftformat --lint` run: the machine-readable reporter output
 /// (stdout) plus SwiftFormat's human run summary (stderr), which carries the
 /// `N/M files require formatting` counts the JSON reporter omits.
-public nonisolated struct LintRun: Sendable, Equatable {
+nonisolated public struct LintRun: Sendable, Equatable {
     /// stdout — e.g. the `--reporter json` payload.
     public let reporterOutput: String
     /// stderr — the run summary line(s).

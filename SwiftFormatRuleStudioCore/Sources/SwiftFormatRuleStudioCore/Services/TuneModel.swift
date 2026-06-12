@@ -182,7 +182,7 @@ public final class TuneModel {
     ) async -> [OptionSweep] {
         if let cached = sweepCache[ruleID] { return cached }
 
-        let optionsByKey = Dictionary(allOptions.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first })
+        let optionsByKey = Dictionary(allOptions.map { ($0.key, $0) }) { first, _ in first }
         var sweeps: [OptionSweep] = []
         for key in OptionRuleUsage.optionKeys(forRule: ruleID) {
             guard let option = optionsByKey[key],
@@ -261,7 +261,7 @@ public final class TuneModel {
     /// How many boolean/enum options a rule has — used to order the opportunity
     /// pass so cheap rules report first.
     private func sweepableOptionCount(_ ruleID: String, in allOptions: [FormatOption]) -> Int {
-        let byKey = Dictionary(allOptions.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first })
+        let byKey = Dictionary(allOptions.map { ($0.key, $0) }) { first, _ in first }
         return OptionRuleUsage.optionKeys(forRule: ruleID).count { key in
             guard let option = byKey[key] else { return false }
             return option.kind == .boolean || option.kind == .enumeration

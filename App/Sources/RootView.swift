@@ -57,41 +57,33 @@ struct RootView: View {
 
     private var mainUI: some View {
         VStack(spacing: 0) {
-            TabView(selection: tabSelection) {
-                ContentView()
-                    .modifier(backToolbar)
-                    .tabItem {
-                        Label("Rules", systemImage: "list.bullet.rectangle")
-                    }
-                    .tag(WorkspaceModel.Tab.rules)
-                ConfigView()
-                    .modifier(backToolbar)
-                    .tabItem {
-                        Label("Config", systemImage: "slider.horizontal.3")
-                    }
-                    .tag(WorkspaceModel.Tab.config)
-                LiveCodePreviewView()
-                    .modifier(backToolbar)
-                    .tabItem {
-                        Label("Preview", systemImage: "wand.and.stars")
-                    }
-                    .tag(WorkspaceModel.Tab.preview)
-                ImpactView()
-                    .modifier(backToolbar)
-                    .tabItem {
-                        Label("Impact", systemImage: "chart.bar.doc.horizontal")
-                    }
-                    .tag(WorkspaceModel.Tab.impact)
-                TuneView()
-                    .modifier(backToolbar)
-                    .tabItem {
-                        Label("Tune", systemImage: "sparkles")
-                    }
-                    .tag(WorkspaceModel.Tab.tune)
-            }
+            tabView
             Divider()
             StatusBar(catalog: catalog)
         }
+    }
+
+    private var tabView: some View {
+        TabView(selection: tabSelection) {
+            tab(ContentView(), "Rules", "list.bullet.rectangle", .rules)
+            tab(ConfigView(), "Config", "slider.horizontal.3", .config)
+            tab(LiveCodePreviewView(), "Preview", "wand.and.stars", .preview)
+            tab(ImpactView(), "Impact", "chart.bar.doc.horizontal", .impact)
+            tab(TuneView(), "Tune", "sparkles", .tune)
+        }
+    }
+
+    /// One tab with the shared Back toolbar, tab item, and tag applied.
+    private func tab(
+        _ content: some View,
+        _ title: String,
+        _ image: String,
+        _ tag: WorkspaceModel.Tab
+    ) -> some View {
+        content
+            .modifier(backToolbar)
+            .tabItem { Label(title, systemImage: image) }
+            .tag(tag)
     }
 
     /// A leading "Back" toolbar item, added to every tab so the control sits in

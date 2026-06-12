@@ -33,7 +33,7 @@ struct ConfigView: View {
                             optionsPanel
                         }
                         .frame(minWidth: 360)
-                        diffPanel
+                        ConfigDiffPanel()
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -262,95 +262,6 @@ struct ConfigView: View {
         }
     }
 
-    // MARK: - Diff panel (before / diff / after of the .swiftformat file)
-
-    private var diffPanel: some View {
-        VSplitView {
-            configPane("Saved .swiftformat", systemImage: "doc") {
-                configListing(config.originalText, emptyMessage: "No .swiftformat saved yet.")
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Label("Pending changes", systemImage: "plusminus")
-                        .scaledFont(.headline, weight: .semibold)
-                    Spacer()
-                    if let error = config.lastError {
-                        Label(error, systemImage: "exclamationmark.triangle")
-                            .scaledFont(.caption)
-                            .foregroundStyle(.red)
-                    }
-                }
-                .padding(8)
-                Divider()
-                Group {
-                    if config.isDirty {
-                        PreviewDiffView(lines: config.diff, showsLineNumbers: true)
-                    } else {
-                        ContentUnavailableView(
-                            "No pending changes",
-                            systemImage: "checkmark.seal",
-                            description: Text("Edit a rule or option to see the .swiftformat diff here.")
-                        )
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            .frame(minHeight: 90)
-            configPane("After saving", systemImage: "doc.badge.gearshape") {
-                configListing(config.editedText, emptyMessage: "Empty — everything is at its default.")
-            }
-        }
-        .frame(minWidth: 320, maxHeight: .infinity)
-    }
-
-    /// A labeled before/after pane wrapping read-only config text.
-    private func configPane(_ title: String, systemImage: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Label(title, systemImage: systemImage)
-                .scaledFont(.headline, weight: .semibold)
-                .padding(8)
-            Divider()
-            content()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .frame(minHeight: 90)
-    }
-
-    /// Read-only, line-numbered rendering of `.swiftformat` text (plain — config
-    /// files aren't Swift). Empty text shows a placeholder.
-    @ViewBuilder
-    private func configListing(_ text: String, emptyMessage: String) -> some View {
-        let lines = text.isEmpty ? [] : text.components(separatedBy: "\n")
-        if lines.isEmpty {
-            Text(emptyMessage)
-                .scaledFont(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(10)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        } else {
-            let width = diffGutterWidth(forMaxNumber: lines.count)
-            GeometryReader { geometry in
-                ScrollView([.vertical, .horizontal]) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                            HStack(alignment: .top, spacing: 8) {
-                                lineNumberGutter(index + 1, width: width)
-                                Divider()
-                                Text(line.isEmpty ? " " : line)
-                            }
-                            .scaledFont(.body, design: .monospaced)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 1)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
-                }
-            }
-            .textSelection(.enabled)
-        }
-    }
 }
 
 /// One option, rendered with the right control for its inferred kind. Options
@@ -373,27 +284,7 @@ struct OptionRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(isSet ? Color.accentColor : Color.clear)
-                    .frame(width: 6, height: 6)
-                Text(option.name)
-                    .scaledFont(.body, design: .monospaced)
-                    .foregroundStyle(isActive ? Color.accentColor : Color.primary)
-                Spacer()
-                if isSet {
-                    Button {
-                        config.removeOption(key: option.key)
-                    } label: {
-                        Image(systemName: "arrow.uturn.backward")
-                            .accessibilityLabel("Reset to default")
-                    }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
-                    .help("Reset to default")
-                }
-                editor
-            }
+            optionRow
             Text(option.summary)
                 .scaledFont(.caption)
                 .foregroundStyle(.secondary)
@@ -406,6 +297,31 @@ struct OptionRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    /// The option's name, set-indicator dot, reset button, and inline editor.
+    private var optionRow: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(isSet ? Color.accentColor : Color.clear)
+                .frame(width: 6, height: 6)
+            Text(option.name)
+                .scaledFont(.body, design: .monospaced)
+                .foregroundStyle(isActive ? Color.accentColor : Color.primary)
+            Spacer()
+            if isSet {
+                Button {
+                    config.removeOption(key: option.key)
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .accessibilityLabel("Reset to default")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .help("Reset to default")
+            }
+            editor
+        }
     }
 
     /// The rules this option tunes (an option is a no-op unless its rule is

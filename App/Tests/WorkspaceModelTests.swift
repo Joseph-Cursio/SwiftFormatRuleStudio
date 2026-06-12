@@ -3,8 +3,8 @@
 //  SwiftFormatRuleStudioTests
 //
 
-@testable import SwiftFormatRuleStudio
 import Foundation
+@testable import SwiftFormatRuleStudio
 import Testing
 
 /// Covers the navigation/state wiring behind the Rules-tab example toggle:

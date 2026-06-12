@@ -151,9 +151,9 @@ final class PlaceholderTextView: NSTextView {
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] event in
             guard let self,
-                  let window = self.window,
+                  let window,
                   event.window === window,
-                  let scrollView = self.enclosingScrollView else { return event }
+                  let scrollView = enclosingScrollView else { return event }
             let frameInWindow = scrollView.convert(scrollView.bounds, to: nil)
             if !frameInWindow.contains(event.locationInWindow) {
                 // Resign after the click is delivered so its own target (if any)
@@ -224,9 +224,9 @@ final class FocusRingOverlay: NSView {
     }
 
     /// Let clicks fall through to the text view beneath.
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func hitTest(_: NSPoint) -> NSView? { nil }
 
-    override func draw(_ dirtyRect: NSRect) {
+    override func draw(_: NSRect) {
         guard isActive else { return }
         let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 1.5, dy: 1.5), xRadius: 4, yRadius: 4)
         ring.lineWidth = 3
