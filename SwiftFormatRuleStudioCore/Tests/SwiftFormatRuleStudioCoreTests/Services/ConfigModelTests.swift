@@ -5,6 +5,7 @@
 
 import Foundation
 @testable import SwiftFormatRuleStudioCore
+import SwiftFormatRuleStudioCoreTestSupport
 import Testing
 
 @Suite("ConfigModel")
@@ -35,6 +36,18 @@ struct ConfigModelTests {
         #expect(model.config.options["indent"] == "4")
         #expect(model.isDirty == false)
         #expect(model.diff.allSatisfy { $0.change == .unchanged })
+    }
+
+    @Test("Loading reads through the injected reader — no disk access")
+    func loadsViaInjectedReader() {
+        let url = URL(fileURLWithPath: "/virtual/.swiftformat")
+        let reader = MockSourceFileReader(path: url.path, contents: "--indent 2\n")
+        let model = ConfigModel(reader: reader)
+        model.load(from: url)
+
+        #expect(model.config.options["indent"] == "2")
+        #expect(model.configPath == url)
+        #expect(model.isDirty == false)
     }
 
     @Test("Loading a missing file yields an empty config rooted at the path")

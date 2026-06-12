@@ -36,6 +36,7 @@ public final class ImpactModel {
     public var extraArguments: [String] = []
 
     private let cli: any SwiftFormatCLIProtocol
+    private let reader: any SourceFileReading
 
     /// Memoized drill-down diffs, keyed by rule + file, so re-expanding a row in
     /// the report doesn't re-run SwiftFormat. Cleared on each new scan.
@@ -45,9 +46,14 @@ public final class ImpactModel {
     /// a single rule for the drill-down, keeping only the option flags.
     private static let ruleSelectionFlags: Set<String> = ["--enable", "--disable", "--rules"]
 
-    /// Creates an impact model backed by the given CLI.
-    public init(cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(), swiftVersion: String? = "5.10") {
+    /// Creates an impact model backed by the given CLI and file reader.
+    public init(
+        cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(),
+        reader: any SourceFileReading = FileSystemSourceReader(),
+        swiftVersion: String? = "5.10"
+    ) {
         self.cli = cli
+        self.reader = reader
         self.swiftVersion = swiftVersion
     }
 
@@ -94,7 +100,7 @@ public final class ImpactModel {
     public func ruleDiff(ruleID: String, filePath: String) async -> [PreviewDiffLine] {
         let key = "\(ruleID)\u{0}\(filePath)"
         if let cached = diffCache[key] { return cached }
-        guard let source = try? String(contentsOfFile: filePath, encoding: .utf8) else { return [] }
+        guard let source = try? reader.readSource(at: filePath) else { return [] }
 
         var arguments = ["stdin", "--stdin-path", filePath]
         if let swiftVersion, !swiftVersion.isEmpty, !extraArguments.contains("--swift-version") {

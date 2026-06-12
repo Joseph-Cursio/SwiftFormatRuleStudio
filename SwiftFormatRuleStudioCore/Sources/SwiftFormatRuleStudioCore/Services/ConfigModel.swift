@@ -24,8 +24,12 @@ public final class ConfigModel {
     /// The most recent error message, if a load/save failed.
     public private(set) var lastError: String?
 
-    /// Creates an empty config model.
-    public init() {}
+    private let reader: any SourceFileReading
+
+    /// Creates an empty config model backed by the given file reader.
+    public init(reader: any SourceFileReading = FileSystemSourceReader()) {
+        self.reader = reader
+    }
 
     // MARK: - Load / save
 
@@ -33,7 +37,7 @@ public final class ConfigModel {
     /// config rooted at `url` (so a first save creates it).
     public func load(from url: URL?) {
         configPath = url
-        if let url, let text = try? String(contentsOf: url, encoding: .utf8) {
+        if let url, let text = try? reader.readSource(at: url.path) {
             originalText = text
             config = SwiftFormatConfig.parse(text)
         } else {

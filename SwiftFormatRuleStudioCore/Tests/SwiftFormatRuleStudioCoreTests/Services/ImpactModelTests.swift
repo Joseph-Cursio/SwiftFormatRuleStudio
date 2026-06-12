@@ -110,6 +110,36 @@ struct ImpactModelTests {
         #expect(diff.isEmpty)
     }
 
+    @Test("ruleDiff reads through the injected reader — no disk access")
+    func ruleDiffUsesInjectedReader() async {
+        // The file path is purely a key into the in-memory reader; nothing is
+        // staged on disk. This is the seam the file-reader protocol unlocks.
+        let path = "/virtual/Sample.swift"
+        let cli = MockSwiftFormatCLI(formatOverride: "let x = 1\n")
+        let reader = MockSourceFileReader(path: path, contents: "let x=1\n")
+        let model = ImpactModel(cli: cli, reader: reader, swiftVersion: "5.10")
+
+        let diff = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: path)
+        #expect(diff.contains { $0.change != .unchanged })
+
+        let args = await cli.lastFormatArguments
+        #expect(args == [
+            "stdin", "--stdin-path", path,
+            "--swift-version", "5.10",
+            "--rules", "spaceAroundOperators"
+        ])
+    }
+
+    @Test("ruleDiff returns empty when the injected reader has no such file")
+    func ruleDiffUnknownPathViaReader() async {
+        let cli = MockSwiftFormatCLI(formatOverride: "changed")
+        let reader = MockSourceFileReader(contentsByPath: [:])
+        let model = ImpactModel(cli: cli, reader: reader)
+        let diff = await model.ruleDiff(ruleID: "indent", filePath: "/virtual/missing.swift")
+        #expect(diff.isEmpty)
+        #expect(await cli.formatCallCount == 0) // bailed before invoking SwiftFormat
+    }
+
     @Test("scanArguments include the lint flags, swift version and config")
     func scanArguments() async {
         let cli = MockSwiftFormatCLI(lintOutput: "[]")

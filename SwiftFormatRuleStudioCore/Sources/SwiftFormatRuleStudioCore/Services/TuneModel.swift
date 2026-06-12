@@ -50,13 +50,19 @@ public final class TuneModel {
     public var extraArguments: [String] = []
 
     private let cli: any SwiftFormatCLIProtocol
+    private let reader: any SourceFileReading
     private var diffCache: [String: [PreviewDiffLine]] = [:]
     private var sweepCache: [String: [OptionSweep]] = [:]
     private static let ruleSelectionFlags: Set<String> = ["--enable", "--disable", "--rules"]
 
-    /// Creates a tune model backed by the given CLI.
-    public init(cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(), swiftVersion: String? = "5.10") {
+    /// Creates a tune model backed by the given CLI and file reader.
+    public init(
+        cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(),
+        reader: any SourceFileReading = FileSystemSourceReader(),
+        swiftVersion: String? = "5.10"
+    ) {
         self.cli = cli
+        self.reader = reader
         self.swiftVersion = swiftVersion
     }
 
@@ -268,7 +274,7 @@ public final class TuneModel {
     public func ruleDiff(ruleID: String, filePath: String) async -> [PreviewDiffLine] {
         let key = "\(ruleID)\u{0}\(filePath)"
         if let cached = diffCache[key] { return cached }
-        guard let source = try? String(contentsOfFile: filePath, encoding: .utf8) else { return [] }
+        guard let source = try? reader.readSource(at: filePath) else { return [] }
 
         var arguments = ["stdin", "--stdin-path", filePath]
         if let swiftVersion, !swiftVersion.isEmpty {
