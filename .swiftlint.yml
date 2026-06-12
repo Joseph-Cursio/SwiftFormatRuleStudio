@@ -5,6 +5,7 @@
 # (** matches nested packages, e.g. Core/.build; globs must be quoted in YAML.)
 excluded:
   - '**/.build'
+  - '**/.build-coverage'
   - '**/Pods'
   - '**/.git'
   - '**/DerivedData'

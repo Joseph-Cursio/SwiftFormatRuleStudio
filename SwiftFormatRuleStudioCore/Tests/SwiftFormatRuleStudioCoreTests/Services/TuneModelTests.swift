@@ -54,14 +54,14 @@ struct TuneModelTests {
     }
 
     @Test("A rule that changes code is churn, aggregated by file and labelled with the candidate")
-    func churnAggregation() async {
+    func churnAggregation() async throws {
         let cli = MockSwiftFormatCLI(lintOutput: Self.json)
         let model = TuneModel(cli: cli)
         await model.runScan(path: URL(fileURLWithPath: "/ws"), candidateRuleNames: ["wrapEnumCases"])
 
         #expect(model.freeWins.isEmpty)
         #expect(model.churn.count == 1)
-        let impact = try! #require(model.churn.first)
+        let impact = try #require(model.churn.first)
         #expect(impact.ruleID == "wrapEnumCases") // labelled by candidate, not the JSON rule_id
         #expect(impact.findingCount == 3)
         #expect(impact.fileCount == 2)
@@ -126,7 +126,7 @@ struct TuneModelTests {
     }
 
     @Test("Sweeps an option's values and finds the zero-churn value")
-    func sweepFindsZeroChurnValue() async {
+    func sweepFindsZeroChurnValue() async throws {
         let cli = allmanAwareCLI()
         let model = TuneModel(cli: cli)
         let sweeps = await model.sweepOptions(
@@ -136,12 +136,12 @@ struct TuneModelTests {
             currentValues: [:]
         )
         #expect(sweeps.count == 1)
-        let sweep = try! #require(sweeps.first)
+        let sweep = try #require(sweeps.first)
         #expect(sweep.optionKey == "allman")
         #expect(sweep.optionFlag == "--allman")
         #expect(sweep.values.map(\.value) == ["true", "false"]) // option's listed order
         #expect(sweep.values.first { $0.value == "true" }?.findingCount == 0)
-        let falseImpact = try! #require(sweep.values.first { $0.value == "false" })
+        let falseImpact = try #require(sweep.values.first { $0.value == "false" })
         #expect(falseImpact.findingCount == 3)
         #expect(falseImpact.fileCount == 2)
         #expect(sweep.zeroChurnValue?.value == "true")
@@ -169,7 +169,7 @@ struct TuneModelTests {
     }
 
     @Test("No improvement when the current value is already the lowest-churn one")
-    func sweepNoImprovementAtBestCurrent() async {
+    func sweepNoImprovementAtBestCurrent() async throws {
         let cli = allmanAwareCLI()
         let model = TuneModel(cli: cli)
         let sweeps = await model.sweepOptions(
@@ -178,7 +178,7 @@ struct TuneModelTests {
             allOptions: [Self.allmanOption],
             currentValues: ["allman": "true"] // already Allman in config
         )
-        let sweep = try! #require(sweeps.first)
+        let sweep = try #require(sweeps.first)
         #expect(sweep.currentValue == "true")
         #expect(sweep.effectiveValue == "true")
         #expect(sweep.currentImpact?.findingCount == 0)
@@ -234,7 +234,7 @@ struct TuneModelTests {
     // MARK: - Option opportunities (post-scan background pass)
 
     @Test("The background pass flags a churn rule's hidden free-win option")
-    func findsOptionOpportunity() async {
+    func findsOptionOpportunity() async throws {
         let cli = allmanAwareCLI()
         let model = TuneModel(cli: cli)
         let path = URL(fileURLWithPath: "/ws")
@@ -242,7 +242,7 @@ struct TuneModelTests {
         #expect(model.churn.map(\.ruleID) == ["braces"]) // churn at the default --allman false
 
         await model.findOptionOpportunities(allOptions: [Self.allmanOption], currentValues: [:])
-        let opportunity = try! #require(model.optionOpportunities["braces"])
+        let opportunity = try #require(model.optionOpportunities["braces"])
         #expect(opportunity.isFreeWin)
         #expect(opportunity.jointFindingCount == 0)
         #expect(opportunity.optionSummary == "--allman true")

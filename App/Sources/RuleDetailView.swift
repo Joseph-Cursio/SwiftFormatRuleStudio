@@ -494,8 +494,8 @@ private struct BlockHeightKey: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
-private extension View {
-    func measuringHeight() -> some View {
+extension View {
+    fileprivate func measuringHeight() -> some View {
         background(GeometryReader { geometry in
             Color.clear.preference(key: BlockHeightKey.self, value: geometry.size.height)
         })
@@ -503,7 +503,7 @@ private extension View {
 
     /// Clamps content to `cap`: short content sizes to fit (no leftover space),
     /// long content caps and scrolls. `nil` cap leaves the height unconstrained.
-    func cappedHeight(_ measured: CGFloat, _ cap: CGFloat?) -> some View {
+    fileprivate func cappedHeight(_ measured: CGFloat, _ cap: CGFloat?) -> some View {
         frame(height: cap.map { min(measured == 0 ? $0 : measured, $0) })
     }
 }
