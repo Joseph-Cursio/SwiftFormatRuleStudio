@@ -19,6 +19,53 @@ lint + option sweeps), applied across the whole rule set instead of one rule.
 
 See also: [audit-redesign.md](audit-redesign.md).
 
+## Proposed tiering
+
+The seam: **free = tune a config you already have** (single repo, individual,
+cheap standalone passes, low-friction exploration); **premium = harder /
+whole-rule-set / cross-artifact / team-scoped / recurring**. The strategic filter
+(per [audit-redesign.md](audit-redesign.md)): the daily-driver audience is thin,
+so premium should target the **team-lead/org buyer** and the **inflection points**
+(bootstrap · upgrade · standardize · onboard), not the solo dev who tunes once.
+
+### Free — single repo, individual, mostly shipped
+
+| Feature | Status | Engine reuse |
+|---|---|---|
+| Rule/option browser with before/after examples | shipped | `CatalogLoader`, `--ruleinfo`/`--options` parsers |
+| Live code preview (edit → reformat) | shipped | `LivePreviewModel` over `swiftformat stdin` |
+| Impact audit (read-only counts + drill-down) | shipped | `ImpactModel` |
+| Adoption scan — free wins + "Enable All" | shipped | `TuneModel` (per-rule isolated lint) |
+| Options-layer drill-down sweeps (boolean/enum) | shipped | `TuneModel` / `OptionSweep` |
+| Rule-level "adopt all best options" + row-level "free win at `--option value`" badges | shipped | `TuneModel` |
+
+### Premium — harder / team / recurring
+
+Ordered by monetization strength (buyer + recurrence), not build effort.
+
+| Feature | Value axis / buyer | Engine reuse | Status |
+|---|---|---|---|
+| **Cross-repo standardization** — one config minimizing total churn across N repos | Team standard / team lead | inference core + `TuneModel` sweeps, run per repo | not started |
+| **Config drift detection** — flag repos that diverged from a canonical config | Team / org, recurring | `ConfigComparisonService` (ADAPT) + CLI | not started |
+| **Version-upgrade dual-version diff** — your config under two SwiftFormat versions | Upgrade inflection, recurring | `MigrationAssistant`/`VersionCompatibilityChecker` (ADAPT) + two binaries | not started |
+| **New-rule free-win digest on upgrade** — newly-added opt-in rules that are zero-churn for you | Upgrade inflection, recurring | `TuneModel` + version-aware catalog | not started |
+| **Config inference (single repo, no `.swiftformat`)** — reverse-engineer the config that matches formatted code | Bootstrap / onboard | new inference engine on Tune primitives | prototyped (script, not in app) |
+| **Onboard-to-a-style** — infer + *explain* a repo's de-facto style to match locally | Onboarding inflection | inference core, repurposed | not started |
+| **Deep option optimization** — search integer/list/string option values (beyond boolean/enum) | Power user | `OptionSweep` extended | not started |
+| **True marginal (interaction-aware) scan** — baseline+X diffed, accurate when rules interact | Power user | `ImpactModel` + per-candidate baseline diff | not started |
+| **CI gate + hooks generation** — pinned GitHub Action / pre-commit / Xcode build phase | Integration, sticky | `SwiftFormatConfig` + templates | not started |
+| **PR / branch-diff scoped impact** — "what this config change does to the current PR" | Integration, recurring | `GitBranchDiffService` (app-local) + `ImpactModel` | not started |
+| **Config A/B comparison on your code** — your config vs a preset vs another team's | Standardize / decide | `ConfigComparisonService` (ADAPT) | not started |
+| **Exportable "why this config" rationale doc** — per rule/option: churn saved, reason set | Onboard / review | `HTMLReportTemplate` + export (shared package) | not started |
+
+**Guardrails.**
+- Keep the free tier genuinely compelling — the product competes with *nothing
+  happening*, so the one-click free-wins hit must stay in free or the funnel dies.
+- The fault line is **single-repo/individual (free) → multi-repo/team/recurring
+  (paid)**. Cross-repo standardization and version-upgrade are the strongest paid
+  bets (budget-holding buyer + recurring moment); deep-option/marginal scans are a
+  power-user upsell, harder to charge an individual for.
+
 ## Experiment (2026-06-10) — it works, and it transfers
 
 Prototyped via a standalone script (not yet in the app) against

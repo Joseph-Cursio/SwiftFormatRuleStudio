@@ -1,7 +1,12 @@
 # Audit redesign — config impact, by consequence
 
-**Status:** thinking / not started (captured 2026-06-06). This is a direction, not
-a committed plan — the open questions below are deliberately unresolved.
+**Status:** ✅ shipped (updated 2026-07-14; originally captured 2026-06-06 as
+"thinking / not started"). All three layers below landed: the read-only report
+grew a **drill-down** (A) and a **cross-link into Preview** (B), and the
+marginal-impact scan (C) shipped as the **Tune** tab. The design analysis
+(thesis, positioning, engineering realities, "forgoing D") is kept as the
+rationale; per-section status is marked inline, and the once-open questions are
+resolved at the end.
 
 ## Thesis
 
@@ -44,31 +49,55 @@ Design implication: optimize for the first-five-minutes "what does my config buy
 me, and what could I adopt for free?" experience, since that's the moment the tool
 is reached for.
 
-## Where the Audit tab is today
+## Where the Audit tab started (June 2026)
 
 A read-only aggregate report: lint the project with the active config, rank rules
 by how many files/findings they'd touch, show summary counts (triggered / enabled
 / disabled rules, files affected, files checked, findings), export CSV/HTML,
-re-run. It answers *"how much would change, and which rules dominate?"* — and
-nothing else. Its limitation: it's a number, not a place you can go, and it's
-inert (you can't act on a finding).
+re-run. It answered *"how much would change, and which rules dominate?"* — and
+nothing else. Its limitation: it was a number, not a place you can go, and it was
+inert (you couldn't act on a finding).
+
+**Since (shipped):** that report became the **Impact** tab — still the ranked
+aggregate, but every rule row now expands to its affected files, and each file to
+its before/after diff, with an "Open in Preview" jump (A + B below). The scan
+itself split off into a separate **Tune** tab (C). The five tabs today are
+Rules · Config · Preview · Impact · Tune.
 
 ## The plan, in three layers
 
-### A — Drill-down (read-only, low risk)
+### A — Drill-down (read-only, low risk) — ✅ shipped
 Make every rule row expand to its affected files, and a file to its before/after
 diff (reusing `PreviewDiffView` + the line-number gutters). Turns the report into
 something explorable. **Build first.**
 
-### B — Cross-link to Preview
+> **Shipped** in the Impact tab: `RuleImpactRow` → `FileImpactRow` →
+> `LiveDiffLinesView`, with diffs loaded lazily on expand. The rows were
+> deliberately decoupled from the model (diff loader + optional actions passed in)
+> so the **Tune** tab reuses the same drill-down.
+
+### B — Cross-link to Preview — ✅ shipped
 Click a finding / file → open it in the Preview tab (which already loads project
 files and shows diffs). Cheap given what exists; big "see the real change" payoff.
 Pairs with A.
 
-### C — Marginal-impact scan (the goal)
+> **Shipped:** each affected-file row has an "Open in Preview" button →
+> `workspace.openInPreview(url, from: .impact(ruleID:filePath:))`; a Back control
+> returns to the exact rule/file it came from (`workspace.impactRestore`
+> re-expands and scrolls to it). The round-trip works in both directions —
+> Preview can also request a rule, which `ContentView` selects.
+
+### C — Marginal-impact scan (the goal) — ✅ shipped as the Tune tab
 The proven SwiftLintRuleStudio flow, extended to SwiftFormat: try each candidate
 change one at a time, count what it would touch, surface the no-churn wins for
 one-click adoption, and let the user review the rest via A/B.
+
+> **Shipped as Tune** (`TuneModel`): the disabled-rule adoption scan (background
+> per-rule isolated lint) ranks candidates into **free wins** (zero churn →
+> "Enable All") and **need-review** churn rows, each expanding into the A/B
+> drill-down. Option scanning shipped too, **on-demand per rule** (the
+> options-layer sweep in a row's drill-down, `OptionSweep`), framed as
+> churn-per-value — exactly the "same engine, different verb" split below.
 
 The candidate space is bigger than SwiftLint's (which was just rule on/off),
 because SwiftFormat has rules **and** options:
@@ -106,23 +135,35 @@ Same engine, different verb.
   (`OptionRuleUsage` already maps this), so only scan option values whose
   consuming rule is enabled.
 
-## Suggested first slice
+## Suggested first slice — ✅ built as proposed
 
 The **disabled-rule adoption scan**: background-run all 27, rank by impact, an
 "Enable all zero-impact rules" button (writes to config), each non-zero row
 expanding into the affected files/diffs (A/B). Options come second, on-demand,
 framed as churn-per-value.
 
-## Open questions (to resolve before building C)
+> This is precisely what shipped as the Tune tab, in this order: adoption scan +
+> "Enable All" first, then the on-demand per-rule option sweeps.
 
-1. **v1 scope:** rule-adoption scan only (closest to the proven SwiftLint flow,
-   shippable soon), or rules + enum/boolean option scanning from the start?
-2. **Prerequisite order:** build A/B (drill-down + Preview cross-link) first, or
-   ship the scan's *list* first and wire drill-down in after?
-3. **Live vs explicit:** recompute on config edits (debounced; needs caching) or
-   an explicit "Scan" action that reuses the last result?
-4. **(For the broader C) comparison baseline**, if we also do whole-config delta:
-   edited-vs-saved, vs-defaults, vs-preset, or a selectable baseline?
+## Open questions — resolved (except #4)
+
+1. **v1 scope:** ✅ **rules + options** — but staged. The rule-adoption scan
+   shipped first; enum/boolean option scanning followed, on-demand per rule rather
+   than all up front.
+2. **Prerequisite order:** ✅ **A/B first.** The drill-down + Preview cross-link
+   landed in the Impact tab, and the Tune scan reuses those same rows — so the
+   scan's list arrived already explorable.
+3. **Live vs explicit:** ✅ **explicit Scan.** Both Impact and Tune run on an
+   explicit action (choose folder / Re-run) and reuse the last result; there's no
+   debounced recompute-on-config-edit. Standalone per-rule measurement (not a live
+   whole-config diff) keeps each pass order-independent, as the "Engineering
+   realities" section argued.
+4. **Comparison baseline (whole-config delta):** ⬜ **still open / not built.**
+   The shipped scans use *standalone* per-candidate measurement. A whole-config
+   delta view (edited-vs-saved · vs-defaults · vs-preset · selectable baseline)
+   was never built — it's the natural next increment if the "compare two configs
+   on your code" premium feature in
+   [config-inference.md](config-inference.md) is pursued.
 
 ## Forgoing D (applying fixes)
 
