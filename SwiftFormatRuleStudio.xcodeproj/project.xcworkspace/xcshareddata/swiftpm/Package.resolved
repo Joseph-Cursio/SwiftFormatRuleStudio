@@ -1,5 +1,5 @@
 {
-  "originHash" : "e3dc1963f4731e7cef8be2bc2d9f9cca6afcf9c3377a24cee287a272c9ddc0f8",
+  "originHash" : "faa6265c91eb278d9deb84c4059ccaacafa2187f51695f0f5fb53c0dd614edd2",
   "pins" : [
     {
       "identity" : "lintstudioui",
@@ -15,8 +15,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/nalexn/ViewInspector.git",
       "state" : {
-        "revision" : "e9a06346499a3a889165647e3f23f8a7b2609a1c",
-        "version" : "0.10.3"
+        "revision" : "6be008f348a757e7c0c6901c2dde983e5bba069f"
       }
     }
   ],
