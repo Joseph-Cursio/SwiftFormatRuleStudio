@@ -15,11 +15,10 @@ import Foundation
 /// byte-for-byte and edits produce minimal diffs (the "comment preservation,
 /// minimal-override" pattern, without Yams).
 ///
-/// One line shape is normalised rather than preserved: a line that is *only*
-/// whitespace parses to `.blank` and serializes as the empty string, so its
-/// spaces are dropped. Every other shape — including a comment or directive with
-/// leading or irregular internal whitespace — is reproduced exactly. See
-/// `serialized()`.
+/// **Every line shape is preserved, whitespace-only ones included.** That was not always true:
+/// until 2026-08-12 a line of spaces parsed to a payload-less `.blank` and serialized as the
+/// empty string, so `serialized(parse(s)) == s` was false for any input containing one. `.blank`
+/// now carries its raw text like every other case.
 public struct SwiftFormatConfig: Equatable, Sendable {
     public enum RuleDirectiveKind: String, Sendable, Equatable, CaseIterable {
         case enable
@@ -28,7 +27,12 @@ public struct SwiftFormatConfig: Equatable, Sendable {
     }
 
     public enum Line: Equatable, Sendable {
-        case blank
+        /// An empty or whitespace-only line, carrying its raw text.
+        ///
+        /// The payload exists so a line of spaces survives a round trip. Classification is by
+        /// TRIMMED content — `"   "` is blank — but the original text is what serializes, which
+        /// is the same rule every other case already followed.
+        case blank(String)
         case comment(String)                                   // raw line, incl. leading '#'
         case option(key: String, value: String, raw: String)   // key has no leading '--'
         case ruleDirective(kind: RuleDirectiveKind, rules: [String], raw: String)
@@ -37,12 +41,23 @@ public struct SwiftFormatConfig: Equatable, Sendable {
         /// The text this line serializes to.
         var rendered: String {
             switch self {
-            case .blank: ""
+            case .blank(let raw): raw
             case .comment(let raw): raw
             case .option(_, _, let raw): raw
             case .ruleDirective(_, _, let raw): raw
             case .unknown(let raw): raw
             }
+        }
+
+        /// Whether the line is visually empty, whatever whitespace it holds.
+        ///
+        /// Callers that mean "is there content here" must ask this rather than compare against
+        /// `.blank`, which no longer denotes a single value. `SwiftFormatConfig+Editing` places a
+        /// new directive after the last non-blank line and would otherwise start treating a line
+        /// of spaces as content.
+        var isBlank: Bool {
+            if case .blank = self { return true }
+            return false
         }
 
         static func makeOption(key: String, value: String) -> Self {
@@ -71,7 +86,7 @@ public struct SwiftFormatConfig: Equatable, Sendable {
 
     private static func parseLine(_ raw: String) -> Line {
         let trimmed = raw.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty { return .blank }
+        if trimmed.isEmpty { return .blank(raw) }
         if trimmed.hasPrefix("#") { return .comment(raw) }
         guard trimmed.hasPrefix("--") else { return .unknown(raw) }
 
@@ -100,14 +115,15 @@ public struct SwiftFormatConfig: Equatable, Sendable {
 
     /// The `.swiftformat` text.
     ///
-    /// Round-trips unedited content exactly **except for whitespace-only lines**:
-    /// `parseLine` classifies by trimmed content, so a line of spaces becomes
-    /// `.blank` and renders as `""`. `serialized(parse(s)) == s` therefore holds
-    /// for any `s` containing no whitespace-only line, and fails otherwise.
+    /// **Round-trips unedited content exactly**: `serialized(parse(s)) == s` for every `s`,
+    /// including input with whitespace-only lines. Both that and the weaker normal-form law
+    /// (`serialized(parse(·))` is a fixed point) are stated over generated input in
+    /// `SwiftFormatConfigNormalFormPropertyTests`.
     ///
-    /// What does hold unconditionally is that this is a normal form —
-    /// `serialized(parse(·))` reaches a fixed point in one pass. Both laws are
-    /// stated over generated input in `SwiftFormatConfigNormalFormPropertyTests`.
+    /// The unrestricted claim is new. It held only on inputs without a whitespace-only line
+    /// until `.blank` gained its raw payload, and the qualified version of this sentence is
+    /// what the property suite was originally written against — see that suite's header for
+    /// which of its laws changed meaning as a result.
     public func serialized() -> String {
         lines.map(\.rendered).joined(separator: "\n")
     }

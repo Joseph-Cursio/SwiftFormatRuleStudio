@@ -9,25 +9,37 @@ import Testing
 
 /// Property tests over `SwiftFormatConfig`'s parse/serialize pair.
 ///
-/// `swift-infer discover` proposed two laws here and ranked the wrong one first:
+/// **The suite outlived the defect it was written for, and the shape of that is worth keeping.**
 ///
-/// - `serialized(parse(s)) == s` — the exact round trip, scored 50. It is
-///   **false**. `parseLine` classifies a line by its *trimmed* content, so a
-///   whitespace-only line becomes `.blank`, whose `rendered` is `""` — the
-///   original spaces are gone. `exactRoundTripDropsWhitespaceOnlyLines` pins it.
-/// - `serialized(parse(serialized(parse(s)))) == serialized(parse(s))` — the
-///   normal-form law, scored 40. This is the one that holds: after one pass every
-///   whitespace-only line is already `""`, so normalising again is a no-op.
+/// `swift-infer discover` proposed two laws over `parse` / `serialized()` and ranked the wrong one
+/// first: `serialized(parse(s)) == s` at score 50, and the weaker normal-form law at 40. The
+/// stronger one was FALSE — a whitespace-only line parsed to a payload-less `.blank` and rendered
+/// as `""` — and the tool was most confident about it partly because a docstring said "round-trips
+/// unedited content exactly", which the `DocstringPropertyCorroborator` read as evidence.
 ///
-/// Two docstrings claim the stronger law (the type's "unedited lines serialize
-/// byte-for-byte" and `serialized()`'s "Round-trips unedited content exactly"),
-/// and the two example tests in `SwiftFormatConfigTests` appear to confirm it —
-/// but neither sample contains a whitespace-only line, so neither can fail.
-/// That is why the counterexample below is pinned rather than left implied.
+/// So this suite was originally: state the true-but-weak law, restrict the strong one to the domain
+/// where it held, and pin the counterexample so nobody strengthened it back.
 ///
-/// Whether the lossy case is a defect is a judgement for the author: dropping
-/// trailing whitespace on an otherwise-empty line is defensible normalisation.
-/// What is not defensible is the docstring promising it does not happen.
+/// Then somebody fixed the code instead. `.blank` carries its raw text, the strong law holds
+/// unrestricted, and `exactRoundTripHoldsEverywhere` states it over the same generator that used to
+/// contain the counterexample. The pinned counterexample became a regression guard asserting
+/// preservation.
+///
+/// What is left is the interesting part:
+///
+/// - **the unrestricted law** — the one worth having, and the one that could not be written before;
+/// - **the restricted law** — kept deliberately. It is now implied by the one above, so it can only
+///   fail together with it; the value is that if the loss returns, the restricted law keeps passing
+///   and the pair says *the regression is in whitespace-only lines* without anyone reading output;
+/// - **the normal-form law** — still true, still weak. Almost any implementation satisfies
+///   idempotent normalisation, which is why it was the wrong law to settle for;
+/// - **the named regression guard** — the exact input that was lost, kept as a case rather than
+///   left for the generator to rediscover.
+///
+/// The generator is hand-rolled rather than a dependency, and deliberately avoids a
+/// `RandomNumberGenerator` conformance: this package sets `.defaultIsolation(MainActor.self)`, which
+/// would make `next()` main-actor isolated and unable to satisfy that protocol's nonisolated
+/// requirement.
 @Suite("SwiftFormatConfig normal form")
 struct SwiftFormatConfigNormalFormPropertyTests {
 
@@ -126,20 +138,32 @@ struct SwiftFormatConfigNormalFormPropertyTests {
         }
     }
 
-    // MARK: - The law that does not
+    // MARK: - The law that used not to hold
 
-    @Test("Exact round-trip is false: a whitespace-only line is not preserved")
-    func exactRoundTripDropsWhitespaceOnlyLines() {
+    @Test("A whitespace-only line survives the round trip")
+    func whitespaceOnlyLinesSurviveTheRoundTrip() {
+        // **This test used to assert the opposite**, and pinned it as a counterexample: `.blank`
+        // carried no payload, so `"   "` serialized as `""` and the exact round trip was false.
+        // The fix was one payload, and this is the regression guard for it — the specific input
+        // that was lost, kept as a named case rather than left to the generator to rediscover.
         let source = "--indent 4\n   \n--enable isEmpty"
 
-        // The claim two docstrings make, and it does not hold.
-        #expect(Self.normalized(source) != source)
+        #expect(Self.normalized(source) == source)
 
-        // What actually happens: the three spaces become the empty string.
-        #expect(Self.normalized(source) == "--indent 4\n\n--enable isEmpty")
+        // The three spaces specifically, not just "some round trip held".
+        let lines = SwiftFormatConfig.parse(source).lines
+        #expect(lines.count == 3)
+        #expect(lines[1] == .blank("   "))
+        #expect(lines[1].isBlank)
+    }
 
-        // And it is stable from there — which is exactly the normal-form law.
-        #expect(Self.normalized(Self.normalized(source)) == Self.normalized(source))
+    @Test("A blank line's whitespace is preserved exactly, tabs included")
+    func blankLineWhitespaceIsPreservedVerbatim() {
+        for raw in ["", " ", "   ", "\t", " \t "] {
+            let parsed = SwiftFormatConfig.parse(raw)
+            #expect(parsed.serialized() == raw, "lost \(raw.debugDescription)")
+            #expect(parsed.lines.first?.isBlank == true, "\(raw.debugDescription) is not blank")
+        }
     }
 
     @Test("Content with no whitespace-only line does round-trip exactly")
@@ -176,6 +200,26 @@ struct SwiftFormatConfigNormalFormPropertyTests {
             }
         }
         return lines.joined(separator: "\n")
+    }
+
+    @Test("Exact round-trip holds on the FULL domain, whitespace-only lines included")
+    func exactRoundTripHoldsEverywhere() {
+        // The law this suite could not state before 2026-08-12. `text(seed:)` draws
+        // whitespace-only lines (case 1) — the exact shape that used to be lost — so this is the
+        // unrestricted claim the type's docstring now makes, over the generator that contains its
+        // former counterexample.
+        //
+        // It subsumes `exactRoundTripHoldsOnTheLosslessDomain` below, which is kept anyway: if a
+        // future change re-introduces the loss, the restricted law keeps passing while this one
+        // fails, and the pair localises the regression to whitespace-only lines without anyone
+        // reading a counterexample.
+        for seed in UInt64(1)...500 {
+            let source = Self.text(seed: seed)
+            #expect(
+                Self.normalized(source) == source,
+                "round trip lost content at seed \(seed): \(source.debugDescription)"
+            )
+        }
     }
 
     @Test("Exact round-trip holds for every input containing no whitespace-only line")
