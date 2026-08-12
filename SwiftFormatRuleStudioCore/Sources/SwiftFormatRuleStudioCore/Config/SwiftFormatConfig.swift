@@ -14,6 +14,12 @@ import Foundation
 /// lines, and keeps each directive's raw text — so unedited lines serialize
 /// byte-for-byte and edits produce minimal diffs (the "comment preservation,
 /// minimal-override" pattern, without Yams).
+///
+/// One line shape is normalised rather than preserved: a line that is *only*
+/// whitespace parses to `.blank` and serializes as the empty string, so its
+/// spaces are dropped. Every other shape — including a comment or directive with
+/// leading or irregular internal whitespace — is reproduced exactly. See
+/// `serialized()`.
 public struct SwiftFormatConfig: Equatable, Sendable {
     public enum RuleDirectiveKind: String, Sendable, Equatable, CaseIterable {
         case enable
@@ -92,7 +98,16 @@ public struct SwiftFormatConfig: Equatable, Sendable {
 
     // MARK: - Serializing
 
-    /// The `.swiftformat` text. Round-trips unedited content exactly.
+    /// The `.swiftformat` text.
+    ///
+    /// Round-trips unedited content exactly **except for whitespace-only lines**:
+    /// `parseLine` classifies by trimmed content, so a line of spaces becomes
+    /// `.blank` and renders as `""`. `serialized(parse(s)) == s` therefore holds
+    /// for any `s` containing no whitespace-only line, and fails otherwise.
+    ///
+    /// What does hold unconditionally is that this is a normal form —
+    /// `serialized(parse(·))` reaches a fixed point in one pass. Both laws are
+    /// stated over generated input in `SwiftFormatConfigNormalFormPropertyTests`.
     public func serialized() -> String {
         lines.map(\.rendered).joined(separator: "\n")
     }

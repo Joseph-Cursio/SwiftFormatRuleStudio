@@ -22,7 +22,11 @@ struct SwiftFormatConfigTests {
 
     // MARK: - Round-trip
 
-    @Test("Parsing then serializing round-trips exactly")
+    // The exact round trip holds only for content with no whitespace-only line;
+    // `sample` has none, which is why this passes. The general claim, and the
+    // counterexample to the stronger one, live in
+    // `SwiftFormatConfigNormalFormPropertyTests`.
+    @Test("Parsing then serializing round-trips this sample exactly")
     func roundTrip() {
         #expect(SwiftFormatConfig.parse(Self.sample).serialized() == Self.sample)
     }
