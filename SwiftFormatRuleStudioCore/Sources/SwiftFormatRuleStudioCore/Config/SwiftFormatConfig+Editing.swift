@@ -108,7 +108,7 @@ extension SwiftFormatConfig {
     /// below trailing blank lines (which keeps a tidy file).
     private func appendingDirective(_ directive: Line, to lines: [Line]) -> [Line] {
         var result = lines
-        if let lastContent = result.lastIndex(where: { $0 != .blank }) {
+        if let lastContent = result.lastIndex(where: { !$0.isBlank }) {
             result.insert(directive, at: lastContent + 1)
         } else {
             result.append(directive)
