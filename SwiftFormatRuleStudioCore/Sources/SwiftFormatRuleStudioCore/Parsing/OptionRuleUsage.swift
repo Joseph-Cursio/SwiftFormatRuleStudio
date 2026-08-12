@@ -9,10 +9,18 @@ import Foundation
 ///
 /// SwiftFormat options *tune* rules (e.g. `--self` drives `redundantSelf`), and
 /// an option is a no-op unless its rule is enabled. This is a curated inverse of
-/// every rule's `--ruleinfo` "Options:" section (SwiftFormat 0.61.x). In that
-/// version all 124 options map to at least one rule (3 map to two); the
+/// every rule's `--ruleinfo` "Options:" section (SwiftFormat **0.62.x**). In that
+/// version all 127 options map to at least one rule (3 map to two); the
 /// `OptionRuleUsageTests` integration test validates the table against the live
 /// catalog so drift fails loudly.
+///
+/// **It did, and this is what that looks like.** The table was curated against
+/// 0.61.x and read 124 entries; 0.62.x adds three options and the integration
+/// test failed on exactly those, naming each one and the rule it belongs to:
+/// `--guard-like-if-statements` → `noGuardInTests`, `--indent-blank-lines` →
+/// `indent`, `--list-wrap-threshold` → `wrap`. The failure is the mechanism
+/// working, not a broken test — so when it fails again after a SwiftFormat
+/// upgrade, read the option names out of the message and add the rows.
 public enum OptionRuleUsage {
     /// The rule(s) that consume the option with the given key (the `--name`
     /// without leading dashes). Empty if the option is unknown / unattributed.
@@ -74,12 +82,14 @@ public enum OptionRuleUsage {
         "group-blank-lines": ["organizeDeclarations"],
         "grouped-extension": ["markTypes"],
         "guard-else": ["elseOnSameLine"],
+        "guard-like-if-statements": ["noGuardInTests"],
         "header": ["fileHeader"],
         "hex-grouping": ["numberFormatting"],
         "hex-literal-case": ["numberFormatting"],
         "ifdef": ["indent"],
         "import-grouping": ["sortImports"],
         "indent": ["indent"],
+        "indent-blank-lines": ["indent"],
         "indent-case": ["indent"],
         "indent-strings": ["indent"],
         "inferred-types": ["propertyTypes"],
@@ -88,6 +98,7 @@ public enum OptionRuleUsage {
         "line-after-marks": ["blankLinesAroundMark"],
         "line-between-guards": ["blankLinesAfterGuardStatements"],
         "linebreaks": ["linebreaks"],
+        "list-wrap-threshold": ["wrap"],
         "mark-categories": ["organizeDeclarations"],
         "mark-class-threshold": ["organizeDeclarations"],
         "mark-enum-threshold": ["organizeDeclarations"],
