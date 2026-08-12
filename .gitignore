@@ -15,3 +15,8 @@ SwiftFormatRuleStudioCore/.swiftpm/
 
 # Tuist leftover (regenerated build artifact; project now generates Info.plist)
 Derived/
+
+# swift-infer working state (SemanticIndex, verify evidence, and the SwiftPM
+# workdir it builds stubs in — the last runs to hundreds of MB). Machine-local:
+# the evidence records verdicts measured against this checkout's source.
+.swiftinfer/
