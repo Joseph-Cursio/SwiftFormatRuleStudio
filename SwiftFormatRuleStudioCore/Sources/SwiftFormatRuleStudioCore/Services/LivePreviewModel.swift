@@ -54,7 +54,7 @@ public final class LivePreviewModel {
 
     /// Creates a live-preview model with optional injected CLI and settings.
     public init(
-        cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(),
+        cli: any SwiftFormatCLIProtocol = SwiftFormatBackend.makePreferred(),
         source: String = "",
         swiftVersion: String? = "5.10",
         debounceMilliseconds: UInt64 = 350

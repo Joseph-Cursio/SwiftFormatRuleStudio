@@ -41,9 +41,16 @@ The parsers (`RuleListParser`, `OptionsParser`, `RuleInfoParser`) currently pars
 
 | | SwiftLint Rule Studio | SwiftFormat Rule Studio |
 | --- | --- | --- |
-| Sandbox-safe path exists? | Yes (`SwiftLintInProcessBackend`) | **No — pure CLI shell-out** |
-| MAS-viable as-is? | Believed resolved | **No** |
-| Fix | Verify in-process backend is on the distribution path | **Link SwiftFormat library; add in-process `SwiftFormatCLIProtocol` conformer** |
+| Sandbox-safe path exists? | Yes (`SwiftLintInProcessBackend`) | Yes, as of 2026-08-28 (`SwiftFormatInProcessActor`, the default backend) |
+| MAS-viable as-is? | Believed resolved | Not yet — no entitlements / bookmarks |
+| Fix | Verify in-process backend is on the distribution path | Remaining: App Sandbox entitlements + security-scoped bookmarks |
+
+> **Update (2026-08-28).** The subprocess dependency described above is no longer the
+> app's default path: SwiftFormat is linked as a library and driven in-process. The
+> parsers were *not* replaced — the library ships its own CLI front end, so the output
+> is byte-identical. See [`in-process-backend-scope.md`](in-process-backend-scope.md).
+> What this note still gets right: everything else on the submission checklist is
+> downstream, and the sandboxing work itself is untouched.
 
 ## Recommended next step
 
