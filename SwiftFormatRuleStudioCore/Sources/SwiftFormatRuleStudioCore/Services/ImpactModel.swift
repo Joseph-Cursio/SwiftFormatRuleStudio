@@ -37,6 +37,7 @@ public final class ImpactModel {
 
     private let cli: any SwiftFormatCLIProtocol
     private let reader: any SourceFileReading
+    private let configIsolation: ConfigIsolation
 
     /// Memoized drill-down diffs, keyed by rule + file, so re-expanding a row in
     /// the report doesn't re-run SwiftFormat. Cleared on each new scan.
@@ -50,10 +51,12 @@ public final class ImpactModel {
     public init(
         cli: any SwiftFormatCLIProtocol = SwiftFormatBackend.makePreferred(),
         reader: any SourceFileReading = FileSystemSourceReader(),
-        swiftVersion: String? = "5.10"
+        swiftVersion: String? = "5.10",
+        configIsolation: ConfigIsolation = .shared
     ) {
         self.cli = cli
         self.reader = reader
+        self.configIsolation = configIsolation
         self.swiftVersion = swiftVersion
     }
 
@@ -64,6 +67,7 @@ public final class ImpactModel {
     /// findings to stdout, so dropping `--quiet` doesn't affect parsing.
     var scanArguments: [String] {
         var arguments = ["--lint", "--reporter", "json"]
+        arguments += configIsolation.arguments
         if let swiftVersion, !swiftVersion.isEmpty {
             arguments += ["--swift-version", swiftVersion]
         }
@@ -103,6 +107,7 @@ public final class ImpactModel {
         guard let source = try? reader.readSource(at: filePath) else { return [] }
 
         var arguments = ["stdin", "--stdin-path", filePath]
+        arguments += configIsolation.arguments
         if let swiftVersion, !swiftVersion.isEmpty, !extraArguments.contains("--swift-version") {
             arguments += ["--swift-version", swiftVersion]
         }

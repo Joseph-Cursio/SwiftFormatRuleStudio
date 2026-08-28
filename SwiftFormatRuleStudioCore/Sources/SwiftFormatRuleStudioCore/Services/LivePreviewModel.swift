@@ -49,6 +49,7 @@ public final class LivePreviewModel {
     public private(set) var state: PreviewState = .idle
 
     private let cli: any SwiftFormatCLIProtocol
+    private let configIsolation: ConfigIsolation
     private let debounceNanoseconds: UInt64
     private var pendingFormat: Task<Void, Never>?
 
@@ -57,9 +58,11 @@ public final class LivePreviewModel {
         cli: any SwiftFormatCLIProtocol = SwiftFormatBackend.makePreferred(),
         source: String = "",
         swiftVersion: String? = "5.10",
-        debounceMilliseconds: UInt64 = 350
+        debounceMilliseconds: UInt64 = 350,
+        configIsolation: ConfigIsolation = .shared
     ) {
         self.cli = cli
+        self.configIsolation = configIsolation
         self.source = source
         self.swiftVersion = swiftVersion
         self.debounceNanoseconds = debounceMilliseconds * 1_000_000
@@ -94,6 +97,9 @@ public final class LivePreviewModel {
 
     private func argumentsAppendingExtras(to base: [String]) -> [String] {
         var arguments = base
+        // Ahead of everything else: `extraArguments` only wins over a discovered
+        // `.swiftformat` when discovery is off.
+        arguments += configIsolation.arguments
         if let stdinPath, !stdinPath.isEmpty {
             arguments += ["--stdin-path", stdinPath]
         }

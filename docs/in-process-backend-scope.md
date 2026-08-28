@@ -163,8 +163,10 @@ that is §4, and it should be scoped on its own.
    (`UserDefaults` key `swiftFormatBackend`, value `commandLine`). SwiftFormat is
    pinned `exact: "0.62.1"` so a rule-behavior change is never a resolution side
    effect. No parser, model, view-model, or existing test changed.
-2. Scope the sandbox work separately (entitlements, bookmarks, config-discovery
-   behavior under a sandbox).
+2. ✅ **Scoped** — [`sandbox-scope.md`](sandbox-scope.md) (entitlements, bookmarks,
+   config-discovery behavior). Note it corrects §4 below: ancestor `.swiftformat`
+   discovery under a sandbox is not a behavior difference, it is a hard scan failure,
+   and `--config` is the fix.
 3. Revisit the dual-version premium feature with the CLI backend as its foundation.
 
 ### What landed

@@ -11,6 +11,14 @@ import Testing
 @Suite("LivePreviewModel")
 @MainActor
 struct LivePreviewModelTests {
+    /// A fixed isolation file, so the `--config` flag every invocation carries is
+    /// assertable by path (production uses `.shared`).
+    private static let isolation = ConfigIsolation(
+        path: FileManager.default.temporaryDirectory
+            .appendingPathComponent("SFRSLivePreviewIsolation.swiftformat").path
+    )
+    private static let config = isolation.arguments
+
     private func makeModel(
         source: String,
         formatOverride: String? = nil,
@@ -18,7 +26,12 @@ struct LivePreviewModelTests {
         swiftVersion: String? = "5.10"
     ) -> (LivePreviewModel, MockSwiftFormatCLI) {
         let cli = MockSwiftFormatCLI(failWith: failWith, formatOverride: formatOverride)
-        let model = LivePreviewModel(cli: cli, source: source, swiftVersion: swiftVersion)
+        let model = LivePreviewModel(
+            cli: cli,
+            source: source,
+            swiftVersion: swiftVersion,
+            configIsolation: Self.isolation
+        )
         return (model, cli)
     }
 
@@ -64,7 +77,7 @@ struct LivePreviewModelTests {
         await model.formatNow()
 
         let args = await cli.lastFormatArguments
-        #expect(args == ["stdin", "--swift-version", "5.10"])
+        #expect(args == ["stdin"] + Self.config + ["--swift-version", "5.10"])
     }
 
     @Test("No --swift-version flag when version is nil")
@@ -73,7 +86,7 @@ struct LivePreviewModelTests {
         await model.formatNow()
 
         let args = await cli.lastFormatArguments
-        #expect(args == ["stdin"])
+        #expect(args == ["stdin"] + Self.config)
     }
 
     @Test("extraArguments (the active config) are appended")
@@ -83,7 +96,8 @@ struct LivePreviewModelTests {
         await model.formatNow()
 
         let args = await cli.lastFormatArguments
-        #expect(args == ["stdin", "--swift-version", "5.10", "--indent", "4", "--disable", "redundantSelf"])
+        #expect(args == ["stdin"] + Self.config
+            + ["--swift-version", "5.10", "--indent", "4", "--disable", "redundantSelf"])
     }
 
     @Test("Config-provided --swift-version is not duplicated")
@@ -93,7 +107,7 @@ struct LivePreviewModelTests {
         await model.formatNow()
 
         let args = await cli.lastFormatArguments
-        #expect(args == ["stdin", "--swift-version", "6.0", "--indent", "4"])
+        #expect(args == ["stdin"] + Self.config + ["--swift-version", "6.0", "--indent", "4"])
     }
 
     @Test("stdinPath is passed as --stdin-path, right after stdin")
@@ -103,7 +117,8 @@ struct LivePreviewModelTests {
         await model.formatNow()
 
         let args = await cli.lastFormatArguments
-        #expect(args == ["stdin", "--stdin-path", "/ws/Sources/Foo.swift", "--swift-version", "5.10"])
+        #expect(args == ["stdin"] + Self.config
+            + ["--stdin-path", "/ws/Sources/Foo.swift", "--swift-version", "5.10"])
     }
 }
 

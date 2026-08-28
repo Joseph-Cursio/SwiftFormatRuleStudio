@@ -11,6 +11,14 @@ import Testing
 @Suite("ImpactModel")
 @MainActor
 struct ImpactModelTests {
+    /// A fixed isolation file, so the `--config` flag every invocation carries is
+    /// assertable by path (production uses `.shared`).
+    private static let isolation = ConfigIsolation(
+        path: FileManager.default.temporaryDirectory
+            .appendingPathComponent("SFRSImpactIsolation.swiftformat").path
+    )
+    private static let config = isolation.arguments
+
     private static let json = """
     [
       { "file": "/ws/A.swift", "line": 1, "reason": "", "rule_id": "indent" },
@@ -70,15 +78,14 @@ struct ImpactModelTests {
         defer { try? FileManager.default.removeItem(at: file) }
 
         let cli = MockSwiftFormatCLI(formatOverride: "let x = 1\n")
-        let model = ImpactModel(cli: cli, swiftVersion: "5.10")
+        let model = ImpactModel(cli: cli, swiftVersion: "5.10", configIsolation: Self.isolation)
         model.extraArguments = ["--indent", "4", "--disable", "redundantSelf", "--enable", "isEmpty"]
 
         let diff = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: file.path)
         #expect(diff.contains { $0.change != .unchanged }) // before/after differ
 
         let args = await cli.lastFormatArguments
-        #expect(args == [
-            "stdin", "--stdin-path", file.path,
+        #expect(args == ["stdin", "--stdin-path", file.path] + Self.config + [
             "--swift-version", "5.10",
             "--indent", "4", // option kept
             "--rules", "spaceAroundOperators"
@@ -117,14 +124,18 @@ struct ImpactModelTests {
         let path = "/virtual/Sample.swift"
         let cli = MockSwiftFormatCLI(formatOverride: "let x = 1\n")
         let reader = MockSourceFileReader(path: path, contents: "let x=1\n")
-        let model = ImpactModel(cli: cli, reader: reader, swiftVersion: "5.10")
+        let model = ImpactModel(
+            cli: cli,
+            reader: reader,
+            swiftVersion: "5.10",
+            configIsolation: Self.isolation
+        )
 
         let diff = await model.ruleDiff(ruleID: "spaceAroundOperators", filePath: path)
         #expect(diff.contains { $0.change != .unchanged })
 
         let args = await cli.lastFormatArguments
-        #expect(args == [
-            "stdin", "--stdin-path", path,
+        #expect(args == ["stdin", "--stdin-path", path] + Self.config + [
             "--swift-version", "5.10",
             "--rules", "spaceAroundOperators"
         ])
@@ -143,15 +154,13 @@ struct ImpactModelTests {
     @Test("scanArguments include the lint flags, swift version and config")
     func scanArguments() async {
         let cli = MockSwiftFormatCLI(lintOutput: "[]")
-        let model = ImpactModel(cli: cli, swiftVersion: "5.10")
+        let model = ImpactModel(cli: cli, swiftVersion: "5.10", configIsolation: Self.isolation)
         model.extraArguments = ["--disable", "redundantSelf"]
         await model.runScan(path: URL(fileURLWithPath: "/ws"))
 
         let args = await cli.lastLintArguments
-        #expect(args == [
-            "--lint", "--reporter", "json",
-            "--swift-version", "5.10", "--disable", "redundantSelf"
-        ])
+        #expect(args == ["--lint", "--reporter", "json"] + Self.config
+            + ["--swift-version", "5.10", "--disable", "redundantSelf"])
     }
 }
 
