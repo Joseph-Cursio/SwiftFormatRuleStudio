@@ -42,7 +42,7 @@ public final class CatalogLoader: CatalogLoading {
     private var memoryCache: RuleCatalog?
 
     public init(
-        cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(),
+        cli: any SwiftFormatCLIProtocol = SwiftFormatBackend.makePreferred(),
         cache: FileCache? = FileCache(appIdentifier: "SwiftFormatRuleStudio")
     ) {
         self.cli = cli

@@ -57,7 +57,7 @@ public final class TuneModel {
 
     /// Creates a tune model backed by the given CLI and file reader.
     public init(
-        cli: any SwiftFormatCLIProtocol = SwiftFormatCLIActor(),
+        cli: any SwiftFormatCLIProtocol = SwiftFormatBackend.makePreferred(),
         reader: any SourceFileReading = FileSystemSourceReader(),
         swiftVersion: String? = "5.10"
     ) {

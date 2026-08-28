@@ -23,13 +23,19 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/Joseph-Cursio/LintStudioUI.git", from: "1.3.1")
+        .package(url: "https://github.com/Joseph-Cursio/LintStudioUI.git", from: "1.3.1"),
+        // Pinned exactly: the linked version *is* the version the app reports and
+        // formats with, and SwiftFormat's rule behavior changes between releases —
+        // so an upgrade is a deliberate act (re-run Scripts/audit_option_effects.py
+        // and refresh the option→rule table), never a resolution side effect.
+        .package(url: "https://github.com/nicklockwood/SwiftFormat.git", exact: "0.62.1")
     ],
     targets: [
         .target(
             name: "SwiftFormatRuleStudioCore",
             dependencies: [
-                .product(name: "LintStudioCore", package: "LintStudioUI")
+                .product(name: "LintStudioCore", package: "LintStudioUI"),
+                .product(name: "SwiftFormat", package: "SwiftFormat")
             ],
             swiftSettings: swiftSettings,
             linkerSettings: [
