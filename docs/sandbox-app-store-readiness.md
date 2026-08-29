@@ -55,3 +55,9 @@ The parsers (`RuleListParser`, `OptionsParser`, `RuleInfoParser`) currently pars
 ## Recommended next step
 
 Before any App Store Connect / icon / screenshot work for this app, do the in-process migration behind the existing `SwiftFormatCLIProtocol` seam. Everything else on the submission checklist is downstream of that.
+
+> **Update (2026-08-28).** Done — and the sandbox work itself is now scoped in
+> [`sandbox-scope.md`](sandbox-scope.md), which found a hard failure this note did not
+> anticipate: SwiftFormat's ancestor `.swiftformat` discovery fails the whole scan under
+> a sandbox (`fileExists` still returns `true` for files that cannot be read), fixed by
+> passing `--config`.

@@ -51,6 +51,7 @@ public final class TuneModel {
 
     private let cli: any SwiftFormatCLIProtocol
     private let reader: any SourceFileReading
+    private let configIsolation: ConfigIsolation
     private var diffCache: [String: [PreviewDiffLine]] = [:]
     private var sweepCache: [String: [OptionSweep]] = [:]
     private static let ruleSelectionFlags: Set<String> = ["--enable", "--disable", "--rules"]
@@ -59,10 +60,12 @@ public final class TuneModel {
     public init(
         cli: any SwiftFormatCLIProtocol = SwiftFormatBackend.makePreferred(),
         reader: any SourceFileReading = FileSystemSourceReader(),
-        swiftVersion: String? = "5.10"
+        swiftVersion: String? = "5.10",
+        configIsolation: ConfigIsolation = .shared
     ) {
         self.cli = cli
         self.reader = reader
+        self.configIsolation = configIsolation
         self.swiftVersion = swiftVersion
     }
 
@@ -155,6 +158,7 @@ public final class TuneModel {
         extraOptions: [String] = []
     ) async throws -> [LintFinding] {
         var arguments = ["--lint", "--reporter", "json", "--rules", ruleName]
+        arguments += configIsolation.arguments
         if let swiftVersion, !swiftVersion.isEmpty {
             arguments += ["--swift-version", swiftVersion]
         }
@@ -277,6 +281,7 @@ public final class TuneModel {
         guard let source = try? reader.readSource(at: filePath) else { return [] }
 
         var arguments = ["stdin", "--stdin-path", filePath]
+        arguments += configIsolation.arguments
         if let swiftVersion, !swiftVersion.isEmpty {
             arguments += ["--swift-version", swiftVersion]
         }
