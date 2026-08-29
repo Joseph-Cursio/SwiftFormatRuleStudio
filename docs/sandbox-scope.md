@@ -147,9 +147,12 @@ the fix — the evidence here is the byte-identical CLI, not the app itself.
 2. **A bookmark store.** Create an app-scoped bookmark at pick time; persist that
    `Data` instead of the path; resolve → `startAccessingSecurityScopedResource()` at
    launch → `stopAccessing` on folder change and termination. This replaces
-   `lastProjectFolderPath` and `scratchpadLastFilePath`, and must replace the
-   `fileExists` gate in `lastFolder` (a resolved-and-stale bookmark is the only honest
-   test).
+   `lastProjectFolderPath`, and must replace the `fileExists` gate in `lastFolder`.
+   ✅ **Scoped in detail** — [`sandbox-bookmarks-scope.md`](sandbox-bookmarks-scope.md),
+   which measured the round trip against a real powerbox grant and corrects two claims
+   made here: the `bookmarks.app-scope` entitlement was **not** enforced in that test,
+   and `scratchpadLastFilePath` does **not** need a bookmark (folder scope covers
+   descendants).
 3. **Pass `--config`.** Point it at the project's `.swiftformat` when one exists, and at
    an empty file in the container when it does not (§2 case D). Fixes the ancestor
    failure and the precedence bug in §3 at once. **Decision:** explicit `--config` also
@@ -216,5 +219,6 @@ outlives the run**. Two consequences:
    pass; SwiftLint clean; the app target builds.
 2. Add entitlements and turn on the sandbox behind the bookmark store; rework
    `WorkspaceModelTests` around resolved bookmarks rather than paths.
+   Scoped in [`sandbox-bookmarks-scope.md`](sandbox-bookmarks-scope.md).
 3. Gate the CLI backend and revise the `.notFound` copy.
 4. Then, and only then, the App Store Connect checklist (icon, screenshots, metadata).
