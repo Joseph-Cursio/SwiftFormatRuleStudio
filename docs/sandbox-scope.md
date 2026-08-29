@@ -158,10 +158,11 @@ the fix — the evidence here is the byte-identical CLI, not the app itself.
    failure and the precedence bug in §3 at once. **Decision:** explicit `--config` also
    makes SwiftFormat ignore `.swiftformat` files in *sub*directories, which today apply.
    That matters for monorepos and should be a deliberate call, not a side effect.
-4. **Gate the CLI backend.** Under sandbox it fails with a misleading "not found".
-   Either hide it when `ENABLE_APP_SANDBOX` is on, or make it available only in a
-   non-sandboxed direct/notarized build. The `.notFound` copy ("brew install
-   swiftformat") is correct only on that path.
+4. ✅ **Gate the CLI backend.** Done: `SwiftFormatBackend.preferred` ignores a
+   `commandLine` override when `APP_SANDBOX_CONTAINER_ID` is present, so the override
+   falls back to in-process instead of failing as a misleading `.notFound`. The
+   `brew install swiftformat` copy stays correct, because it is now reachable only on
+   the non-sandboxed path.
 5. **App icon.** There is no asset catalog in the project at all — the App Store
    requires an icon. Still deferred from M6.
 
@@ -220,5 +221,6 @@ outlives the run**. Two consequences:
 2. Add entitlements and turn on the sandbox behind the bookmark store; rework
    `WorkspaceModelTests` around resolved bookmarks rather than paths.
    Scoped in [`sandbox-bookmarks-scope.md`](sandbox-bookmarks-scope.md).
-3. Gate the CLI backend and revise the `.notFound` copy.
+3. ✅ **Done.** The CLI backend is gated by `APP_SANDBOX_CONTAINER_ID`; the
+   `.notFound` copy needed no revision once it became unreachable under sandbox.
 4. Then, and only then, the App Store Connect checklist (icon, screenshots, metadata).
