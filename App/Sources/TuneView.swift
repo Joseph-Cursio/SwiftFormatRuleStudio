@@ -22,6 +22,9 @@ struct TuneView: View {
     @State private var expandedFiles: Set<String> = []
     /// The post-scan option-opportunity pass, cancelled when a new scan starts.
     @State private var opportunityTask: Task<Void, Never>?
+    /// Which rules to scan: everything disabled, or only what a SwiftFormat upgrade
+    /// brought. Both run the same isolated lint — see `TuneScanScope`.
+    @State private var scope: TuneScanScope = .allDisabled
 
     var body: some View {
         Group {
@@ -37,6 +40,12 @@ struct TuneView: View {
         }
         .navigationTitle("Tune")
         .toolbar { toolbarContent }
+        .onChange(of: scope) { _, _ in
+            // Results belong to the scope they were scanned under; keeping them would
+            // show upgrade rules under "all disabled", or vice versa.
+            opportunityTask?.cancel()
+            model.reset()
+        }
     }
 
     private var noProject: some View {
@@ -75,6 +84,29 @@ struct TuneView: View {
             }
             .disabled(!canScan)
         }
+        ToolbarItem {
+            Picker("Scan", selection: $scope) {
+                Text(TuneScanScope.allDisabled.title).tag(TuneScanScope.allDisabled)
+                if !upgradeScopes.isEmpty {
+                    Divider()
+                    // "I'm on 0.60.1, what did upgrading give me?"
+                    ForEach(upgradeScopes, id: \.self) { scope in
+                        Text(scope.title).tag(scope)
+                    }
+                }
+            }
+            .pickerStyle(.menu)
+            .help("Scan every disabled rule, or only the rules a SwiftFormat upgrade added")
+        }
+    }
+
+    /// One scope per anchor version older than the SwiftFormat the app links. Versions
+    /// at or above it are omitted: there is nothing newer to have arrived.
+    private var upgradeScopes: [TuneScanScope] {
+        guard let current = catalog.catalog?.swiftFormatVersion else { return [] }
+        return RuleHistory.anchorVersions
+            .filter { RuleHistory.isUpgrade(from: $0, to: current) }
+            .map { .newSince(version: $0) }
     }
 
     @ViewBuilder
@@ -82,13 +114,19 @@ struct TuneView: View {
         switch model.state {
         case .idle:
             ContentUnavailableView {
-                Label("Find free wins", systemImage: "sparkles")
+                Label(
+                    scope == .allDisabled ? "Find free wins" : "What the upgrade brought",
+                    systemImage: "sparkles"
+                )
             } description: {
-                Text("Scan every disabled rule against this project to see which "
-                    + "you could enable without changing a single line.")
+                Text(scope.explanation)
             } actions: {
-                Button("Scan for Free Wins") { Task { await scan() } }
-                    .disabled(!canScan)
+                Button(candidateRuleNames.isEmpty
+                    ? "Nothing to scan"
+                    : "Scan \(candidateRuleNames.count) Rule\(candidateRuleNames.count == 1 ? "" : "s")") {
+                    Task { await scan() }
+                }
+                .disabled(!canScan || candidateRuleNames.isEmpty)
             }
         case let .running(scanned, total):
             ProgressView(value: Double(scanned), total: Double(max(total, 1))) {
@@ -117,12 +155,11 @@ struct TuneView: View {
         return true
     }
 
-    /// Every rule not currently enabled — the adoption candidates. Deprecated rules
-    /// are skipped (no point adopting something on its way out).
+    /// The adoption candidates for the selected scope.
     private var candidateRuleNames: [String] {
-        guard let rules = catalog.catalog?.rules else { return [] }
-        return rules
-            .filter { !$0.isDeprecated && !config.isRuleEnabled($0.name, isOptIn: $0.isOptIn) }
+        guard let loaded = catalog.catalog else { return [] }
+        return scope
+            .candidateRules(in: loaded) { config.isRuleEnabled($0.name, isOptIn: $0.isOptIn) }
             .map(\.name)
     }
 

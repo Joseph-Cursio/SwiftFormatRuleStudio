@@ -128,10 +128,13 @@ sits and it needs neither.
 
 ## 8. Sequence
 
-1. Generate the per-version catalog table; ship the **new-rule digest**. No second engine,
-   no fork, no size cost.
-2. Correct the premise in [`config-inference.md`](config-inference.md) and
-   [`sandbox-scope.md`](sandbox-scope.md) §6: this does **not** require a second
+1. ✅ **Done.** `Scripts/generate_rule_history.py` downloads each anchor release, asks it
+   for `--rules`, and writes `RuleHistory+Generated.swift` (7 anchors, 110 → 140 rules).
+   `TuneScanScope` turns a version into a candidate set, and the Tune tab picks between
+   "all disabled rules" and "new since <version>" — both feeding the same isolated lint.
+   Verified against this repo's own `App/` sources: of the 5 rules added since 0.61.1 and
+   not already enabled, **4 are free wins**, 1 needs review.
+2. ✅ **Done** in the scoping PR: neither doc now claims this needs a second
    distribution target.
 3. If the churn diff still looks worth it after the digest is in users' hands, take
    option A and pick anchors deliberately.
