@@ -175,11 +175,12 @@ the fix — the evidence here is the byte-identical CLI, not the app itself.
   detect the 257 error and surface an actionable message rather than a raw failure; or
   upstream a patch making SwiftFormat tolerate an unreadable config the way it tolerates
   an absent one. The middle option is the cheap one and should ship regardless.
-- **Sandbox forecloses the dual-version feature.** The version-upgrade diff in
-  `config-inference.md` needs a second, user-supplied SwiftFormat binary, which a
-  sandboxed build cannot execute. If that feature ships, it ships in a direct/notarized
-  build — meaning **two distribution targets**, which is a product decision, not a build
-  setting.
+- **~~Sandbox forecloses the dual-version feature.~~** *Corrected 2026-08-29 —
+  [`version-upgrade-diff-scope.md`](version-upgrade-diff-scope.md).* It forecloses a
+  *user-supplied* binary, which is not the same thing. Two SwiftFormat versions link
+  into one sandboxed binary (+3 MB), and a helper executable bundled inside the app
+  spawns fine under sandbox and can read the user's granted project. No second
+  distribution target is required.
 - **Scope lifetime is now load-bearing.** Today the app reads project files from many
   places with no notion of "access is currently held". Under a sandbox, every one of
   those reads depends on a `startAccessing` that must outlive them. A single owner of

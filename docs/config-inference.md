@@ -47,8 +47,8 @@ Ordered by monetization strength (buyer + recurrence), not build effort.
 |---|---|---|---|
 | **Cross-repo standardization** — one config minimizing total churn across N repos | Team standard / team lead | inference core + `TuneModel` sweeps, run per repo | not started |
 | **Config drift detection** — flag repos that diverged from a canonical config | Team / org, recurring | `ConfigComparisonService` (ADAPT) + CLI | not started |
-| **Version-upgrade dual-version diff** — your config under two SwiftFormat versions | Upgrade inflection, recurring | `MigrationAssistant`/`VersionCompatibilityChecker` (ADAPT) + two binaries | not started |
-| **New-rule free-win digest on upgrade** — newly-added opt-in rules that are zero-churn for you | Upgrade inflection, recurring | `TuneModel` + version-aware catalog | not started |
+| **Version-upgrade dual-version diff** — your config under two SwiftFormat versions | Upgrade inflection, recurring | two *linked* versions, not two binaries — [`version-upgrade-diff-scope.md`](version-upgrade-diff-scope.md) | not started; scoped |
+| **New-rule free-win digest on upgrade** — newly-added opt-in rules that are zero-churn for you | Upgrade inflection, recurring | `TuneModel` + a static per-version catalog — **needs no second engine** ([scope](version-upgrade-diff-scope.md) §2) | not started; scoped, and the cheaper of the two |
 | **Config inference (single repo, no `.swiftformat`)** — reverse-engineer the config that matches formatted code | Bootstrap / onboard | new inference engine on Tune primitives | prototyped (script, not in app) |
 | **Onboard-to-a-style** — infer + *explain* a repo's de-facto style to match locally | Onboarding inflection | inference core, repurposed | not started |
 | **Deep option optimization** — search integer/list/string option values (beyond boolean/enum) | Power user | `OptionSweep` extended | not started |
