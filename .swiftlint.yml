@@ -14,6 +14,8 @@ excluded:
   - '**/.xcode'
   # Generated from CuratedExamples/*.md by Scripts/generate_curated_examples.py
   - '**/CuratedLiveExample+Generated.swift'
+  # Generated from released SwiftFormat binaries by Scripts/generate_rule_history.py
+  - '**/RuleHistory+Generated.swift'
 # Opt-in rules (enable specific rules that are valuable)
 opt_in_rules:
   - empty_count
