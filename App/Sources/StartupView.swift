@@ -38,7 +38,6 @@ struct StartupView: View {
         .padding(40)
         .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result {
-                _ = url.startAccessingSecurityScopedResource()
                 workspace.open(url)
             }
         }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Required for the Mac App Store. See docs/sandbox-scope.md. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- read-WRITE, not read-only: the app writes .swiftformat plus a timestamped
+	     .backup into the project directory (ConfigModel.save → SafeFileWriter). -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<!-- Documented as required for the app-scoped bookmarks that reopen a project
+	     across launches. Not enforced in the ad-hoc-signed test in
+	     docs/sandbox-bookmarks-scope.md §2 — kept because a distribution profile is
+	     not that environment, but it is not the thing to suspect when a bookmark
+	     fails. -->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+</dict>
+</plist>

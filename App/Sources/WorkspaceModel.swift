@@ -109,30 +109,70 @@ final class WorkspaceModel {
         }
     }
 
-    /// Absolute path of the most recently opened project, persisted across
-    /// launches so the startup screen can offer to reopen it.
-    var lastFolderPath: String? {
-        didSet { UserDefaults.standard.set(lastFolderPath, forKey: Self.lastFolderKey) }
+    // MARK: - Folder access
+
+    /// The folder the app is currently working in, holding its scoped access.
+    private var access: ScopedFolder?
+
+    /// Last launch's project, resolved from its bookmark (which also started its
+    /// access). Promoted to `access` if the user reopens it, released if they open
+    /// something else.
+    private var remembered: ScopedFolder?
+
+    private let bookmarks: any BookmarkStoring
+    private let defaults: UserDefaults
+
+    private static let bookmarkKey = "lastProjectFolderBookmark"
+    /// Written by pre-sandbox builds. A raw path can't be upgraded into a bookmark —
+    /// that needs access we no longer have — so it's dropped rather than left to rot.
+    private static let legacyPathKey = "lastProjectFolderPath"
+
+    init(
+        bookmarks: any BookmarkStoring = SecurityScopedBookmarkStore(),
+        defaults: UserDefaults = .standard
+    ) {
+        self.bookmarks = bookmarks
+        self.defaults = defaults
+        defaults.removeObject(forKey: Self.legacyPathKey)
+        guard let data = defaults.data(forKey: Self.bookmarkKey) else { return }
+        remembered = ScopedFolder(resolving: data, store: bookmarks)
+        // A resolve can refresh stale bookmark data; keep what actually works.
+        if let refreshed = remembered?.bookmark {
+            defaults.set(refreshed, forKey: Self.bookmarkKey)
+        }
     }
 
-    private static let lastFolderKey = "lastProjectFolderPath"
+    /// The remembered project, or `nil` when there isn't one the app can actually
+    /// open. Sandboxed, `fileExists` answers `true` for folders it may not read, so
+    /// a successful resolve — not a path check — is the only honest test.
+    var lastFolder: URL? { remembered?.url }
 
-    init() {
-        lastFolderPath = UserDefaults.standard.string(forKey: Self.lastFolderKey)
-    }
-
-    /// The remembered project as a URL, but only if it still exists on disk.
-    var lastFolder: URL? {
-        guard let path = lastFolderPath,
-              FileManager.default.fileExists(atPath: path) else { return nil }
-        return URL(fileURLWithPath: path, isDirectory: true)
-    }
-
-    /// Opens a project folder: makes it the selection, remembers it, and leaves
-    /// the startup screen.
+    /// Opens a project folder: makes it the selection, remembers it for next launch,
+    /// and leaves the startup screen.
+    ///
+    /// Reopening the remembered folder keeps the `ScopedFolder` the bookmark already
+    /// produced. Building a fresh one would release that access and replace it with a
+    /// grant this launch never received — the folder would go unreadable mid-session.
     func open(_ url: URL) {
+        if let remembered, remembered.url == url {
+            access?.release()
+            access = remembered
+            self.remembered = nil
+        } else {
+            remembered?.release()
+            remembered = nil
+            access?.release()
+            let folder = ScopedFolder(granting: url, store: bookmarks)
+            access = folder
+            if let bookmark = folder.bookmark {
+                defaults.set(bookmark, forKey: Self.bookmarkKey)
+            } else {
+                // Nothing worth offering next launch: a bookmark we couldn't make is
+                // a Reopen button that would fail.
+                defaults.removeObject(forKey: Self.bookmarkKey)
+            }
+        }
         selectedFolder = url
-        lastFolderPath = url.path
         hasCompletedStartup = true
     }
 

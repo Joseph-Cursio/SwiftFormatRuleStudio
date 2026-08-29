@@ -41,7 +41,6 @@ struct ImpactView: View {
             .toolbar { toolbarContent }
             .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
                 if case .success(let url) = result {
-                    _ = url.startAccessingSecurityScopedResource()
                     workspace.open(url)
                 }
             }
