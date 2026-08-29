@@ -71,11 +71,24 @@ profile is not the same environment as an ad-hoc signature, so **keep it in the
 entitlements file** — but if something breaks later, this is not the cause, and the doc
 should not send anyone hunting there.
 
-**The existing `startAccessingSecurityScopedResource()` calls are not what makes today's
-session work.** §4 of that doc guessed as much ("misleading no-op"); it is now measured.
-A powerbox-vended URL is readable without them, the call returns `true` anyway, and each
-unbalanced call leaks a sandbox extension. All three sites should lose the call — not
-keep it "just in case."
+**~~The existing `startAccessingSecurityScopedResource()` calls are not what makes
+today's session work.~~** *Wrong — corrected 2026-08-29 while building this, and the
+mistake is instructive.* The probe above used `NSOpenPanel`, whose URLs are usable
+immediately; the app uses SwiftUI's **`.fileImporter`**, whose URLs are not. Dropping
+the three calls on that evidence produced an app that opened a project, listed it, and
+read its `.swiftformat` — and then **failed to save**, with
+*".swiftformat" couldn't be copied because you don't have permission to access
+"<project>"*. Restoring the call fixed it: `.swiftformat` written, timestamped backup
+created, in both a freshly picked folder and a bookmark-resolved one.
+
+Read access without the call, write access only with it, is a nasty shape: every
+casual check passes and the failure lands on the one operation that touches the user's
+repo. `ScopedFolder(granting:)` therefore starts access and is balanced by `release()`,
+same as the resolved case, and the bookmark is created *after* access is held.
+
+The general lesson, which the original probe could not see: **a probe that only reads
+cannot clear a write path, and one file-picking API's behavior does not transfer to
+another's.**
 
 Also observed, and worth a note in whatever ships: creating a scoped bookmark logs
 `sandbox_extension_issue_file failed … (Operation not permitted)` to stderr **while
@@ -124,7 +137,7 @@ project's file list. No second bookmark, no migration.
 | File | Change |
 |---|---|
 | `App/Sources/WorkspaceModel.swift:114-137` | `lastFolderPath: String?` → bookmark `Data`; `lastFolder` resolves instead of `fileExists`; `open(_:)` creates the bookmark and takes scope; new `ScopedFolder` owner |
-| `App/Sources/StartupView.swift:41`, `ConfigView.swift:46`, `ImpactView.swift:44` | drop the unbalanced `startAccessing…` |
+| `App/Sources/StartupView.swift:41`, `ConfigView.swift:46`, `ImpactView.swift:44` | drop the *unbalanced* `startAccessing…` — the scope itself moves into `ScopedFolder`, which balances it (§2) |
 | `App/Tests/WorkspaceModelTests.swift` | today it constructs `WorkspaceModel()` freely and never touches disk; it will need the bookmark store injected (§6) |
 | `SwiftFormatRuleStudio.xcodeproj` | `ENABLE_APP_SANDBOX = YES`, `CODE_SIGN_ENTITLEMENTS`, real `DEVELOPMENT_TEAM`, automatic signing |
 | `SwiftFormatRuleStudio.entitlements` | **new file** (the project has none) |
@@ -188,6 +201,7 @@ on it persists. Delete the stale key on read rather than leaving it to rot.
 
 1. `ScopedFolder` + `BookmarkStoring` + `WorkspaceModel`, still unsandboxed, tests green.
 2. Add the entitlements file and flip `ENABLE_APP_SANDBOX`; run the manual round-trip.
-3. Delete the three `startAccessing` calls and the stale defaults key.
+3. Move the three `startAccessing` calls into `ScopedFolder` (do not simply delete
+   them — §2) and drop the stale defaults key.
 4. Then the App Store Connect checklist — icon (there is still no asset catalog),
    screenshots, metadata — per [`sandbox-scope.md`](sandbox-scope.md) §5.
