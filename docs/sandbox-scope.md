@@ -163,8 +163,10 @@ the fix — the evidence here is the byte-identical CLI, not the app itself.
    falls back to in-process instead of failing as a misleading `.notFound`. The
    `brew install swiftformat` copy stays correct, because it is now reachable only on
    the non-sandboxed path.
-5. **App icon.** There is no asset catalog in the project at all — the App Store
-   requires an icon. Still deferred from M6.
+5. ✅ **App icon — scaffolded.** `App/Sources/Assets.xcassets` now exists with an
+   `AppIcon` set wired to `ASSETCATALOG_COMPILER_APPICON_NAME`, and
+   `Scripts/make_app_icon.sh` slices a 1024 master into the ten PNGs. The artwork
+   itself is still missing; see [`app-store-checklist.md`](app-store-checklist.md).
 
 ## 6. Regressions and decisions
 
@@ -223,4 +225,7 @@ outlives the run**. Two consequences:
    Scoped in [`sandbox-bookmarks-scope.md`](sandbox-bookmarks-scope.md).
 3. ✅ **Done.** The CLI backend is gated by `APP_SANDBOX_CONTAINER_ID`; the
    `.notFound` copy needed no revision once it became unreachable under sandbox.
-4. Then, and only then, the App Store Connect checklist (icon, screenshots, metadata).
+4. Then, and only then, the App Store Connect checklist (icon, screenshots, metadata)
+   — enumerated in [`app-store-checklist.md`](app-store-checklist.md), with the asset
+   catalog and an icon-slicing script scaffolded and the rest waiting on an Apple
+   Developer account.
