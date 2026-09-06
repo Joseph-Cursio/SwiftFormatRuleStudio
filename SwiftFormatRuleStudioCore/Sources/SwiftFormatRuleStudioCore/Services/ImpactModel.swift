@@ -108,7 +108,7 @@ public final class ImpactModel {
 
         var arguments = ["stdin", "--stdin-path", filePath]
         arguments += configIsolation.arguments
-        if let swiftVersion, !swiftVersion.isEmpty, !extraArguments.contains("--swift-version") {
+        if let swiftVersion, !swiftVersion.isEmpty {
             arguments += ["--swift-version", swiftVersion]
         }
         arguments += optionArguments
