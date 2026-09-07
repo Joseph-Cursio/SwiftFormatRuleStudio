@@ -42,7 +42,6 @@ import Testing
 /// requirement.
 @Suite("SwiftFormatConfig normal form")
 struct SwiftFormatConfigNormalFormPropertyTests {
-
     // MARK: - Deterministic generator
 
     /// SplitMix64. Seeded rather than system-random so a failure is replayable

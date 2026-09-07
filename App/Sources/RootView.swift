@@ -38,14 +38,26 @@ struct RootView: View {
         // load its config and run its scan so both tabs reflect it. Driven from
         // RootView (always alive) so it fires once per change, not on tab switches.
         .onChange(of: workspace.selectedFolder) { _, folder in
-            guard let folder else { return }
-            config.load(from: folder.appendingPathComponent(".swiftformat"))
-            impact.extraArguments = config.commandLineArguments
-            Task { await impact.runScan(path: folder) }
-            // Tune scans on demand (it's far heavier), so just clear stale results
-            // here; the Tune tab kicks off its own scan when asked.
-            tune.reset()
+            openProject(at: folder)
         }
+    }
+
+    /// Adopt a newly selected project folder: load its `.swiftformat`, hand the resulting
+    /// arguments to Impact and start its scan, and drop Tune's stale results.
+    ///
+    /// Lifted out of the `onChange` above, where the four steps and their order were unreachable
+    /// from any test. The order matters and was not written down: Impact's arguments come from
+    /// `config` *after* it loads, so swapping the first two lines would scan with the previous
+    /// project's settings.
+    ///
+    /// Tune is reset rather than rescanned because its scan is far heavier; the Tune tab kicks
+    /// off its own when asked.
+    private func openProject(at folder: URL?) {
+        guard let folder else { return }
+        config.load(from: folder.appendingPathComponent(".swiftformat"))
+        impact.extraArguments = config.commandLineArguments
+        Task { await impact.runScan(path: folder) }
+        tune.reset()
     }
 
     /// Binds the TabView to the shared selection so cross-links and Back can switch

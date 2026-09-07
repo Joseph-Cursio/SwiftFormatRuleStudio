@@ -52,8 +52,7 @@ struct LiveCodePreviewView: View {
             await model.formatNow()
         }
         .onChange(of: config.commandLineArguments) { _, newArguments in
-            model.extraArguments = newArguments
-            model.scheduleFormat()
+            model.reformat(with: newArguments)
         }
         // Rebuild the file list for the selected project, then restore the
         // remembered file (or clear the selection if it isn't in this project).

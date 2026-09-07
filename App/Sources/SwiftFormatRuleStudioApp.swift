@@ -10,9 +10,6 @@ struct SwiftFormatRuleStudioApp: App {
     // Text-size step for the Rules panel, shared with ContentView via AppStorage.
     @AppStorage("rulesTextSizeStep") private var textSizeStep = 0
 
-    private let minStep = -3
-    private let maxStep = 6
-
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -21,14 +18,25 @@ struct SwiftFormatRuleStudioApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(after: .toolbar) {
-                Button("Larger Text") { textSizeStep = min(textSizeStep + 1, maxStep) }
+                Button("Larger Text") { step(by: 1) }
                     .keyboardShortcut("+", modifiers: .command)
-                Button("Smaller Text") { textSizeStep = max(textSizeStep - 1, minStep) }
+                Button("Smaller Text") { step(by: -1) }
                     .keyboardShortcut("-", modifiers: .command)
-                Button("Actual Size") { textSizeStep = 0 }
+                Button("Actual Size") { resetTextSize() }
                     .keyboardShortcut("0", modifiers: .command)
                 Divider()
             }
         }
+    }
+
+    /// The clamp lives in `TextSizeStep.stepping(_:by:)`, which is a total function under test.
+    /// What is left here is the store, and `@AppStorage` writes straight through to the defaults
+    /// store — so this method is reachable from a test in a way a `@State` write would not be.
+    private func step(by delta: Int) {
+        textSizeStep = TextSizeStep.stepping(textSizeStep, by: delta)
+    }
+
+    private func resetTextSize() {
+        textSizeStep = TextSizeStep.actualSize
     }
 }

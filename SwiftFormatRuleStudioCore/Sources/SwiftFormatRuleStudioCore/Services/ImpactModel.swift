@@ -43,8 +43,6 @@ public final class ImpactModel {
     /// the result. Shared with the other scan model — see ``RuleDiffLoader``.
     private let diffLoader: RuleDiffLoader
 
-
-
     /// Creates an impact model backed by the given CLI and file reader.
     public init(
         cli: any SwiftFormatCLIProtocol = SwiftFormatBackend.makePreferred(),
@@ -108,7 +106,6 @@ public final class ImpactModel {
             extraArguments: extraArguments
         )
     }
-
 
     /// Pulls the files-checked count from SwiftFormat's run summary, e.g.
     /// `"26/26 files require formatting, 3 files skipped."` → 26 (the denominator),

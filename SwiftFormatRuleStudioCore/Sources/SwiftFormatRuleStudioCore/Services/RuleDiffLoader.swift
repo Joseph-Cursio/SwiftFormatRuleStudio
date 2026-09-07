@@ -20,7 +20,6 @@ import LintStudioCore
 /// ``clearCache()``.
 @MainActor
 final class RuleDiffLoader {
-
     /// The config flags that pick *which* rules run. These are stripped when
     /// isolating a single rule, keeping only the option flags — otherwise the
     /// config's own enable/disable set fights the `--rules` we pass.

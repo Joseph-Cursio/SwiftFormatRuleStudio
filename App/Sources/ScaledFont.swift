@@ -16,8 +16,36 @@ extension EnvironmentValues {
 extension CGFloat {
     /// Maps a text-size step (0 = 100%) to a clamped scale multiplier. Each step
     /// is ±12%; shared by the menu commands and the views that apply the scale.
+    ///
+    /// The clamp here is a backstop, not the live bound. `TextSizeStep.range` keeps the step
+    /// inside ±3/+6, which maps to 0.64…1.72 — inside 0.6…2.0 with room to spare — so this
+    /// `min`/`max` never fires for any step the menu can produce. Two clamps, one of them dead,
+    /// and until `TextSizeStep` existed nothing said which.
     static func uiTextScale(forStep step: Int) -> CGFloat {
         Swift.min(Swift.max(1.0 + CGFloat(step) * 0.12, 0.6), 2.0)
+    }
+}
+
+/// The text-size step the Rules panel is showing, and the arithmetic that moves it.
+///
+/// A total function of its arguments, extracted out of three menu-command closures that each
+/// carried a copy of the clamp. `Unreachable Effect Closure` pointed at the closures; what was
+/// worth having was underneath them.
+enum TextSizeStep {
+    /// The steps the menu offers. Below the floor the UI stops being legible; above the ceiling
+    /// the Rules panel's fixed-width columns start truncating.
+    static let range = -3...6
+
+    /// 100%, and the step "Actual Size" returns to.
+    static let actualSize = 0
+
+    /// The step after moving `current` by `delta`, clamped into `range`.
+    ///
+    /// Total: every `Int` in, every result inside `range`. Idempotent at each end — stepping up
+    /// from the ceiling is the ceiling — which is the property the three closures each encoded
+    /// separately and none stated.
+    static func stepping(_ current: Int, by delta: Int) -> Int {
+        min(max(current + delta, range.lowerBound), range.upperBound)
     }
 }
 
