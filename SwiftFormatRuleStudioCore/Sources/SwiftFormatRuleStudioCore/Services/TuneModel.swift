@@ -52,9 +52,11 @@ public final class TuneModel {
     private let cli: any SwiftFormatCLIProtocol
     private let reader: any SourceFileReading
     private let configIsolation: ConfigIsolation
-    private var diffCache: [String: [PreviewDiffLine]] = [:]
+
+    /// Runs a single rule over a single file for the drill-down, and memoizes
+    /// the result. Shared with the other scan model — see ``RuleDiffLoader``.
+    private let diffLoader: RuleDiffLoader
     private var sweepCache: [String: [OptionSweep]] = [:]
-    private static let ruleSelectionFlags: Set<String> = ["--enable", "--disable", "--rules"]
 
     /// Creates a tune model backed by the given CLI and file reader.
     public init(
@@ -67,6 +69,7 @@ public final class TuneModel {
         self.reader = reader
         self.configIsolation = configIsolation
         self.swiftVersion = swiftVersion
+        self.diffLoader = RuleDiffLoader(cli: cli, reader: reader, configIsolation: configIsolation)
     }
 
     /// Zero-churn candidates — enabling any of these changes nothing on this
@@ -92,7 +95,7 @@ public final class TuneModel {
         scannedPath = nil
         optionOpportunities = [:]
         isFindingOpportunities = false
-        diffCache.removeAll()
+        diffLoader.clearCache()
         sweepCache.removeAll()
     }
 
@@ -100,7 +103,7 @@ public final class TuneModel {
     /// `results` and `state` (with progress) as it goes.
     public func runScan(path: URL, candidateRuleNames: [String]) async {
         scannedPath = path
-        diffCache.removeAll()
+        diffLoader.clearCache()
         sweepCache.removeAll()
         optionOpportunities = [:]
         results = []
@@ -162,7 +165,7 @@ public final class TuneModel {
         if let swiftVersion, !swiftVersion.isEmpty {
             arguments += ["--swift-version", swiftVersion]
         }
-        arguments += optionArguments
+        arguments += RuleDiffLoader.optionArguments(from: extraArguments)
         // Appended last so a swept option value wins over the config's own.
         arguments += extraOptions
         let result = try await cli.lint(path: path.path, arguments: arguments)
@@ -276,38 +279,12 @@ public final class TuneModel {
     /// drill-down — the file on disk vs. SwiftFormat with only that rule enabled
     /// (under the config's options). Cached for the lifetime of the current scan.
     public func ruleDiff(ruleID: String, filePath: String) async -> [PreviewDiffLine] {
-        let key = "\(ruleID)\u{0}\(filePath)"
-        if let cached = diffCache[key] { return cached }
-        guard let source = try? reader.readSource(at: filePath) else { return [] }
-
-        var arguments = ["stdin", "--stdin-path", filePath]
-        arguments += configIsolation.arguments
-        if let swiftVersion, !swiftVersion.isEmpty {
-            arguments += ["--swift-version", swiftVersion]
-        }
-        arguments += optionArguments
-        arguments += ["--rules", ruleID]
-
-        guard let output = try? await cli.format(source: source, arguments: arguments) else { return [] }
-        let diff = PreviewDiffLine.lines(from: UnifiedDiffEngine.computeDiff(before: source, after: output))
-        diffCache[key] = diff
-        return diff
+        await diffLoader.diff(
+            ruleID: ruleID,
+            filePath: filePath,
+            swiftVersion: swiftVersion,
+            extraArguments: extraArguments
+        )
     }
 
-    /// `extraArguments` with the rule-selection flags (`--enable`/`--disable`/
-    /// `--rules`) and their values dropped, leaving only the option flags — so a
-    /// candidate is measured in isolation, not fought by the config's own set.
-    private var optionArguments: [String] {
-        var result: [String] = []
-        var index = 0
-        while index < extraArguments.count {
-            if Self.ruleSelectionFlags.contains(extraArguments[index]) {
-                index += 2
-            } else {
-                result.append(extraArguments[index])
-                index += 1
-            }
-        }
-        return result
-    }
 }

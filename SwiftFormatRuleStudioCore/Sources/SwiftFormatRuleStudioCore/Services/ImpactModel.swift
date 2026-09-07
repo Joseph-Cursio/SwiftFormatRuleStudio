@@ -39,13 +39,11 @@ public final class ImpactModel {
     private let reader: any SourceFileReading
     private let configIsolation: ConfigIsolation
 
-    /// Memoized drill-down diffs, keyed by rule + file, so re-expanding a row in
-    /// the report doesn't re-run SwiftFormat. Cleared on each new scan.
-    private var diffCache: [String: [PreviewDiffLine]] = [:]
+    /// Runs a single rule over a single file for the drill-down, and memoizes
+    /// the result. Shared with the other scan model — see ``RuleDiffLoader``.
+    private let diffLoader: RuleDiffLoader
 
-    /// The config flags that pick *which* rules run. We strip these when isolating
-    /// a single rule for the drill-down, keeping only the option flags.
-    private static let ruleSelectionFlags: Set<String> = ["--enable", "--disable", "--rules"]
+
 
     /// Creates an impact model backed by the given CLI and file reader.
     public init(
@@ -58,6 +56,7 @@ public final class ImpactModel {
         self.reader = reader
         self.configIsolation = configIsolation
         self.swiftVersion = swiftVersion
+        self.diffLoader = RuleDiffLoader(cli: cli, reader: reader, configIsolation: configIsolation)
     }
 
     /// The arguments passed to `swiftformat <path>` for the scan.
@@ -79,7 +78,7 @@ public final class ImpactModel {
     public func runScan(path: URL) async {
         state = .running
         scannedPath = path
-        diffCache.removeAll()
+        diffLoader.clearCache()
         do {
             let result = try await cli.lint(path: path.path, arguments: scanArguments)
             let findings = LintReportParser.parse(result.reporterOutput)
@@ -102,41 +101,14 @@ public final class ImpactModel {
     /// here?" directly. Empty if the file can't be read or formatting fails.
     /// Results are cached for the lifetime of the current report.
     public func ruleDiff(ruleID: String, filePath: String) async -> [PreviewDiffLine] {
-        let key = "\(ruleID)\u{0}\(filePath)"
-        if let cached = diffCache[key] { return cached }
-        guard let source = try? reader.readSource(at: filePath) else { return [] }
-
-        var arguments = ["stdin", "--stdin-path", filePath]
-        arguments += configIsolation.arguments
-        if let swiftVersion, !swiftVersion.isEmpty {
-            arguments += ["--swift-version", swiftVersion]
-        }
-        arguments += optionArguments
-        arguments += ["--rules", ruleID]
-
-        guard let output = try? await cli.format(source: source, arguments: arguments) else { return [] }
-        let diff = PreviewDiffLine.lines(from: UnifiedDiffEngine.computeDiff(before: source, after: output))
-        diffCache[key] = diff
-        return diff
+        await diffLoader.diff(
+            ruleID: ruleID,
+            filePath: filePath,
+            swiftVersion: swiftVersion,
+            extraArguments: extraArguments
+        )
     }
 
-    /// `extraArguments` with the rule-selection flags (`--enable`/`--disable`/
-    /// `--rules`) and their values dropped, leaving only the option flags. Used to
-    /// isolate one rule without the config's own enable/disable set fighting
-    /// `--rules`.
-    private var optionArguments: [String] {
-        var result: [String] = []
-        var index = 0
-        while index < extraArguments.count {
-            if Self.ruleSelectionFlags.contains(extraArguments[index]) {
-                index += 2 // skip the flag and its comma-joined value
-            } else {
-                result.append(extraArguments[index])
-                index += 1
-            }
-        }
-        return result
-    }
 
     /// Pulls the files-checked count from SwiftFormat's run summary, e.g.
     /// `"26/26 files require formatting, 3 files skipped."` → 26 (the denominator),
