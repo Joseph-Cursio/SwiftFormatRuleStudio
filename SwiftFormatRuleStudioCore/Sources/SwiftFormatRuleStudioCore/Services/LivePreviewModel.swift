@@ -142,6 +142,17 @@ public final class LivePreviewModel {
         }
     }
 
+    /// Adopt new formatter arguments and re-format at the debounce.
+    ///
+    /// The pair was written out at two call sites, identically, inside `onChange` closures that
+    /// nothing could reach. Together they are one operation — *the arguments changed, so redo the
+    /// preview* — and separately they are an ordering nobody stated: setting the arguments after
+    /// scheduling would format with the previous set.
+    public func reformat(with arguments: [String]) {
+        extraArguments = arguments
+        scheduleFormat()
+    }
+
     /// Debounced format trigger — call from the editor's `onChange`. Cancels any
     /// in-flight debounce so only the latest edit formats.
     public func scheduleFormat() {

@@ -32,7 +32,6 @@ import ViewInspector
 @Suite("ViewInspector compatibility")
 @MainActor
 struct ViewInspectorCompatibilityTests {
-
     private struct GeometryProbe: View {
         var body: some View {
             GeometryReader { proxy in

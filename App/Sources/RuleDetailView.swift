@@ -273,8 +273,7 @@ struct RuleLiveExampleView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .task(id: reloadKey) { await reload() }
         .onChange(of: ruleArguments) { _, newArguments in
-            model.extraArguments = newArguments
-            model.scheduleFormat()
+            model.reformat(with: newArguments)
         }
     }
 
