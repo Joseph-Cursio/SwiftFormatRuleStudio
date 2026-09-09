@@ -28,7 +28,7 @@ struct RuleSidebar: View {
             }
         }
         .searchable(text: $model.filter.searchText, prompt: "Search rules")
-        .overlay { overlay }
+        .overlay { RuleSidebarOverlay(loadState: model.loadState, hasNoMatches: model.hasNoMatches) }
         .safeAreaInset(edge: .top) { filterBar }
         .navigationTitle("Rules")
     }
@@ -56,9 +56,19 @@ struct RuleSidebar: View {
         .background(.bar)
     }
 
-    @ViewBuilder
-    private var overlay: some View {
-        switch model.loadState {
+}
+
+/// The loading, failure and no-matches states drawn over the list.
+///
+/// Takes the two values it reads rather than the model, so typing in the search field — which
+/// rebuilds the sidebar on every keystroke through `$model.filter.searchText` — leaves it alone
+/// except when the match count actually crosses zero.
+private struct RuleSidebarOverlay: View {
+    let loadState: RuleStudioModel.LoadState
+    let hasNoMatches: Bool
+
+    var body: some View {
+        switch loadState {
         case .loading:
             ProgressView("Loading rules…")
         case .failed(let message):
@@ -68,7 +78,7 @@ struct RuleSidebar: View {
                 Text(message)
             }
         case .idle, .loaded:
-            if model.hasNoMatches {
+            if hasNoMatches {
                 ContentUnavailableView.search
             }
         }

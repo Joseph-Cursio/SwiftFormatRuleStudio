@@ -267,7 +267,11 @@ struct RuleLiveExampleView: View {
                 Spacer()
                 sourcePicker
             }
-            hint
+            LiveExampleHint(
+                ruleName: rule.name,
+                projectFileName: showingProjectFile ? (projectFile?.lastPathComponent ?? "your file") : nil,
+                hasCuratedSource: curatedSource != nil
+            )
             contentArea
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -298,22 +302,6 @@ struct RuleLiveExampleView: View {
             get: { workspace.rulesShowsProjectFile },
             set: { workspace.rulesShowsProjectFile = $0 }
         )
-    }
-
-    @ViewBuilder
-    private var hint: some View {
-        if showingProjectFile {
-            Text("Running just this rule on \(projectFile?.lastPathComponent ?? "your file") with your "
-                + "current options — edit the options above to see the effect change.")
-                .scaledFont(.caption)
-                .foregroundStyle(.secondary)
-        } else if curatedSource != nil, CuratedLiveExample.unavailableNote(forRule: rule.name) == nil {
-            Text(CuratedLiveExample.hint(forRule: rule.name)
-                ?? "This rule applied to the sample with your current options — "
-                + "edit the options above to watch it change.")
-                .scaledFont(.caption)
-                .foregroundStyle(.secondary)
-        }
     }
 
     @ViewBuilder
@@ -409,3 +397,30 @@ struct RuleLiveExampleView: View {
 /// Maps tokenizer kinds to display colors and builds a syntax-highlighted
 /// `Text` from a line of Swift, so example code reads like an editor instead of
 /// flat monospace. Colors are chosen to stay legible in light and dark mode.
+
+/// The sentence under the heading explaining what the example below is showing.
+///
+/// Takes the three facts it reads. `RuleLiveExampleView` re-runs the formatter on every option
+/// change and stores the result in `LivePreviewModel`, so it rebuilds constantly — and none of that
+/// changes this sentence.
+private struct LiveExampleHint: View {
+    let ruleName: String
+    /// The file being previewed, or `nil` when the curated example is showing.
+    let projectFileName: String?
+    let hasCuratedSource: Bool
+
+    var body: some View {
+        if let projectFileName {
+            Text("Running just this rule on \(projectFileName) with your "
+                + "current options — edit the options above to see the effect change.")
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+        } else if hasCuratedSource, CuratedLiveExample.unavailableNote(forRule: ruleName) == nil {
+            Text(CuratedLiveExample.hint(forRule: ruleName)
+                ?? "This rule applied to the sample with your current options — "
+                + "edit the options above to watch it change.")
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
