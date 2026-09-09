@@ -31,7 +31,10 @@ struct ImpactView: View {
                 content
             } else {
                 VStack(spacing: 0) {
-                    folderHeader
+                    FolderHeader(
+                        folderName: workspace.selectedFolder?.lastPathComponent ?? "",
+                        isScanning: model.state == .running
+                    )
                     Divider()
                     content
                 }
@@ -64,26 +67,6 @@ struct ImpactView: View {
         exportFormat = format
         exportDocument = TextExportDocument(text: text)
         showingExporter = true
-    }
-
-    // MARK: - Folder header
-
-    /// Mirrors the Config tab: once a project is chosen, keep its name visible at
-    /// the top of the pane (the toolbar button alone is easy to miss).
-    private var folderHeader: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "folder.fill")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            Text(workspace.selectedFolder?.lastPathComponent ?? "")
-                .scaledFont(.headline, weight: .semibold)
-            if model.state == .running {
-                ProgressView().controlSize(.small)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
     }
 
     @ViewBuilder
@@ -362,7 +345,7 @@ struct FileImpactRow: View {
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
-            diffContent
+            FileImpactDiff(diff: diff, loading: loading)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "swift").foregroundStyle(.secondary).accessibilityHidden(true)
@@ -393,21 +376,6 @@ struct FileImpactRow: View {
             if open { Task { await load() } }
         }
         .task { if isExpanded { await load() } }
-    }
-
-    @ViewBuilder
-    private var diffContent: some View {
-        if loading {
-            ProgressView().controlSize(.small).padding(.vertical, 4)
-        } else if let diff, !diff.isEmpty {
-            LiveDiffLinesView(lines: diff)
-                .padding(.vertical, 4)
-        } else if diff != nil {
-            Text("This rule makes no isolated change here.")
-                .scaledFont(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.vertical, 4)
-        }
     }
 
     private func load() async {
@@ -467,5 +435,29 @@ struct ImpactRow: View {
             .frame(height: 6)
         }
         .padding(.vertical, 3)
+    }
+}
+
+/// The before/after diff a file row reveals when expanded.
+///
+/// Takes the loaded lines and the loading flag. `FileImpactRow` also holds a `Binding` to the
+/// expansion state and two closures the list allocates afresh on every update, so the row itself
+/// never compares equal — this does.
+private struct FileImpactDiff: View {
+    let diff: [PreviewDiffLine]?
+    let loading: Bool
+
+    var body: some View {
+        if loading {
+            ProgressView().controlSize(.small).padding(.vertical, 4)
+        } else if let diff, !diff.isEmpty {
+            LiveDiffLinesView(lines: diff)
+                .padding(.vertical, 4)
+        } else if diff != nil {
+            Text("This rule makes no isolated change here.")
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 4)
+        }
     }
 }

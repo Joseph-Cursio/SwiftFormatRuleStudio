@@ -29,10 +29,13 @@ struct TuneView: View {
     var body: some View {
         Group {
             if workspace.selectedFolder == nil {
-                noProject
+                TuneNoProject()
             } else {
                 VStack(spacing: 0) {
-                    folderHeader
+                    FolderHeader(
+                        folderName: workspace.selectedFolder?.lastPathComponent ?? "",
+                        isScanning: { if case .running = model.state { true } else { false } }()
+                    )
                     Divider()
                     content
                 }
@@ -46,32 +49,6 @@ struct TuneView: View {
             opportunityTask?.cancel()
             model.reset()
         }
-    }
-
-    private var noProject: some View {
-        ContentUnavailableView {
-            Label("Tune your config", systemImage: "sparkles")
-        } description: {
-            Text("Open a project, then scan to find rules you can adopt with zero churn.")
-        }
-    }
-
-    // MARK: - Folder header
-
-    private var folderHeader: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "folder.fill")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            Text(workspace.selectedFolder?.lastPathComponent ?? "")
-                .scaledFont(.headline, weight: .semibold)
-            if case .running = model.state {
-                ProgressView().controlSize(.small)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
     }
 
     @ToolbarContentBuilder
@@ -176,6 +153,19 @@ struct TuneView: View {
         let currentValues = config.config.options
         opportunityTask = Task {
             await model.findOptionOpportunities(allOptions: options, currentValues: currentValues)
+        }
+    }
+}
+
+/// Shown before a project is opened.
+///
+/// Reads nothing, so the scan scope, the expanded rows and the running scan all leave it alone.
+private struct TuneNoProject: View {
+    var body: some View {
+        ContentUnavailableView {
+            Label("Tune your config", systemImage: "sparkles")
+        } description: {
+            Text("Open a project, then scan to find rules you can adopt with zero churn.")
         }
     }
 }
