@@ -19,6 +19,22 @@ import LintStudioCore
 /// and written by this code; each model clears it on its own schedule via
 /// ``clearCache()``.
 @MainActor
+/// Runs one rule over one file and memoizes the result.
+///
+/// `SwiftProjectLint`'s `concrete-type-usage` reports both holders — `ImpactModel.diffLoader` and
+/// `TuneModel.diffLoader` — and the findings are declined at those declarations.
+///
+/// It is correctly *not* a pure kernel: it holds a mutable `cache`, which is state a second
+/// instance would hold differently. But the substitution the rule asks for is already in place and
+/// already exercised. Both collaborators are existentials the holders inject —
+/// `any SwiftFormatCLIProtocol` and `any SourceFileReading` — so a test that constructs
+/// `ImpactModel(cli: recorder, reader: FixedSource())` controls everything this class can observe
+/// or do.
+///
+/// And the tests do not want to *replace* this class; they want to watch it.
+/// `SwiftVersionArgumentOrderTests` drives `ImpactModel.ruleDiff` straight through here and asserts
+/// the argument order the CLI received. A `RuleDiffLoading` protocol would give those tests a way to
+/// bypass the one behaviour they are checking.
 final class RuleDiffLoader {
     /// The config flags that pick *which* rules run. These are stripped when
     /// isolating a single rule, keeping only the option flags — otherwise the
