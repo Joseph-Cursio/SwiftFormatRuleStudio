@@ -53,6 +53,9 @@ public final class TuneModel {
     private let reader: any SourceFileReading
     private let configIsolation: ConfigIsolation
 
+    // Declined — reasoning at `RuleDiffLoader`: both its collaborators are existentials this
+    // type injects, and the tests drive it through here rather than wanting to replace it.
+    // swiftprojectlint:disable:next concrete-type-usage
     /// Runs a single rule over a single file for the drill-down, and memoizes
     /// the result. Shared with the other scan model — see ``RuleDiffLoader``.
     private let diffLoader: RuleDiffLoader
