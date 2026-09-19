@@ -90,7 +90,7 @@ extension SwiftFormatConfig {
         lines = result
     }
 
-    private func rulesAlreadyPresent(_ name: String, kind: RuleDirectiveKind) -> Bool {
+    func rulesAlreadyPresent(_ name: String, kind: RuleDirectiveKind) -> Bool {
         for case let .ruleDirective(lineKind, rules, _) in lines where lineKind == kind {
             if rules.contains(name) { return true }
         }
