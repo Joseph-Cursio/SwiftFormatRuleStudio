@@ -84,7 +84,7 @@ public struct SwiftFormatConfig: Equatable, Sendable {
         return Self(lines: parsed)
     }
 
-    private static func parseLine(_ raw: String) -> Line {
+    static func parseLine(_ raw: String) -> Line {
         let trimmed = raw.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty { return .blank(raw) }
         if trimmed.hasPrefix("#") { return .comment(raw) }

@@ -169,7 +169,7 @@ public enum RuleInfoParser {
 
     /// An example block ends at the first non-blank line that is neither a diff
     /// line (`+`/`-`) nor indented code — i.e. left-aligned prose.
-    private static func exampleEnded(at line: String, trimmed: String, started: Bool) -> Bool {
+    static func exampleEnded(at line: String, trimmed: String, started: Bool) -> Bool {
         guard started, !trimmed.isEmpty else { return false }
         let isDiff = line.hasPrefix("+") || line.hasPrefix("-")
         let isIndented = line.first == " " || line.first == "\t"
