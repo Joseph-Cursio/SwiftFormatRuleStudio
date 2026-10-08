@@ -68,6 +68,13 @@ struct OptionsParserTests {
         #expect(acronyms.defaultValue == "ID,URL,UUID")
     }
 
+    @Test("Infers a list option from \"list of\" in the blurb alone")
+    func listOptionFromBlurb() throws {
+        let names = try option("--names", in: OptionsParser.parse("--names            List of names to keep"))
+        #expect(names.kind == .list)
+        #expect(names.defaultValue == nil)
+    }
+
     @Test("Infers integer options")
     func integerOption() throws {
         let threshold = try option("--class-threshold", in: OptionsParser.parse(Self.fixture))

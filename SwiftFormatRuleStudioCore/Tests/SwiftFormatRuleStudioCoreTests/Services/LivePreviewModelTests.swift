@@ -120,6 +120,72 @@ struct LivePreviewModelTests {
         #expect(args == ["stdin"] + Self.config
             + ["--stdin-path", "/ws/Sources/Foo.swift", "--swift-version", "5.10"])
     }
+
+    // MARK: - Fragment fallback
+
+    /// A CLI that rejects any format without `--fragment`, as SwiftFormat rejects a
+    /// bare snippet that is not a complete file.
+    private func fragmentOnlyModel() -> (LivePreviewModel, MockSwiftFormatCLI) {
+        let failure: @Sendable ([String]) -> SwiftFormatError? = { args in
+            args.contains("--fragment") ? nil : .executionFailed(message: "unexpected end of file")
+        }
+        let cli = MockSwiftFormatCLI(formatOverride: "let x = 1", formatFailureForArguments: failure)
+        let model = LivePreviewModel(cli: cli, source: "let x=1", swiftVersion: nil, configIsolation: Self.isolation)
+        return (model, cli)
+    }
+
+    @Test("With fragmentFallback, a failed format is retried once with --fragment true")
+    func fragmentFallbackRetries() async {
+        let (model, cli) = fragmentOnlyModel()
+        model.fragmentFallback = true
+        await model.formatNow()
+
+        #expect(model.state == .formatted)
+        #expect(model.formattedSource == "let x = 1")
+        #expect(await cli.formatCallCount == 2)
+        #expect(await cli.lastFormatArguments == ["stdin"] + Self.config + ["--fragment", "true"])
+    }
+
+    @Test("Without fragmentFallback, a failed format fails without a retry")
+    func noFragmentFallbackFails() async {
+        let (model, cli) = fragmentOnlyModel()
+        await model.formatNow()
+
+        #expect(model.state == .failed(SwiftFormatError.executionFailed(message: "unexpected end of file")
+            .localizedDescription))
+        #expect(await cli.formatCallCount == 1)
+    }
+
+    @Test("A format that already passed --fragment is not retried")
+    func fragmentFormatIsNotRetried() async {
+        let (model, cli) = makeModel(source: "let x=1", failWith: .executionFailed(message: "bad"))
+        model.fragmentFallback = true
+        model.extraArguments = ["--fragment", "true"]
+        await model.formatNow()
+
+        guard case .failed = model.state else {
+            Issue.record("expected .failed, got \(model.state)")
+            return
+        }
+        #expect(await cli.formatCallCount == 1)
+    }
+
+    // MARK: - Debounce
+
+    @Test("A scheduled format runs once the debounce elapses")
+    func scheduledFormatRuns() async throws {
+        let cli = MockSwiftFormatCLI(formatOverride: "let x = 1")
+        let model = LivePreviewModel(
+            cli: cli, source: "let x=1", debounceMilliseconds: 1, configIsolation: Self.isolation
+        )
+        model.scheduleFormat()
+        for _ in 0 ..< 400 where model.state != .formatted {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+
+        #expect(model.state == .formatted)
+        #expect(model.formattedSource == "let x = 1")
+    }
 }
 
 /// Exercises real `swiftformat stdin` formatting end-to-end. Skips when
