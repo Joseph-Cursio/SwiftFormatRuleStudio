@@ -29,7 +29,7 @@ nonisolated public struct LintRun: Sendable, Equatable {
 }
 
 /// The CLI operations the app needs from `swiftformat`.
-public protocol SwiftFormatCLIProtocol: Sendable {
+nonisolated public protocol SwiftFormatCLIProtocol: Sendable {
     /// Locates the `swiftformat` binary, throwing `.notFound` if absent.
     func detectPath() async throws -> URL
     /// Returns the installed SwiftFormat version, e.g. `"0.61.1"`.
