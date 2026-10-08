@@ -20,3 +20,7 @@ Derived/
 # workdir it builds stubs in — the last runs to hundreds of MB). Machine-local:
 # the evidence records verdicts measured against this checkout's source.
 .swiftinfer/
+
+# swift-mutation-testing verdict cache, keyed by file contents. Machine-local, like
+# .swiftinfer/: a cached verdict is only valid against this checkout's build.
+.swift-mutation-testing-cache/
