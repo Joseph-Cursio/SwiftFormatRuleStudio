@@ -137,6 +137,18 @@ struct SwiftFormatInProcessActorTests {
         }
     }
 
+    @Test("A bad invocation's message is SwiftFormat's error line, not the empty stdout")
+    func invalidArgumentsMessage() async {
+        do {
+            _ = try await SwiftFormatInProcessActor().ruleInfoOutput(ruleName: "noSuchRuleExists")
+            Issue.record("expected executionFailed")
+        } catch let SwiftFormatError.executionFailed(message) {
+            #expect(message.contains("noSuchRuleExists"), "message: \(message)")
+        } catch {
+            Issue.record("unexpected error \(error)")
+        }
+    }
+
     /// `CLI.print`/`CLI.readLine` are process globals shared by every instance, so
     /// overlapping runs are the failure mode to guard: without the lock they capture
     /// each other's output.

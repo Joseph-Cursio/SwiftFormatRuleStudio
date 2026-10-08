@@ -129,4 +129,18 @@ struct CatalogLoaderTests {
 
         #expect(await cli.rulesCallCount == 2)
     }
+
+    @Test("A loader serves its own memory cache, and refetches when the version moves")
+    func memoryCacheTracksVersion() async throws {
+        let cli = makeCLI()
+        let loader = CatalogLoader(cli: cli, cache: nil) // no disk cache: only memory can serve
+        _ = try await loader.loadCatalog()
+        _ = try await loader.loadCatalog()
+        #expect(await cli.rulesCallCount == 1)
+
+        await cli.setVersion("0.62.0")
+        let catalog = try await loader.loadCatalog()
+        #expect(catalog.swiftFormatVersion == "0.62.0")
+        #expect(await cli.rulesCallCount == 2)
+    }
 }

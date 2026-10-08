@@ -19,6 +19,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     private let lintOutput: String
     private let lintOutputForArguments: (@Sendable ([String]) -> String)?
     private let lintSummary: String
+    private let formatFailureForArguments: (@Sendable ([String]) -> SwiftFormatError?)?
 
     public private(set) var versionCallCount = 0
     public private(set) var rulesCallCount = 0
@@ -39,7 +40,8 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         formatOverride: String? = nil,
         lintOutput: String = "[]",
         lintOutputForArguments: (@Sendable ([String]) -> String)? = nil,
-        lintSummary: String = ""
+        lintSummary: String = "",
+        formatFailureForArguments: (@Sendable ([String]) -> SwiftFormatError?)? = nil
     ) {
         self.versionValue = version
         self.rules = rules
@@ -51,6 +53,7 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
         self.lintOutput = lintOutput
         self.lintOutputForArguments = lintOutputForArguments
         self.lintSummary = lintSummary
+        self.formatFailureForArguments = formatFailureForArguments
     }
 
     /// Changes the reported version (to exercise cache invalidation).
@@ -90,10 +93,13 @@ public actor MockSwiftFormatCLI: SwiftFormatCLIProtocol {
     /// Returns `formatOverride` if set (simulating a formatting change),
     /// otherwise echoes the source unchanged (a no-op format). Records the
     /// arguments so callers can assert flags like `--swift-version`.
+    /// `formatFailureForArguments` fails only some invocations — e.g. one
+    /// without `--fragment` — so a retry can succeed where the first call failed.
     public func format(source: String, arguments: [String]) throws -> String {
         formatCallCount += 1
         lastFormatArguments = arguments
         if let failWith { throw failWith }
+        if let failure = formatFailureForArguments?(arguments) { throw failure }
         return formatOverride ?? source
     }
 

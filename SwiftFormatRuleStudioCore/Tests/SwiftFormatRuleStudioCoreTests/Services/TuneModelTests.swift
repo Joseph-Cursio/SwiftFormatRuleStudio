@@ -100,7 +100,7 @@ struct TuneModelTests {
     // MARK: - Option sweep
 
     /// The churn `braces` causes at `--allman false` (three findings, two files).
-    private static let allmanFalseChurn = """
+    static let allmanFalseChurn = """
     [
       { "file": "/ws/A.swift", "line": 1, "reason": "", "rule_id": "braces" },
       { "file": "/ws/B.swift", "line": 1, "reason": "", "rule_id": "braces" },
@@ -108,7 +108,7 @@ struct TuneModelTests {
     ]
     """
 
-    private static let allmanOption = FormatOption(
+    static let allmanOption = FormatOption(
         name: "--allman",
         summary: "Use Allman indentation style",
         kind: .boolean,
@@ -118,7 +118,7 @@ struct TuneModelTests {
 
     /// An Allman-styled project: `braces` is churn at the default `false`, free at
     /// `true`.
-    private func allmanAwareCLI() -> MockSwiftFormatCLI {
+    func allmanAwareCLI() -> MockSwiftFormatCLI {
         let churn = Self.allmanFalseChurn // capture the Sendable value, not the isolated static
         return MockSwiftFormatCLI { args in
             args.contains("true") ? "[]" : churn
@@ -258,5 +258,23 @@ struct TuneModelTests {
         await model.runScan(path: path, candidateRuleNames: ["braces"])
         await model.findOptionOpportunities(allOptions: [Self.allmanOption], currentValues: [:])
         #expect(model.optionOpportunities.isEmpty)
+    }
+
+    // MARK: - Swift version
+
+    @Test("A Swift version is passed as --swift-version; an empty one is omitted")
+    func swiftVersionArgument() async throws {
+        let cli = MockSwiftFormatCLI(lintOutput: "[]")
+        let model = TuneModel(cli: cli, swiftVersion: "5.10")
+        let path = URL(fileURLWithPath: "/ws")
+
+        await model.runScan(path: path, candidateRuleNames: ["wrapEnumCases"])
+        let args = await cli.lastLintArguments
+        let flag = try #require(args.firstIndex(of: "--swift-version"))
+        #expect(args[flag + 1] == "5.10")
+
+        model.swiftVersion = ""
+        await model.runScan(path: path, candidateRuleNames: ["wrapEnumCases"])
+        #expect(await !cli.lastLintArguments.contains("--swift-version"))
     }
 }
