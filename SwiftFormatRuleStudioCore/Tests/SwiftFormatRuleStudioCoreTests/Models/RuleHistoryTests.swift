@@ -72,7 +72,7 @@ struct RuleHistoryTests {
         let rules = [
             rule("freshRule"),
             rule("freshButDeprecated", deprecated: true),
-            rule("freshButAlreadyOn")
+            rule("freshButAlreadyOn"),
         ]
         let added = RuleHistory.rulesAdded(since: "0.61.1", in: catalog(rules)) {
             $0.name == "freshButAlreadyOn"

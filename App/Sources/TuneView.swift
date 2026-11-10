@@ -105,18 +105,21 @@ struct TuneView: View {
                 }
                 .disabled(!canScan || candidateRuleNames.isEmpty)
             }
+
         case let .running(scanned, total):
             ProgressView(value: Double(scanned), total: Double(max(total, 1))) {
                 Text("Scanning rule \(scanned) of \(total)…")
             }
             .padding(40)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
         case .failed(let message):
             ContentUnavailableView {
                 Label("Scan failed", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(message)
             }
+
         case .completed:
             TuneResultsView(expandedRules: $expandedRules, expandedFiles: $expandedFiles)
         }

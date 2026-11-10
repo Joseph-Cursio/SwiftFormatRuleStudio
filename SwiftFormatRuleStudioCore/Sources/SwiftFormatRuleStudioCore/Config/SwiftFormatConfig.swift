@@ -169,9 +169,11 @@ public struct SwiftFormatConfig: Equatable, Sendable {
                 if !value.isEmpty {
                     arguments.append(value)
                 }
+
             case let .ruleDirective(kind, rules, _) where !rules.isEmpty:
                 arguments.append("--\(kind.rawValue)")
                 arguments.append(rules.joined(separator: ","))
+
             case .blank, .comment, .unknown, .ruleDirective:
                 break
             }

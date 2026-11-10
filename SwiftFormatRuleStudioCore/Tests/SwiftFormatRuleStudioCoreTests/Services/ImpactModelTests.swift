@@ -88,7 +88,7 @@ struct ImpactModelTests {
         #expect(args == ["stdin", "--stdin-path", file.path] + Self.config + [
             "--swift-version", "5.10",
             "--indent", "4", // option kept
-            "--rules", "spaceAroundOperators"
+            "--rules", "spaceAroundOperators",
         ])
         // The config's rule-selection flags are stripped so only the one rule runs.
         #expect(!args.contains("redundantSelf"))
@@ -137,7 +137,7 @@ struct ImpactModelTests {
         let args = await cli.lastFormatArguments
         #expect(args == ["stdin", "--stdin-path", path] + Self.config + [
             "--swift-version", "5.10",
-            "--rules", "spaceAroundOperators"
+            "--rules", "spaceAroundOperators",
         ])
     }
 

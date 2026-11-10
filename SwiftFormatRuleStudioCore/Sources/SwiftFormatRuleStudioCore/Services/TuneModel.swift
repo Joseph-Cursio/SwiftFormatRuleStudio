@@ -289,5 +289,4 @@ public final class TuneModel {
             extraArguments: extraArguments
         )
     }
-
 }

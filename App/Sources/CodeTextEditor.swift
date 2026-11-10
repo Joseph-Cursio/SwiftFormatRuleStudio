@@ -180,7 +180,7 @@ final class PlaceholderTextView: NSTextView {
 
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font ?? .monospacedSystemFont(ofSize: 13, weight: .regular),
-            .foregroundColor: NSColor.placeholderTextColor
+            .foregroundColor: NSColor.placeholderTextColor,
         ]
         let origin = NSPoint(
             x: textContainerInset.width + (textContainer?.lineFragmentPadding ?? 0),
@@ -282,7 +282,7 @@ final class LineNumberRulerView: NSRulerView {
         let font = textView.font ?? .monospacedSystemFont(ofSize: 11, weight: .regular)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: font.pointSize * 0.85, weight: .regular),
-            .foregroundColor: NSColor.tertiaryLabelColor
+            .foregroundColor: NSColor.tertiaryLabelColor,
         ]
         let originY = convert(NSPoint.zero, from: textView).y + textView.textContainerInset.height
 

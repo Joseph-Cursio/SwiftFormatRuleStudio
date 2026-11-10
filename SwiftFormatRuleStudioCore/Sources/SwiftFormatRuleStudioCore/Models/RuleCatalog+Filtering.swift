@@ -23,10 +23,13 @@ extension RuleCatalog {
             switch filter.availability {
             case .all:
                 break
+
             case .defaultOn where rule.isOptIn:
                 return false
+
             case .optIn where !rule.isOptIn:
                 return false
+
             case .defaultOn, .optIn:
                 break
             }

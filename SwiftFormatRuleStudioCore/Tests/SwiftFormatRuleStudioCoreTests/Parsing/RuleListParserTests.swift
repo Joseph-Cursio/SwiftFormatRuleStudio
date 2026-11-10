@@ -30,7 +30,7 @@ struct RuleListParserTests {
         #expect(entries.map(\.name) == [
             "acronyms", "andOperator", "anyObjectProtocol",
             "blankLineAfterImports", "blankLineAfterSwitchCase",
-            "redundantProperty", "redundantSelf"
+            "redundantProperty", "redundantSelf",
         ])
     }
 

@@ -260,7 +260,6 @@ struct ConfigView: View {
             return (option.name + " " + option.summary).lowercased().contains(query)
         }
     }
-
 }
 
 /// One option, rendered with the right control for its inferred kind. Options
@@ -348,6 +347,7 @@ struct OptionRow: View {
             }
             .labelsHidden()
             .frame(maxWidth: 160, alignment: .trailing)
+
         case .enumeration:
             Picker("", selection: enumSelection) {
                 Text(omittedLabel).tag(String?.none)
@@ -357,6 +357,7 @@ struct OptionRow: View {
             }
             .labelsHidden()
             .frame(maxWidth: 160, alignment: .trailing)
+
         case .integer, .list, .string:
             // Show the set value, or an empty field with the default as a dimmed
             // placeholder — so unset options read as "not set (default: X)".

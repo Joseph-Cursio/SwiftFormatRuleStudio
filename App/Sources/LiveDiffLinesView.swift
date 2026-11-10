@@ -59,9 +59,11 @@ extension [PreviewDiffLine] {
             case .removed:
                 defer { old += 1 }
                 return NumberedDiffLine(line: line, oldNumber: old, newNumber: nil)
+
             case .added:
                 defer { new += 1 }
                 return NumberedDiffLine(line: line, oldNumber: nil, newNumber: new)
+
             case .unchanged:
                 defer { old += 1; new += 1 }
                 return NumberedDiffLine(line: line, oldNumber: old, newNumber: new)

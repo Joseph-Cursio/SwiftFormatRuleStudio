@@ -28,7 +28,7 @@ extension TuneModelTests {
             "mid": Self.report(["/ws/A.swift", "/ws/B.swift"]), // 2 files, 2 findings
             "zeta": Self.report(Array(repeating: "/ws/A.swift", count: 4)), // 1 file, 4 findings
             "alpha": Self.report(["/ws/A.swift", "/ws/A.swift"]), // 1 file, 2 findings
-            "beta": Self.report(["/ws/B.swift", "/ws/B.swift"]) // 1 file, 2 findings
+            "beta": Self.report(["/ws/B.swift", "/ws/B.swift"]), // 1 file, 2 findings
         ]
         let cli = MockSwiftFormatCLI { args in
             reports.first { args.contains($0.key) }?.value ?? "[]"
@@ -121,7 +121,7 @@ extension TuneModelTests {
         // wrapArguments out-churns braces, so it leads `churn`; braces has one sweepable option to its two.
         let reports = [
             "wrapArguments": Self.report(["/ws/A.swift", "/ws/B.swift"]),
-            "braces": Self.report(["/ws/A.swift"])
+            "braces": Self.report(["/ws/A.swift"]),
         ]
         let probe = LintProbe()
         let cli = MockSwiftFormatCLI { args in
@@ -147,7 +147,7 @@ extension TuneModelTests {
                 kind: .boolean,
                 allowedValues: ["true", "false"],
                 defaultValue: "true"
-            )
+            ),
         ]
         probe.arm()
         await model.findOptionOpportunities(allOptions: options, currentValues: [:])

@@ -71,7 +71,7 @@ struct ScaledFont: ViewModifier {
     /// macOS default point sizes for the semantic text styles.
     private static let baseSizes: [Font.TextStyle: CGFloat] = [
         .largeTitle: 26, .title: 22, .title2: 17, .title3: 15, .headline: 13,
-        .body: 13, .callout: 12, .subheadline: 11, .footnote: 10, .caption: 10, .caption2: 10
+        .body: 13, .callout: 12, .subheadline: 11, .footnote: 10, .caption: 10, .caption2: 10,
     ]
 
     func body(content: Content) -> some View {

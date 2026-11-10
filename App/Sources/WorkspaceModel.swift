@@ -103,6 +103,7 @@ final class WorkspaceModel {
         case .preview(let file):
             selectedTab = .preview
             if let file { previewRequest = file }
+
         case let .impact(ruleID, filePath):
             selectedTab = .impact
             impactRestore = ImpactTarget(ruleID: ruleID, filePath: filePath)

@@ -155,8 +155,7 @@ struct FormatRuleClassifierTests {
         "wrapPropertyBodies",
         "wrapSingleLineComments",
         "wrapSwitchCases",
-        "yodaConditions"
-
+        "yodaConditions",
     ]
 
     @Test("Every known rule is curated (no fallback needed)")

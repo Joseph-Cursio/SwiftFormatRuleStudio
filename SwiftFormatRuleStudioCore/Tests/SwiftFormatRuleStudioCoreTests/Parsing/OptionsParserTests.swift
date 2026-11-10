@@ -30,7 +30,7 @@ struct OptionsParserTests {
         let options = OptionsParser.parse(Self.fixture)
         #expect(options.map(\.name) == [
             "--acronyms", "--allman", "--allow-partial-wrapping",
-            "--self", "--class-threshold"
+            "--self", "--class-threshold",
         ])
     }
 

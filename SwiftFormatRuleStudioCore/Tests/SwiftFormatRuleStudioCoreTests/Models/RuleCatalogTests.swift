@@ -13,7 +13,7 @@ struct RuleCatalogTests {
             swiftFormatVersion: "0.61.1",
             rules: [
                 FormatRule(name: "indent", ruleDescription: "Indent.", category: .spacing),
-                FormatRule(name: "sortedImports", ruleDescription: "", category: .imports, isDeprecated: true)
+                FormatRule(name: "sortedImports", ruleDescription: "", category: .imports, isDeprecated: true),
             ],
             options: [
                 FormatOption(name: "--indent", summary: "Indentation", kind: .integer, defaultValue: "4")

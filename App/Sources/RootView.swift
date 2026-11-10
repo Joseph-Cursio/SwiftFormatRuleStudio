@@ -141,9 +141,11 @@ private struct StatusBar: View {
                     systemImage: "exclamationmark.triangle.fill"
                 )
                 .foregroundStyle(.orange)
+
             case .loaded:
                 Label(versionText, systemImage: "checkmark.seal")
                     .foregroundStyle(.secondary)
+
             case .idle, .loading:
                 Label("Loading rules…", systemImage: "hourglass")
                     .foregroundStyle(.secondary)

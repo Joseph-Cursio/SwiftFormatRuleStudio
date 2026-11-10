@@ -80,15 +80,18 @@ struct ImpactView: View {
             } actions: {
                 Button("Choose Folder…") { choosingFolder = true }
             }
+
         case .running:
             ProgressView("Scanning…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+
         case .failed(let message):
             ContentUnavailableView {
                 Label("Scan failed", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(message)
             }
+
         case .completed:
             if let report = model.report {
                 reportView(report)

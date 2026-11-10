@@ -55,7 +55,6 @@ struct RuleSidebar: View {
         .padding(8)
         .background(.bar)
     }
-
 }
 
 /// The loading, failure and no-matches states drawn over the list.
@@ -71,12 +70,14 @@ private struct RuleSidebarOverlay: View {
         switch loadState {
         case .loading:
             ProgressView("Loading rules…")
+
         case .failed(let message):
             ContentUnavailableView {
                 Label("Couldn’t load rules", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(message)
             }
+
         case .idle, .loaded:
             if hasNoMatches {
                 ContentUnavailableView.search

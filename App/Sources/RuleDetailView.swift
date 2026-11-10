@@ -356,6 +356,7 @@ struct RuleLiveExampleView: View {
             Text("Couldn’t render a live preview for this example.")
                 .scaledFont(.caption)
                 .foregroundStyle(.tertiary)
+
         case .idle, .formatting, .formatted:
             // Before / Diff / After in both modes. For a real file each block is
             // height-capped and scrolls internally, so all three stay visible at

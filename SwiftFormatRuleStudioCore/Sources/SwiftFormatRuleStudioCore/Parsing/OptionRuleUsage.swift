@@ -170,6 +170,6 @@ public enum OptionRuleUsage {
         "wrap-type-aliases": ["wrapArguments"],
         "xcode-indentation": ["indent"],
         "xctest-symbols": ["preferSwiftTesting"],
-        "yoda-swap": ["yodaConditions"]
+        "yoda-swap": ["yodaConditions"],
     ]
 }

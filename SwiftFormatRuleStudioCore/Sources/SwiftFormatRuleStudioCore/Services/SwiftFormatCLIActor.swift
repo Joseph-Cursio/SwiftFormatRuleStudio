@@ -69,8 +69,10 @@ public enum SwiftFormatError: LocalizedError, Sendable, Equatable {
 
             After installing, restart SwiftFormat Rule Studio.
             """
+
         case .executionFailed(let message):
             return "SwiftFormat execution failed: \(message)"
+
         case .timedOut(let seconds):
             return "SwiftFormat command timed out after \(seconds) seconds."
         }
@@ -80,6 +82,7 @@ public enum SwiftFormatError: LocalizedError, Sendable, Equatable {
         switch self {
         case .notFound:
             return "Install SwiftFormat with Homebrew: brew install swiftformat"
+
         default:
             return nil
         }
@@ -178,8 +181,10 @@ public actor SwiftFormatCLIActor: SwiftFormatCLIProtocol {
             switch error {
             case .notFound:
                 throw SwiftFormatError.notFound
+
             case .timedOut(_, let seconds):
                 throw SwiftFormatError.timedOut(seconds: seconds)
+
             case .executionFailed(let message):
                 throw SwiftFormatError.executionFailed(message: message)
             }

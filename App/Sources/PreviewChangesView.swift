@@ -204,12 +204,15 @@ struct PreviewResultView: View {
         switch model.state {
         case .idle:
             EmptyView()
+
         case .formatting:
             ProgressView().controlSize(.small)
+
         case .formatted:
             Text(model.hasChanges ? changeSummary : "No changes")
                 .scaledFont(.caption)
                 .foregroundStyle(.secondary)
+
         case .failed:
             Label("Error", systemImage: "exclamationmark.triangle")
                 .scaledFont(.caption)
@@ -237,6 +240,7 @@ struct PreviewResultView: View {
             } description: {
                 Text(message)
             }
+
         default:
             if model.hasChanges {
                 PreviewDiffView(lines: model.diff, showsLineNumbers: true)
