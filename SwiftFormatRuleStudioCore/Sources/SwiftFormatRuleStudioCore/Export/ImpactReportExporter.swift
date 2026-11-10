@@ -3,7 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
 import LintStudioCore
 
 /// Output formats for an exported impact report.

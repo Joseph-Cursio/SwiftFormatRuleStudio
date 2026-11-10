@@ -47,12 +47,36 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
     /// reconstruction needed, since SwiftFormat already emits diff markers.
     public let example: String?
 
+    /// Creates a rule enabled the way SwiftFormat enables it by default:
+    /// opt-in rules start off, the rest start on.
     public init(
         name: String,
         ruleDescription: String,
         category: FormatRuleCategory = .idiomatic,
         isOptIn: Bool = false,
-        isEnabled: Bool? = nil,
+        isDeprecated: Bool = false,
+        relatedOptions: [String] = [],
+        example: String? = nil
+    ) {
+        self.init(
+            name: name,
+            ruleDescription: ruleDescription,
+            isEnabled: !isOptIn,
+            category: category,
+            isOptIn: isOptIn,
+            isDeprecated: isDeprecated,
+            relatedOptions: relatedOptions,
+            example: example
+        )
+    }
+
+    /// Creates a rule whose enablement in the active configuration is known.
+    public init(
+        name: String,
+        ruleDescription: String,
+        isEnabled: Bool,
+        category: FormatRuleCategory = .idiomatic,
+        isOptIn: Bool = false,
         isDeprecated: Bool = false,
         relatedOptions: [String] = [],
         example: String? = nil
@@ -61,8 +85,7 @@ public struct FormatRule: LintRule, Codable, Identifiable, Sendable, Hashable {
         self.ruleDescription = ruleDescription
         self.category = category
         self.isOptIn = isOptIn
-        // Default enablement mirrors SwiftFormat: opt-in rules start off.
-        self.isEnabled = isEnabled ?? !isOptIn
+        self.isEnabled = isEnabled
         self.isDeprecated = isDeprecated
         self.relatedOptions = relatedOptions
         self.example = example

@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// A single finding from `swiftformat --lint --reporter json`: a place where one
 /// rule would change the code.
 public struct LintFinding: Equatable, Sendable {

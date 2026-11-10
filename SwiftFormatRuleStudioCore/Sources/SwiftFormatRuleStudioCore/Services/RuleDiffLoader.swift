@@ -3,7 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
 import LintStudioCore
 
 /// Runs one rule in isolation over one file and memoizes the resulting diff.

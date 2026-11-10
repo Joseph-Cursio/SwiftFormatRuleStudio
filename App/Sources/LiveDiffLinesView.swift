@@ -48,30 +48,6 @@ struct NumberedDiffLine: Identifiable {
     var id: Int { line.id }
 }
 
-extension [PreviewDiffLine] {
-    /// Assigns old/new numbers across the diff: removed → old only, added → new
-    /// only, unchanged → both.
-    func numbered() -> [NumberedDiffLine] {
-        var old = 1
-        var new = 1
-        return map { line in
-            switch line.change {
-            case .removed:
-                defer { old += 1 }
-                return NumberedDiffLine(line: line, oldNumber: old, newNumber: nil)
-
-            case .added:
-                defer { new += 1 }
-                return NumberedDiffLine(line: line, oldNumber: nil, newNumber: new)
-
-            case .unchanged:
-                defer { old += 1; new += 1 }
-                return NumberedDiffLine(line: line, oldNumber: old, newNumber: new)
-            }
-        }
-    }
-}
-
 /// Gutter width sufficient for the widest line number (monospaced).
 func diffGutterWidth(forMaxNumber maxNumber: Int) -> CGFloat {
     CGFloat(max(String(maxNumber).count, 1)) * 9 + 2
@@ -92,87 +68,6 @@ private struct BlockHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
-}
-
-extension View {
-    func measuringHeight() -> some View {
-        background(GeometryReader { geometry in
-            Color.clear.preference(key: BlockHeightKey.self, value: geometry.size.height)
-        })
-    }
-
-    /// Clamps content to `cap`: short content sizes to fit (no leftover space),
-    /// long content caps and scrolls. `nil` cap leaves the height unconstrained.
-    func cappedHeight(_ measured: CGFloat, _ cap: CGFloat?) -> some View {
-        frame(height: cap.map { min(measured == 0 ? $0 : measured, $0) })
-    }
-}
-
-struct LiveDiffLinesView: View {
-    let lines: [PreviewDiffLine]
-    /// When set, the diff is capped to this height and scrolls vertically too — so
-    /// a long project-file diff stays compact alongside the Before/After panes.
-    var maxHeight: CGFloat?
-    @State private var contentHeight: CGFloat = 0
-
-    var body: some View {
-        let rows = lines.numbered()
-        let oldWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.oldNumber).max() ?? 0)
-        let newWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.newNumber).max() ?? 0)
-        ScrollView(maxHeight == nil ? .horizontal : [.horizontal, .vertical], showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(rows) { row in
-                    HStack(alignment: .top, spacing: 8) {
-                        lineNumberGutter(row.oldNumber, width: oldWidth)
-                        lineNumberGutter(row.newNumber, width: newWidth)
-                        Divider()
-                        Text(symbol(for: row.line.change))
-                            .foregroundStyle(foreground(for: row.line.change))
-                            .frame(width: 10, alignment: .leading)
-                        Text(SwiftCodeColor.attributed(row.line.text))
-                    }
-                    .scaledFont(.body, design: .monospaced)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 1)
-                    .background(background(for: row.line.change))
-                }
-            }
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .measuringHeight()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .cappedHeight(contentHeight, maxHeight)
-        .onPreferenceChange(BlockHeightKey.self) { contentHeight = $0 }
-        .background(Color(nsColor: .textBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
-    }
-
-    private func symbol(for change: PreviewDiffLine.Change) -> String {
-        switch change {
-        case .added: "+"
-        case .removed: "-"
-        case .unchanged: " "
-        }
-    }
-
-    private func foreground(for change: PreviewDiffLine.Change) -> Color {
-        switch change {
-        case .added: .green
-        case .removed: .red
-        case .unchanged: .primary
-        }
-    }
-
-    private func background(for change: PreviewDiffLine.Change) -> Color {
-        switch change {
-        case .added: Color.green.opacity(0.12)
-        case .removed: Color.red.opacity(0.12)
-        case .unchanged: .clear
-        }
-    }
 }
 
 /// Renders a raw unified-diff example (lines prefixed `+`/`-`/space) with
@@ -251,5 +146,110 @@ struct DiffExampleView: View {
         if line.hasPrefix("+") { return Color.green.opacity(0.12) }
         if line.hasPrefix("-") { return Color.red.opacity(0.12) }
         return .clear
+    }
+}
+
+struct LiveDiffLinesView: View {
+    let lines: [PreviewDiffLine]
+    /// When set, the diff is capped to this height and scrolls vertically too — so
+    /// a long project-file diff stays compact alongside the Before/After panes.
+    var maxHeight: CGFloat?
+    @State private var contentHeight: CGFloat = 0
+
+    var body: some View {
+        let rows = lines.numbered()
+        let oldWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.oldNumber).max() ?? 0)
+        let newWidth = diffGutterWidth(forMaxNumber: rows.compactMap(\.newNumber).max() ?? 0)
+        ScrollView(maxHeight == nil ? .horizontal : [.horizontal, .vertical], showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(rows) { row in
+                    HStack(alignment: .top, spacing: 8) {
+                        lineNumberGutter(row.oldNumber, width: oldWidth)
+                        lineNumberGutter(row.newNumber, width: newWidth)
+                        Divider()
+                        Text(symbol(for: row.line.change))
+                            .foregroundStyle(foreground(for: row.line.change))
+                            .frame(width: 10, alignment: .leading)
+                        Text(SwiftCodeColor.attributed(row.line.text))
+                    }
+                    .scaledFont(.body, design: .monospaced)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 1)
+                    .background(background(for: row.line.change))
+                }
+            }
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .measuringHeight()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cappedHeight(contentHeight, maxHeight)
+        .onPreferenceChange(BlockHeightKey.self) { contentHeight = $0 }
+        .background(Color(nsColor: .textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
+    }
+
+    private func symbol(for change: PreviewDiffLine.Change) -> String {
+        switch change {
+        case .added: "+"
+        case .removed: "-"
+        case .unchanged: " "
+        }
+    }
+
+    private func foreground(for change: PreviewDiffLine.Change) -> Color {
+        switch change {
+        case .added: .green
+        case .removed: .red
+        case .unchanged: .primary
+        }
+    }
+
+    private func background(for change: PreviewDiffLine.Change) -> Color {
+        switch change {
+        case .added: Color.green.opacity(0.12)
+        case .removed: Color.red.opacity(0.12)
+        case .unchanged: .clear
+        }
+    }
+}
+
+extension [PreviewDiffLine] {
+    /// Assigns old/new numbers across the diff: removed → old only, added → new
+    /// only, unchanged → both.
+    func numbered() -> [NumberedDiffLine] {
+        var old = 1
+        var new = 1
+        return map { line in
+            switch line.change {
+            case .removed:
+                defer { old += 1 }
+                return NumberedDiffLine(line: line, oldNumber: old, newNumber: nil)
+
+            case .added:
+                defer { new += 1 }
+                return NumberedDiffLine(line: line, oldNumber: nil, newNumber: new)
+
+            case .unchanged:
+                defer { old += 1; new += 1 }
+                return NumberedDiffLine(line: line, oldNumber: old, newNumber: new)
+            }
+        }
+    }
+}
+
+extension View {
+    func measuringHeight() -> some View {
+        background(GeometryReader { geometry in
+            Color.clear.preference(key: BlockHeightKey.self, value: geometry.size.height)
+        })
+    }
+
+    /// Clamps content to `cap`: short content sizes to fit (no leftover space),
+    /// long content caps and scrolls. `nil` cap leaves the height unconstrained.
+    func cappedHeight(_ measured: CGFloat, _ cap: CGFloat?) -> some View {
+        frame(height: cap.map { min(measured == 0 ? $0 : measured, $0) })
     }
 }

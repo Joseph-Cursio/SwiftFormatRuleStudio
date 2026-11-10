@@ -6,57 +6,6 @@
 import SwiftFormatRuleStudioCore
 import SwiftUI
 
-/// Searchable, filterable rule list, sectioned by category. Binds directly to
-/// `model.filter`.
-struct RuleSidebar: View {
-    @Bindable var model: RuleStudioModel
-    @Binding var selection: String?
-
-    var body: some View {
-        List(selection: $selection) {
-            ForEach(model.groupedRules) { group in
-                Text("\(group.category.displayName)  ·  \(group.rules.count)")
-                    .scaledFont(.title3, weight: .bold)
-                    .foregroundStyle(.primary)
-                    .padding(.top, 8)
-                    .listRowSeparator(.hidden)
-                    .selectionDisabled()
-                ForEach(group.rules) { rule in
-                    RuleRow(rule: rule)
-                        .tag(rule.name)
-                }
-            }
-        }
-        .searchable(text: $model.filter.searchText, prompt: "Search rules")
-        .overlay { RuleSidebarOverlay(loadState: model.loadState, hasNoMatches: model.hasNoMatches) }
-        .safeAreaInset(edge: .top) { filterBar }
-        .navigationTitle("Rules")
-    }
-
-    @ViewBuilder
-    private var filterBar: some View {
-        VStack(spacing: 6) {
-            Picker("Show", selection: $model.filter.availability) {
-                ForEach(RuleAvailability.allCases) { availability in
-                    Text(availability.displayName).tag(availability)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-
-            Picker("Category", selection: $model.filter.category) {
-                Text("All categories").tag(FormatRuleCategory?.none)
-                ForEach(FormatRuleCategory.allCases) { category in
-                    Text(category.displayName).tag(FormatRuleCategory?.some(category))
-                }
-            }
-            .labelsHidden()
-        }
-        .padding(8)
-        .background(.bar)
-    }
-}
-
 /// The loading, failure and no-matches states drawn over the list.
 ///
 /// Takes the two values it reads rather than the model, so typing in the search field — which
@@ -107,5 +56,56 @@ struct RuleRow: View {
                     .accessibilityLabel("Opt-in, off by default")
             }
         }
+    }
+}
+
+/// Searchable, filterable rule list, sectioned by category. Binds directly to
+/// `model.filter`.
+struct RuleSidebar: View {
+    @Bindable var model: RuleStudioModel
+    @Binding var selection: String?
+
+    var body: some View {
+        List(selection: $selection) {
+            ForEach(model.groupedRules) { group in
+                Text("\(group.category.displayName)  ·  \(group.rules.count)")
+                    .scaledFont(.title3, weight: .bold)
+                    .foregroundStyle(.primary)
+                    .padding(.top, 8)
+                    .listRowSeparator(.hidden)
+                    .selectionDisabled()
+                ForEach(group.rules) { rule in
+                    RuleRow(rule: rule)
+                        .tag(rule.name)
+                }
+            }
+        }
+        .searchable(text: $model.filter.searchText, prompt: "Search rules")
+        .overlay { RuleSidebarOverlay(loadState: model.loadState, hasNoMatches: model.hasNoMatches) }
+        .safeAreaInset(edge: .top) { filterBar }
+        .navigationTitle("Rules")
+    }
+
+    @ViewBuilder
+    private var filterBar: some View {
+        VStack(spacing: 6) {
+            Picker("Show", selection: $model.filter.availability) {
+                ForEach(RuleAvailability.allCases) { availability in
+                    Text(availability.displayName).tag(availability)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            Picker("Category", selection: $model.filter.category) {
+                Text("All categories").tag(FormatRuleCategory?.none)
+                ForEach(FormatRuleCategory.allCases) { category in
+                    Text(category.displayName).tag(FormatRuleCategory?.some(category))
+                }
+            }
+            .labelsHidden()
+        }
+        .padding(8)
+        .background(.bar)
     }
 }

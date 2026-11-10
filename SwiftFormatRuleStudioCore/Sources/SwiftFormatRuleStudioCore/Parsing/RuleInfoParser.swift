@@ -113,10 +113,11 @@ public enum RuleInfoParser {
         )
     }
 
+    /// The part of a `--ruleinfo` block a line belongs to.
+    private enum Section { case description, options, examples, done }
+
     /// Walks the lines after the rule name, routing each to the active section.
     private struct SectionAccumulator {
-        enum Section { case description, options, examples, done }
-
         var section: Section = .description
         var exampleStarted = false
         var descriptionLines: [String] = []

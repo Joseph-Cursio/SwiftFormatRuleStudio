@@ -3,7 +3,6 @@
 //  SwiftFormatRuleStudioCoreTests
 //
 
-import Foundation
 @testable import SwiftFormatRuleStudioCore
 import Testing
 
@@ -58,10 +57,10 @@ struct SwiftFormatConfigNormalFormPropertyTests {
 
         mutating func next() -> UInt64 {
             state &+= 0x9E37_79B9_7F4A_7C15
-            var z = state
-            z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
-            z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
-            return z ^ (z >> 31)
+            var mixed = state
+            mixed = (mixed ^ (mixed >> 30)) &* 0xBF58_476D_1CE4_E5B9
+            mixed = (mixed ^ (mixed >> 27)) &* 0x94D0_49BB_1331_11EB
+            return mixed ^ (mixed >> 31)
         }
 
         mutating func int(in range: ClosedRange<Int>) -> Int {
@@ -111,9 +110,10 @@ struct SwiftFormatConfigNormalFormPropertyTests {
             let source = Self.text(seed: seed)
             let once = Self.normalized(source)
             let twice = Self.normalized(once)
+            let passes = "\(once.debugDescription) -> \(twice.debugDescription)"
             #expect(
                 once == twice,
-                "normal form not reached at seed \(seed): \(source.debugDescription) -> \(once.debugDescription) -> \(twice.debugDescription)"
+                "normal form not reached at seed \(seed): \(source.debugDescription) -> \(passes)"
             )
         }
     }
@@ -225,9 +225,10 @@ struct SwiftFormatConfigNormalFormPropertyTests {
     func exactRoundTripHoldsOnTheLosslessDomain() {
         for seed in UInt64(1)...500 {
             let source = Self.lossless(seed: seed)
+            let normalized = Self.normalized(source)
             #expect(
-                Self.normalized(source) == source,
-                "round trip lost content at seed \(seed): \(source.debugDescription) -> \(Self.normalized(source).debugDescription)"
+                normalized == source,
+                "round trip lost content at seed \(seed): \(source.debugDescription) -> \(normalized.debugDescription)"
             )
         }
     }

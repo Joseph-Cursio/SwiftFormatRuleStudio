@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// Hand-authored "before" snippets for the live example, used in preference to
 /// the auto-reconstructed `FormatRule.exampleBeforeSource`.
 ///

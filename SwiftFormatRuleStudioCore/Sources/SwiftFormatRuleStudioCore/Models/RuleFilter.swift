@@ -25,6 +25,19 @@ public enum RuleAvailability: String, CaseIterable, Sendable, Identifiable {
     }
 }
 
+/// A category and its rules, for sectioned display in the browser.
+public struct RuleGroup: Identifiable, Sendable, Equatable {
+    public let category: FormatRuleCategory
+    public let rules: [FormatRule]
+
+    public init(category: FormatRuleCategory, rules: [FormatRule]) {
+        self.category = category
+        self.rules = rules
+    }
+
+    public var id: String { category.rawValue }
+}
+
 /// The active filter for the rule browser: free-text search, an optional
 /// category, an availability facet, and whether deprecated rules are shown.
 public struct RuleFilter: Equatable, Sendable {
@@ -52,17 +65,4 @@ public struct RuleFilter: Equatable, Sendable {
             || availability != .all
             || includeDeprecated
     }
-}
-
-/// A category and its rules, for sectioned display in the browser.
-public struct RuleGroup: Identifiable, Sendable, Equatable {
-    public let category: FormatRuleCategory
-    public let rules: [FormatRule]
-
-    public init(category: FormatRuleCategory, rules: [FormatRule]) {
-        self.category = category
-        self.rules = rules
-    }
-
-    public var id: String { category.rawValue }
 }

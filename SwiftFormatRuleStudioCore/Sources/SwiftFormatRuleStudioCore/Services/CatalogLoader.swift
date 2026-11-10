@@ -3,7 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
 import LintStudioCore
 
 /// Loads the SwiftFormat rule/option catalog and enriches individual rules.
@@ -91,9 +90,9 @@ public final class CatalogLoader: CatalogLoading {
         return FormatRule(
             name: base.name,
             ruleDescription: info.ruleDescription,
+            isEnabled: base.isEnabled,
             category: base.category,
             isOptIn: base.isOptIn,
-            isEnabled: base.isEnabled,
             isDeprecated: base.isDeprecated,
             relatedOptions: info.relatedOptions,
             example: info.example
@@ -121,9 +120,9 @@ public final class CatalogLoader: CatalogLoading {
     }
 }
 
-extension CatalogLoading {
+public extension CatalogLoading {
     /// Loads the catalog from cache when valid, otherwise re-fetches.
-    public func loadCatalog() async throws -> RuleCatalog {
+    func loadCatalog() async throws -> RuleCatalog {
         try await loadCatalog(forceRefresh: false)
     }
 }

@@ -6,6 +6,64 @@
 import SwiftFormatRuleStudioCore
 import SwiftUI
 
+/// See `RootView.backToolbar`.
+private struct BackToolbar: ViewModifier {
+    let workspace: WorkspaceModel
+
+    func body(content: Content) -> some View {
+        content.toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    workspace.goBack()
+                } label: {
+                    Label("Back", systemImage: "chevron.backward")
+                }
+                .disabled(!workspace.canGoBack)
+                .keyboardShortcut("[", modifiers: .command)
+                .help("Back to where you jumped from")
+            }
+        }
+    }
+}
+
+/// Bottom status bar: shows the detected SwiftFormat version, or install
+/// guidance when the catalog couldn't load (SwiftFormat not found).
+private struct StatusBar: View {
+    let catalog: RuleStudioModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            switch catalog.loadState {
+            case .failed:
+                Label(
+                    "SwiftFormat not found — install with: brew install swiftformat",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .foregroundStyle(.orange)
+
+            case .loaded:
+                Label(versionText, systemImage: "checkmark.seal")
+                    .foregroundStyle(.secondary)
+
+            case .idle, .loading:
+                Label("Loading rules…", systemImage: "hourglass")
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .scaledFont(.caption)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+    }
+
+    private var versionText: String {
+        if let version = catalog.catalog?.swiftFormatVersion {
+            return "SwiftFormat \(version) · \(catalog.catalog?.rules.count ?? 0) rules"
+        }
+        return "SwiftFormat ready"
+    }
+}
+
 /// Top-level navigation. Owns the shared catalog and config models and injects
 /// them into the environment so all tabs work off the same state (e.g. the live
 /// preview reflects the edited config).
@@ -104,63 +162,5 @@ struct RootView: View {
     /// doesn't trap when a view is inspected/previewed without the shared models.
     private var backToolbar: BackToolbar {
         BackToolbar(workspace: workspace)
-    }
-}
-
-/// See `RootView.backToolbar`.
-private struct BackToolbar: ViewModifier {
-    let workspace: WorkspaceModel
-
-    func body(content: Content) -> some View {
-        content.toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    workspace.goBack()
-                } label: {
-                    Label("Back", systemImage: "chevron.backward")
-                }
-                .disabled(!workspace.canGoBack)
-                .keyboardShortcut("[", modifiers: .command)
-                .help("Back to where you jumped from")
-            }
-        }
-    }
-}
-
-/// Bottom status bar: shows the detected SwiftFormat version, or install
-/// guidance when the catalog couldn't load (SwiftFormat not found).
-private struct StatusBar: View {
-    let catalog: RuleStudioModel
-
-    var body: some View {
-        HStack(spacing: 6) {
-            switch catalog.loadState {
-            case .failed:
-                Label(
-                    "SwiftFormat not found — install with: brew install swiftformat",
-                    systemImage: "exclamationmark.triangle.fill"
-                )
-                .foregroundStyle(.orange)
-
-            case .loaded:
-                Label(versionText, systemImage: "checkmark.seal")
-                    .foregroundStyle(.secondary)
-
-            case .idle, .loading:
-                Label("Loading rules…", systemImage: "hourglass")
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-        }
-        .scaledFont(.caption)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 4)
-    }
-
-    private var versionText: String {
-        if let version = catalog.catalog?.swiftFormatVersion {
-            return "SwiftFormat \(version) · \(catalog.catalog?.rules.count ?? 0) rules"
-        }
-        return "SwiftFormat ready"
     }
 }

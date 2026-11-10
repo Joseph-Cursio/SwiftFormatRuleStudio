@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// Which rules a Tune scan considers.
 ///
 /// Both scopes feed the same engine — `TuneModel.runScan(path:candidateRuleNames:)`

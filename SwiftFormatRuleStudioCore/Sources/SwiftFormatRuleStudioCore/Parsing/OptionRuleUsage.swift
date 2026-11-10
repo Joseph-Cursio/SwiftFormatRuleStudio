@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// Which SwiftFormat rule(s) consume a given option.
 ///
 /// SwiftFormat options *tune* rules (e.g. `--self` drives `redundantSelf`), and

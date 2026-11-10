@@ -7,6 +7,43 @@
 import SwiftFormatRuleStudioCore
 import SwiftUI
 
+/// The row-level flag the background pass produces: a churn rule that an option
+/// change would make cheaper (or free), shown right under the collapsed rule with
+/// a one-click Adopt that applies the whole recommended option set at once — so
+/// the hidden free win isn't buried in the drill-down.
+struct OptionOpportunityBadge: View {
+    let opportunity: OptionOpportunity
+    let adopt: () -> Void
+
+    private var tint: Color { opportunity.isFreeWin ? .green : .orange }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .scaledFont(.caption2)
+                .foregroundStyle(tint)
+                .accessibilityHidden(true)
+            Text(headline)
+                .scaledFont(.caption2, weight: .semibold)
+                .foregroundStyle(tint)
+            Text(opportunity.optionSummary)
+                .scaledFont(.caption2, design: .monospaced)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Button("Adopt") { adopt() }
+                .controlSize(.small)
+                .accessibilityLabel("Adopt \(opportunity.ruleID) with \(opportunity.optionSummary)")
+        }
+    }
+
+    private var headline: String {
+        guard !opportunity.isFreeWin else { return "free win available —" }
+        let count = opportunity.jointFindingCount
+        return "down to \(count) change\(count == 1 ? "" : "s") —"
+    }
+}
+
 struct RuleOptionsPanel: View {
     let ruleID: String
     let loadSweeps: () async -> [OptionSweep]
@@ -153,42 +190,5 @@ struct RuleOptionsPanel: View {
         Text(text)
             .scaledFont(.caption2, weight: .medium)
             .foregroundStyle(color)
-    }
-}
-
-/// The row-level flag the background pass produces: a churn rule that an option
-/// change would make cheaper (or free), shown right under the collapsed rule with
-/// a one-click Adopt that applies the whole recommended option set at once — so
-/// the hidden free win isn't buried in the drill-down.
-struct OptionOpportunityBadge: View {
-    let opportunity: OptionOpportunity
-    let adopt: () -> Void
-
-    private var tint: Color { opportunity.isFreeWin ? .green : .orange }
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-                .scaledFont(.caption2)
-                .foregroundStyle(tint)
-                .accessibilityHidden(true)
-            Text(headline)
-                .scaledFont(.caption2, weight: .semibold)
-                .foregroundStyle(tint)
-            Text(opportunity.optionSummary)
-                .scaledFont(.caption2, design: .monospaced)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Button("Adopt") { adopt() }
-                .controlSize(.small)
-                .accessibilityLabel("Adopt \(opportunity.ruleID) with \(opportunity.optionSummary)")
-        }
-    }
-
-    private var headline: String {
-        guard !opportunity.isFreeWin else { return "free win available —" }
-        let count = opportunity.jointFindingCount
-        return "down to \(count) change\(count == 1 ? "" : "s") —"
     }
 }

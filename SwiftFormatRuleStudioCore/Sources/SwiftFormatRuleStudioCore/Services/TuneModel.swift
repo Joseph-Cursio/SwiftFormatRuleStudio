@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import LintStudioCore
 import Observation
 
 /// Observable model for the disabled-rule adoption scan (the marginal-impact

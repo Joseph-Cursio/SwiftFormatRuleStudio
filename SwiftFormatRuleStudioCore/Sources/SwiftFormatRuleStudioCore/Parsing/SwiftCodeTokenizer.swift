@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// A lightweight, line-oriented Swift tokenizer for *display* syntax coloring —
 /// not a parser. It splits a line into spans tagged with a semantic kind so the
 /// UI can color keywords, strings, comments, numbers, and types. Good enough for

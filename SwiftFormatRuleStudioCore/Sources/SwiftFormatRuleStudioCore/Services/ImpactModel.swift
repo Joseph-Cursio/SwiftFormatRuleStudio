@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import LintStudioCore
 import Observation
 
 /// Observable model for the impact scan (M5): run `swiftformat --lint` over a
