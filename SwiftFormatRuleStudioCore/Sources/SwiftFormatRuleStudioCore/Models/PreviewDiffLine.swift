@@ -3,7 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
 import LintStudioCore
 
 /// A single line of a before/after diff, in a form the UI can render without

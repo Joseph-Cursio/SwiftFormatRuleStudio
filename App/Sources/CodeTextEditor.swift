@@ -6,110 +6,6 @@
 import AppKit
 import SwiftUI
 
-/// A monospaced, non-wrapping code editor with a line-number gutter — SwiftUI's
-/// `TextEditor` offers neither. Wraps `NSTextView` in a scroll view and draws
-/// line numbers via an `NSRulerView`, so the numbers line up with the Changes
-/// panel.
-struct CodeTextEditor: NSViewRepresentable {
-    @Binding var text: String
-    var fontSize: CGFloat
-    /// Greyed-out prompt drawn when the editor is empty (Apple's "you can type
-    /// here" convention). Disappears on the first keystroke.
-    var placeholder = "Type or paste Swift here…"
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    func makeNSView(context: Context) -> EditorContainerView {
-        let big = CGFloat.greatestFiniteMagnitude
-        let textView = PlaceholderTextView()
-        textView.placeholder = placeholder
-        textView.delegate = context.coordinator
-        textView.isRichText = false
-        textView.isAutomaticQuoteSubstitutionEnabled = false
-        textView.isAutomaticDashSubstitutionEnabled = false
-        textView.isAutomaticSpellingCorrectionEnabled = false
-        textView.isAutomaticTextReplacementEnabled = false
-        textView.allowsUndo = true
-        textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
-        textView.string = text
-        textView.textContainerInset = NSSize(width: 4, height: 6)
-
-        // Look like an editable field, not a static label: a real text-field
-        // background distinguishes this pane from the read-only result panes.
-        textView.drawsBackground = true
-        textView.backgroundColor = .textBackgroundColor
-
-        // Don't wrap — let long lines scroll horizontally so line numbers map 1:1.
-        textView.isHorizontallyResizable = true
-        textView.isVerticallyResizable = true
-        textView.maxSize = NSSize(width: big, height: big)
-        textView.textContainer?.widthTracksTextView = false
-        textView.textContainer?.containerSize = NSSize(width: big, height: big)
-
-        let scrollView = NSScrollView()
-        scrollView.documentView = textView
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = true
-
-        // A recessed bezel gives the always-on "this is a field" frame.
-        scrollView.drawsBackground = true
-        scrollView.backgroundColor = .textBackgroundColor
-        scrollView.borderType = .bezelBorder
-        scrollView.contentView.postsBoundsChangedNotifications = true
-
-        let ruler = LineNumberRulerView(textView: textView)
-        scrollView.verticalRulerView = ruler
-        scrollView.hasVerticalRuler = true
-        scrollView.rulersVisible = true
-
-        // AppKit only auto-draws a focus ring for the first-responder view, and
-        // the first responder here is the (scrollable) text view — its ring would
-        // wrap the whole document, not the visible frame. So we draw our own ring
-        // around the editor's frame via an overlay, toggled on first-responder.
-        let overlay = FocusRingOverlay()
-        textView.onFocusChange = { [weak overlay] focused in overlay?.isActive = focused }
-
-        context.coordinator.ruler = ruler
-        context.coordinator.textView = textView
-
-        // Focus the editor when the pane first appears so the insertion-point
-        // caret blinks — an unambiguous cue that the area accepts typing.
-        DispatchQueue.main.async { [weak textView] in
-            guard let textView, textView.window?.firstResponder !== textView else { return }
-            textView.window?.makeFirstResponder(textView)
-        }
-        return EditorContainerView(scrollView: scrollView, overlay: overlay)
-    }
-
-    func updateNSView(_ container: EditorContainerView, context: Context) {
-        guard let textView = container.scrollView.documentView as? NSTextView else { return }
-        if textView.string != text {
-            textView.string = text
-            textView.needsDisplay = true
-        }
-        if textView.font?.pointSize != fontSize {
-            textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
-            context.coordinator.ruler?.needsDisplay = true
-        }
-    }
-
-    final class Coordinator: NSObject, NSTextViewDelegate {
-        let parent: CodeTextEditor
-        weak var ruler: LineNumberRulerView?
-        weak var textView: NSTextView?
-
-        init(_ parent: CodeTextEditor) { self.parent = parent }
-
-        func textDidChange(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else { return }
-            parent.text = textView.string
-            // Repaint so the placeholder appears/clears as the editor empties/fills.
-            textView.needsDisplay = true
-            ruler?.needsDisplay = true
-        }
-    }
-}
-
 /// An `NSTextView` that draws greyed-out placeholder text while it's empty.
 /// `NSTextView` has no native `placeholderString` (unlike `NSTextField`), so we
 /// render it ourselves in the text container's top-left.
@@ -180,7 +76,7 @@ final class PlaceholderTextView: NSTextView {
 
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font ?? .monospacedSystemFont(ofSize: 13, weight: .regular),
-            .foregroundColor: NSColor.placeholderTextColor
+            .foregroundColor: NSColor.placeholderTextColor,
         ]
         let origin = NSPoint(
             x: textContainerInset.width + (textContainer?.lineFragmentPadding ?? 0),
@@ -282,7 +178,7 @@ final class LineNumberRulerView: NSRulerView {
         let font = textView.font ?? .monospacedSystemFont(ofSize: 11, weight: .regular)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: font.pointSize * 0.85, weight: .regular),
-            .foregroundColor: NSColor.tertiaryLabelColor
+            .foregroundColor: NSColor.tertiaryLabelColor,
         ]
         let originY = convert(NSPoint.zero, from: textView).y + textView.textContainerInset.height
 
@@ -306,6 +202,110 @@ final class LineNumberRulerView: NSRulerView {
               let stringIndex = utf16Index.samePosition(in: text) else { return 1 }
         return 1 + text[text.startIndex..<stringIndex].reduce(into: 0) { count, character in
             if character == "\n" { count += 1 }
+        }
+    }
+}
+
+/// A monospaced, non-wrapping code editor with a line-number gutter — SwiftUI's
+/// `TextEditor` offers neither. Wraps `NSTextView` in a scroll view and draws
+/// line numbers via an `NSRulerView`, so the numbers line up with the Changes
+/// panel.
+struct CodeTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    var fontSize: CGFloat
+    /// Greyed-out prompt drawn when the editor is empty (Apple's "you can type
+    /// here" convention). Disappears on the first keystroke.
+    var placeholder = "Type or paste Swift here…"
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> EditorContainerView {
+        let big = CGFloat.greatestFiniteMagnitude
+        let textView = PlaceholderTextView()
+        textView.placeholder = placeholder
+        textView.delegate = context.coordinator
+        textView.isRichText = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.allowsUndo = true
+        textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        textView.string = text
+        textView.textContainerInset = NSSize(width: 4, height: 6)
+
+        // Look like an editable field, not a static label: a real text-field
+        // background distinguishes this pane from the read-only result panes.
+        textView.drawsBackground = true
+        textView.backgroundColor = .textBackgroundColor
+
+        // Don't wrap — let long lines scroll horizontally so line numbers map 1:1.
+        textView.isHorizontallyResizable = true
+        textView.isVerticallyResizable = true
+        textView.maxSize = NSSize(width: big, height: big)
+        textView.textContainer?.widthTracksTextView = false
+        textView.textContainer?.containerSize = NSSize(width: big, height: big)
+
+        let scrollView = NSScrollView()
+        scrollView.documentView = textView
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = true
+
+        // A recessed bezel gives the always-on "this is a field" frame.
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = .textBackgroundColor
+        scrollView.borderType = .bezelBorder
+        scrollView.contentView.postsBoundsChangedNotifications = true
+
+        let ruler = LineNumberRulerView(textView: textView)
+        scrollView.verticalRulerView = ruler
+        scrollView.hasVerticalRuler = true
+        scrollView.rulersVisible = true
+
+        // AppKit only auto-draws a focus ring for the first-responder view, and
+        // the first responder here is the (scrollable) text view — its ring would
+        // wrap the whole document, not the visible frame. So we draw our own ring
+        // around the editor's frame via an overlay, toggled on first-responder.
+        let overlay = FocusRingOverlay()
+        textView.onFocusChange = { [weak overlay] focused in overlay?.isActive = focused }
+
+        context.coordinator.ruler = ruler
+        context.coordinator.textView = textView
+
+        // Focus the editor when the pane first appears so the insertion-point
+        // caret blinks — an unambiguous cue that the area accepts typing.
+        DispatchQueue.main.async { [weak textView] in
+            guard let textView, textView.window?.firstResponder !== textView else { return }
+            textView.window?.makeFirstResponder(textView)
+        }
+        return EditorContainerView(scrollView: scrollView, overlay: overlay)
+    }
+
+    func updateNSView(_ container: EditorContainerView, context: Context) {
+        guard let textView = container.scrollView.documentView as? NSTextView else { return }
+        if textView.string != text {
+            textView.string = text
+            textView.needsDisplay = true
+        }
+        if textView.font?.pointSize != fontSize {
+            textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
+            context.coordinator.ruler?.needsDisplay = true
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        let parent: CodeTextEditor
+        weak var ruler: LineNumberRulerView?
+        weak var textView: NSTextView?
+
+        init(_ parent: CodeTextEditor) { self.parent = parent }
+
+        func textDidChange(_ notification: Notification) {
+            guard let editedView = notification.object as? NSTextView else { return }
+            parent.text = editedView.string
+            // Repaint so the placeholder appears/clears as the editor empties/fills.
+            editedView.needsDisplay = true
+            ruler?.needsDisplay = true
         }
     }
 }

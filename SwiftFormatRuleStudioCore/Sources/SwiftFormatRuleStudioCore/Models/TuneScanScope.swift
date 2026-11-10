@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// Which rules a Tune scan considers.
 ///
 /// Both scopes feed the same engine — `TuneModel.runScan(path:candidateRuleNames:)`
@@ -30,6 +28,7 @@ nonisolated public enum TuneScanScope: Hashable, Sendable {
         case .allDisabled:
             catalog.rules
                 .filter { !$0.isDeprecated && !isEnabled($0) }
+
         case .newSince(let version):
             RuleHistory.rulesAdded(since: version, in: catalog, alreadyEnabled: isEnabled)
         }
@@ -49,6 +48,7 @@ nonisolated public enum TuneScanScope: Hashable, Sendable {
         case .allDisabled:
             "Scan every disabled rule against this project to see which you could "
                 + "enable without changing a single line."
+
         case .newSince(let version):
             "SwiftFormat added rules since \(version). Scan them against this project "
                 + "to see which you could adopt without changing a single line."

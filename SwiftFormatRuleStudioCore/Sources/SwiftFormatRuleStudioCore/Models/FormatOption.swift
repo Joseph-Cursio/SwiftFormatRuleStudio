@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// The value shape of a SwiftFormat global option, inferred from its
 /// `--options` blurb. Drives which editor control the Options panel renders.
 public enum FormatOptionKind: String, Codable, Sendable, CaseIterable {

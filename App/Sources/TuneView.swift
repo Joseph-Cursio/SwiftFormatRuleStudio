@@ -6,6 +6,19 @@
 import SwiftFormatRuleStudioCore
 import SwiftUI
 
+/// Shown before a project is opened.
+///
+/// Reads nothing, so the scan scope, the expanded rows and the running scan all leave it alone.
+private struct TuneNoProject: View {
+    var body: some View {
+        ContentUnavailableView {
+            Label("Tune your config", systemImage: "sparkles")
+        } description: {
+            Text("Open a project, then scan to find rules you can adopt with zero churn.")
+        }
+    }
+}
+
 /// The disabled-rule adoption scan (docs/audit-redesign.md, layer C — first slice).
 /// Runs every currently-disabled rule over the project in isolation and splits the
 /// results: **free wins** (rules that would change nothing — adopt them with one
@@ -105,18 +118,21 @@ struct TuneView: View {
                 }
                 .disabled(!canScan || candidateRuleNames.isEmpty)
             }
+
         case let .running(scanned, total):
             ProgressView(value: Double(scanned), total: Double(max(total, 1))) {
                 Text("Scanning rule \(scanned) of \(total)…")
             }
             .padding(40)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
         case .failed(let message):
             ContentUnavailableView {
                 Label("Scan failed", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(message)
             }
+
         case .completed:
             TuneResultsView(expandedRules: $expandedRules, expandedFiles: $expandedFiles)
         }
@@ -153,19 +169,6 @@ struct TuneView: View {
         let currentValues = config.config.options
         opportunityTask = Task {
             await model.findOptionOpportunities(allOptions: options, currentValues: currentValues)
-        }
-    }
-}
-
-/// Shown before a project is opened.
-///
-/// Reads nothing, so the scan scope, the expanded rows and the running scan all leave it alone.
-private struct TuneNoProject: View {
-    var body: some View {
-        ContentUnavailableView {
-            Label("Tune your config", systemImage: "sparkles")
-        } description: {
-            Text("Open a project, then scan to find rules you can adopt with zero churn.")
         }
     }
 }

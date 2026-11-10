@@ -6,6 +6,59 @@
 import SwiftFormatRuleStudioCore
 import SwiftUI
 
+/// The loading, failure and no-matches states drawn over the list.
+///
+/// Takes the two values it reads rather than the model, so typing in the search field — which
+/// rebuilds the sidebar on every keystroke through `$model.filter.searchText` — leaves it alone
+/// except when the match count actually crosses zero.
+private struct RuleSidebarOverlay: View {
+    let loadState: RuleStudioModel.LoadState
+    let hasNoMatches: Bool
+
+    var body: some View {
+        switch loadState {
+        case .loading:
+            ProgressView("Loading rules…")
+
+        case .failed(let message):
+            ContentUnavailableView {
+                Label("Couldn’t load rules", systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(message)
+            }
+
+        case .idle, .loaded:
+            if hasNoMatches {
+                ContentUnavailableView.search
+            }
+        }
+    }
+}
+
+/// A single rule row: name plus opt-in / deprecated markers.
+struct RuleRow: View {
+    let rule: FormatRule
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(rule.name)
+                .scaledFont(.body)
+            Spacer()
+            if rule.isDeprecated {
+                Text("deprecated")
+                    .scaledFont(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            if rule.isOptIn {
+                Image(systemName: "circle.dashed")
+                    .foregroundStyle(.secondary)
+                    .help("Opt-in (off by default)")
+                    .accessibilityLabel("Opt-in, off by default")
+            }
+        }
+    }
+}
+
 /// Searchable, filterable rule list, sectioned by category. Binds directly to
 /// `model.filter`.
 struct RuleSidebar: View {
@@ -54,57 +107,5 @@ struct RuleSidebar: View {
         }
         .padding(8)
         .background(.bar)
-    }
-
-}
-
-/// The loading, failure and no-matches states drawn over the list.
-///
-/// Takes the two values it reads rather than the model, so typing in the search field — which
-/// rebuilds the sidebar on every keystroke through `$model.filter.searchText` — leaves it alone
-/// except when the match count actually crosses zero.
-private struct RuleSidebarOverlay: View {
-    let loadState: RuleStudioModel.LoadState
-    let hasNoMatches: Bool
-
-    var body: some View {
-        switch loadState {
-        case .loading:
-            ProgressView("Loading rules…")
-        case .failed(let message):
-            ContentUnavailableView {
-                Label("Couldn’t load rules", systemImage: "exclamationmark.triangle")
-            } description: {
-                Text(message)
-            }
-        case .idle, .loaded:
-            if hasNoMatches {
-                ContentUnavailableView.search
-            }
-        }
-    }
-}
-
-/// A single rule row: name plus opt-in / deprecated markers.
-struct RuleRow: View {
-    let rule: FormatRule
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(rule.name)
-                .scaledFont(.body)
-            Spacer()
-            if rule.isDeprecated {
-                Text("deprecated")
-                    .scaledFont(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            if rule.isOptIn {
-                Image(systemName: "circle.dashed")
-                    .foregroundStyle(.secondary)
-                    .help("Opt-in (off by default)")
-                    .accessibilityLabel("Opt-in, off by default")
-            }
-        }
     }
 }

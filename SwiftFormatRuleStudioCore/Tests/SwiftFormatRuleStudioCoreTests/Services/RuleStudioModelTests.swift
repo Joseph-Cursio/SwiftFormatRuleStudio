@@ -3,7 +3,6 @@
 //  SwiftFormatRuleStudioCoreTests
 //
 
-import Foundation
 @testable import SwiftFormatRuleStudioCore
 import SwiftFormatRuleStudioCoreTestSupport
 import Testing

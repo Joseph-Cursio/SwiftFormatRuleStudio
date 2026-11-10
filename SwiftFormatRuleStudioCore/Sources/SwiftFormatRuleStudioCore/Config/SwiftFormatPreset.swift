@@ -3,27 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
-/// A starter `.swiftformat` configuration the user can apply as a baseline.
-public struct SwiftFormatPreset: Identifiable, Sendable, Equatable {
-    /// Stable identifier.
-    public let id: String
-    /// Display name.
-    public let name: String
-    /// One-line description of what the preset does.
-    public let summary: String
-    /// The `.swiftformat` content the preset installs.
-    public let configText: String
-
-    public init(id: String, name: String, summary: String, configText: String) {
-        self.id = id
-        self.name = name
-        self.summary = summary
-        self.configText = configText
-    }
-}
-
 /// Built-in starter presets.
 public enum BuiltInPresets {
     /// All presets, in display order.
@@ -66,4 +45,23 @@ public enum BuiltInPresets {
         --enable isEmpty,organizeDeclarations,blankLineAfterSwitchCase,wrapEnumCases
         """
     )
+}
+
+/// A starter `.swiftformat` configuration the user can apply as a baseline.
+public struct SwiftFormatPreset: Identifiable, Sendable, Equatable {
+    /// Stable identifier.
+    public let id: String
+    /// Display name.
+    public let name: String
+    /// One-line description of what the preset does.
+    public let summary: String
+    /// The `.swiftformat` content the preset installs.
+    public let configText: String
+
+    public init(id: String, name: String, summary: String, configText: String) {
+        self.id = id
+        self.name = name
+        self.summary = summary
+        self.configText = configText
+    }
 }

@@ -6,7 +6,7 @@ import PackageDescription
 let swiftSettings: [SwiftSetting] = [
     .swiftLanguageMode(.v6),
     .defaultIsolation(MainActor.self),
-    .enableUpcomingFeature("MemberImportVisibility")
+    .enableUpcomingFeature("MemberImportVisibility"),
 ]
 
 let package = Package(
@@ -20,7 +20,7 @@ let package = Package(
         .library(
             name: "SwiftFormatRuleStudioCoreTestSupport",
             targets: ["SwiftFormatRuleStudioCoreTestSupport"]
-        )
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/Joseph-Cursio/LintStudioUI.git", from: "1.3.1"),
@@ -28,14 +28,14 @@ let package = Package(
         // formats with, and SwiftFormat's rule behavior changes between releases —
         // so an upgrade is a deliberate act (re-run Scripts/audit_option_effects.py
         // and refresh the option→rule table), never a resolution side effect.
-        .package(url: "https://github.com/nicklockwood/SwiftFormat.git", exact: "0.62.1")
+        .package(url: "https://github.com/nicklockwood/SwiftFormat.git", exact: "0.62.1"),
     ],
     targets: [
         .target(
             name: "SwiftFormatRuleStudioCore",
             dependencies: [
                 .product(name: "LintStudioCore", package: "LintStudioUI"),
-                .product(name: "SwiftFormat", package: "SwiftFormat")
+                .product(name: "SwiftFormat", package: "SwiftFormat"),
             ],
             swiftSettings: swiftSettings,
             linkerSettings: [
@@ -51,9 +51,9 @@ let package = Package(
             name: "SwiftFormatRuleStudioCoreTests",
             dependencies: [
                 "SwiftFormatRuleStudioCore",
-                "SwiftFormatRuleStudioCoreTestSupport"
+                "SwiftFormatRuleStudioCoreTestSupport",
             ],
             swiftSettings: swiftSettings
-        )
+        ),
     ]
 )

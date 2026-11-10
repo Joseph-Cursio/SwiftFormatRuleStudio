@@ -49,6 +49,100 @@ func previewReadOnlyCode(_ source: String, showsLineNumbers: Bool = false) -> so
     .textSelection(.enabled)
 }
 
+/// The Diff + Formatted-output result panel.
+struct PreviewResultView: View {
+    let model: LivePreviewModel
+
+    var body: some View {
+        VSplitView {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    previewPaneHeader("Diff", systemImage: "plusminus")
+                    Spacer()
+                    statusLabel
+                        .padding(.trailing, 10)
+                }
+                Divider()
+                resultBody
+            }
+            .frame(minHeight: 100)
+
+            VStack(alignment: .leading, spacing: 0) {
+                previewPaneHeader("Formatted output", systemImage: "wand.and.stars")
+                Divider()
+                formattedOutput
+            }
+            .frame(minHeight: 100)
+        }
+        .frame(minWidth: 300)
+    }
+
+    /// The clean formatted result (no diff markers), syntax-highlighted. Its line
+    /// numbers line up with the diff's "new" column.
+    @ViewBuilder
+    private var formattedOutput: some View {
+        previewReadOnlyCode(model.formattedSource, showsLineNumbers: true)
+    }
+
+    @ViewBuilder
+    private var statusLabel: some View {
+        switch model.state {
+        case .idle:
+            EmptyView()
+
+        case .formatting:
+            ProgressView().controlSize(.small)
+
+        case .formatted:
+            Text(model.hasChanges ? changeSummary : "No changes")
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+
+        case .failed:
+            Label("Error", systemImage: "exclamationmark.triangle")
+                .scaledFont(.caption)
+                .foregroundStyle(.red)
+        }
+    }
+
+    private var addedCount: Int { model.diff.filter { $0.change == .added }.count }
+    private var removedCount: Int { model.diff.filter { $0.change == .removed }.count }
+
+    /// e.g. "11 line changes: 6 insertions + 5 deletions".
+    private var changeSummary: String {
+        let total = addedCount + removedCount
+        return "\(total) line \(total == 1 ? "change" : "changes"): "
+            + "\(addedCount) insertion\(addedCount == 1 ? "" : "s") + "
+            + "\(removedCount) deletion\(removedCount == 1 ? "" : "s")"
+    }
+
+    @ViewBuilder
+    private var resultBody: some View {
+        switch model.state {
+        case .failed(let message):
+            ContentUnavailableView {
+                Label("Couldn’t format", systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(message)
+            }
+
+        default:
+            if model.hasChanges {
+                PreviewDiffView(lines: model.diff, showsLineNumbers: true)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            } else if model.state == .formatted {
+                ContentUnavailableView(
+                    "Already formatted",
+                    systemImage: "checkmark.seal",
+                    description: Text("This code already matches the current formatting rules.")
+                )
+            } else {
+                Color.clear
+            }
+        }
+    }
+}
+
 /// The "SwiftFormat rules triggered" panel: one row per change, each linking to
 /// the rule in the Rules tab.
 struct PreviewChangesView: View {
@@ -161,95 +255,5 @@ struct PreviewChangesView: View {
     /// returns here. Shared by the row's reveal button and its context menu.
     private func showRuleInRulesTab(_ ruleID: String) {
         workspace.openInRules(ruleID, from: .preview(file: selectedFile))
-    }
-}
-
-/// The Diff + Formatted-output result panel.
-struct PreviewResultView: View {
-    let model: LivePreviewModel
-
-    var body: some View {
-        VSplitView {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    previewPaneHeader("Diff", systemImage: "plusminus")
-                    Spacer()
-                    statusLabel
-                        .padding(.trailing, 10)
-                }
-                Divider()
-                resultBody
-            }
-            .frame(minHeight: 100)
-
-            VStack(alignment: .leading, spacing: 0) {
-                previewPaneHeader("Formatted output", systemImage: "wand.and.stars")
-                Divider()
-                formattedOutput
-            }
-            .frame(minHeight: 100)
-        }
-        .frame(minWidth: 300)
-    }
-
-    /// The clean formatted result (no diff markers), syntax-highlighted. Its line
-    /// numbers line up with the diff's "new" column.
-    @ViewBuilder
-    private var formattedOutput: some View {
-        previewReadOnlyCode(model.formattedSource, showsLineNumbers: true)
-    }
-
-    @ViewBuilder
-    private var statusLabel: some View {
-        switch model.state {
-        case .idle:
-            EmptyView()
-        case .formatting:
-            ProgressView().controlSize(.small)
-        case .formatted:
-            Text(model.hasChanges ? changeSummary : "No changes")
-                .scaledFont(.caption)
-                .foregroundStyle(.secondary)
-        case .failed:
-            Label("Error", systemImage: "exclamationmark.triangle")
-                .scaledFont(.caption)
-                .foregroundStyle(.red)
-        }
-    }
-
-    private var addedCount: Int { model.diff.filter { $0.change == .added }.count }
-    private var removedCount: Int { model.diff.filter { $0.change == .removed }.count }
-
-    /// e.g. "11 line changes: 6 insertions + 5 deletions".
-    private var changeSummary: String {
-        let total = addedCount + removedCount
-        return "\(total) line \(total == 1 ? "change" : "changes"): "
-            + "\(addedCount) insertion\(addedCount == 1 ? "" : "s") + "
-            + "\(removedCount) deletion\(removedCount == 1 ? "" : "s")"
-    }
-
-    @ViewBuilder
-    private var resultBody: some View {
-        switch model.state {
-        case .failed(let message):
-            ContentUnavailableView {
-                Label("Couldn’t format", systemImage: "exclamationmark.triangle")
-            } description: {
-                Text(message)
-            }
-        default:
-            if model.hasChanges {
-                PreviewDiffView(lines: model.diff, showsLineNumbers: true)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            } else if model.state == .formatted {
-                ContentUnavailableView(
-                    "Already formatted",
-                    systemImage: "checkmark.seal",
-                    description: Text("This code already matches the current formatting rules.")
-                )
-            } else {
-                Color.clear
-            }
-        }
     }
 }

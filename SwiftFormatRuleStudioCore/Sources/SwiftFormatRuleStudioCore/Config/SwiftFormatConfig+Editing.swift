@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 extension SwiftFormatConfig {
     // MARK: - Options
 

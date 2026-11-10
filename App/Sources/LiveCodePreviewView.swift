@@ -10,7 +10,6 @@ import SwiftUI
 /// diff) on the right, live. Thin wrapper over the tested `LivePreviewModel`.
 struct LiveCodePreviewView: View {
     @Environment(ConfigModel.self) private var config
-    @Environment(RuleStudioModel.self) private var catalog
     @Environment(WorkspaceModel.self) private var workspace
     @Environment(\.uiTextScale) private var uiTextScale
     @State private var model = LivePreviewModel(source: Self.sampleSource)

@@ -3,7 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
 import LintStudioCore
 
 /// A grouping for SwiftFormat rules, used for sidebar sectioning and filtering.

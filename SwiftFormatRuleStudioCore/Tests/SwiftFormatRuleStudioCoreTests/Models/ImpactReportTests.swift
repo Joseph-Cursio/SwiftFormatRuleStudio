@@ -13,7 +13,7 @@ struct ImpactReportTests {
         LintFinding(filePath: "/ws/A.swift", line: 2, ruleID: "indent", reason: ""),
         LintFinding(filePath: "/ws/B.swift", line: 1, ruleID: "indent", reason: ""),
         LintFinding(filePath: "/ws/A.swift", line: 1, ruleID: "consecutiveSpaces", reason: ""),
-        LintFinding(filePath: "/ws/C.swift", line: 5, ruleID: "consecutiveSpaces", reason: "")
+        LintFinding(filePath: "/ws/C.swift", line: 5, ruleID: "consecutiveSpaces", reason: ""),
     ]
 
     @Test("Aggregates per-rule file and finding counts")

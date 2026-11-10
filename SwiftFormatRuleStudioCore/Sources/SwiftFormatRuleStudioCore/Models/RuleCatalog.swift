@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// The full set of SwiftFormat rules and global options for a given binary
 /// version. Cached on disk and invalidated when the version changes.
 public struct RuleCatalog: Codable, Sendable, Equatable {

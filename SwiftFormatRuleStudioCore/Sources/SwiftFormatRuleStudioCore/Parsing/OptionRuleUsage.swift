@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// Which SwiftFormat rule(s) consume a given option.
 ///
 /// SwiftFormat options *tune* rules (e.g. `--self` drives `redundantSelf`), and
@@ -170,6 +168,6 @@ public enum OptionRuleUsage {
         "wrap-type-aliases": ["wrapArguments"],
         "xcode-indentation": ["indent"],
         "xctest-symbols": ["preferSwiftTesting"],
-        "yoda-swap": ["yodaConditions"]
+        "yoda-swap": ["yodaConditions"],
     ]
 }

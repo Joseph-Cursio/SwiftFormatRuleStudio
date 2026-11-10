@@ -18,7 +18,7 @@ struct FormatRuleClassifierPropertyTests {
         ("modifierorder", .organization), ("accesscontrol", .organization), ("hoist", .organization),
         ("wrap", .wrapping), ("brace", .wrapping), ("sameline", .wrapping),
         ("space", .spacing), ("blank", .spacing), ("indent", .spacing),
-        ("linebreak", .spacing), ("consecutive", .spacing)
+        ("linebreak", .spacing), ("consecutive", .spacing),
     ]
 
     /// An uncurated name containing a keyword — in any case, between affixes that spell no

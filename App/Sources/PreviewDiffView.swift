@@ -12,7 +12,6 @@ struct FileNode: Identifiable, Hashable {
     let name: String
     let children: [Self]?
     var id: URL { url }
-    var isDirectory: Bool { children != nil }
 }
 
 /// One outline row, recursive over its children. Directories are `DisclosureGroup`s

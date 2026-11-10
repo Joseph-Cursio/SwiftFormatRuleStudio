@@ -35,7 +35,7 @@ public enum FormatRuleClassifier {
             "redundantSelf", "redundantSendable", "redundantStaticSelf", "redundantSwiftTestingSuite",
             "redundantThrows", "redundantType", "redundantTypedThrows", "redundantVariable",
             "redundantViewBuilder", "redundantVoidReturnType",
-            "unusedArguments", "unusedPrivateDeclarations"
+            "unusedArguments", "unusedPrivateDeclarations",
         ],
         .spacing: [
             "blankLineAfterSwitchCase", "blankLinesAfterGuardStatements", "blankLinesAroundMark",
@@ -44,34 +44,34 @@ public enum FormatRuleClassifier {
             "consistentSwitchCaseSpacing", "emptyBraces", "indent", "linebreakAtEndOfFile",
             "linebreaks", "spaceAroundBraces", "spaceAroundBrackets", "spaceAroundGenerics",
             "spaceAroundOperators", "spaceAroundParens", "spaceInsideBraces", "spaceInsideBrackets",
-            "spaceInsideGenerics", "spaceInsideParens", "trailingSpace"
+            "spaceInsideGenerics", "spaceInsideParens", "trailingSpace",
         ],
         .wrapping: [
             "braces", "elseOnSameLine", "leadingDelimiters", "modifiersOnSameLine", "wrap",
             "wrapArguments", "wrapAttributes", "wrapCaseBodies", "wrapConditionalBodies",
             "wrapEnumCases", "wrapFunctionBodies", "wrapLoopBodies",
             "wrapMultilineConditionalAssignment", "wrapMultilineFunctionChains",
-            "wrapMultilineStatementBraces", "wrapPropertyBodies", "wrapSwitchCases"
+            "wrapMultilineStatementBraces", "wrapPropertyBodies", "wrapSwitchCases",
         ],
         .organization: [
             "emptyExtensions", "enumNamespaces", "extensionAccessControl", "genericExtensions",
             "hoistAwait", "hoistPatternLet", "hoistTry", "markTypes", "modifierOrder",
             "organizeDeclarations", "singlePropertyPerLine", "sortDeclarations", "sortSwitchCases",
-            "sortTypealiases", "sortedSwitchCases", "specifiers"
+            "sortTypealiases", "sortedSwitchCases", "specifiers",
         ],
         .imports: [
             "blankLineAfterImports", "blankLinesBetweenImports", "duplicateImports",
-            "sortImports", "sortedImports"
+            "sortImports", "sortedImports",
         ],
         .comments: [
             "blockComments", "docComments", "docCommentsBeforeModifiers", "fileHeader",
             "headerFileName", "spaceAroundComments", "spaceInsideComments", "todos",
-            "wrapSingleLineComments"
+            "wrapSingleLineComments",
         ],
         .testing: [
             "assertionFailures", "noForceTryInTests", "noForceUnwrapInTests", "noGuardInTests",
             "preferSwiftTesting", "swiftTestingTestCaseNames", "testSuiteAccessControl",
-            "throwingTests", "validateTestCases"
+            "throwingTests", "validateTestCases",
         ],
         .idiomatic: [
             "acronyms", "andOperator", "anyObjectProtocol", "applicationMain", "conditionalAssignment",
@@ -80,8 +80,8 @@ public enum FormatRuleClassifier {
             "preferFinalClasses", "preferForLoop", "preferKeyPath", "preferSwiftStringAPI",
             "privateStateVariables", "propertyTypes", "semicolons", "simplifyGenericConstraints",
             "strongOutlets", "strongifiedSelf", "trailingClosures", "trailingCommas", "typeSugar",
-            "urlMacro", "void", "yodaConditions"
-        ]
+            "urlMacro", "void", "yodaConditions",
+        ],
     ]
 
     nonisolated private static let lookup: [String: FormatRuleCategory] = {

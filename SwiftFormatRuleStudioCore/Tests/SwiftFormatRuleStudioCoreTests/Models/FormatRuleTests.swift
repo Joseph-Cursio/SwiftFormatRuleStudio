@@ -43,8 +43,8 @@ struct FormatRuleTests {
         let rule = FormatRule(
             name: "acronyms",
             ruleDescription: "Capitalize acronyms.",
-            isOptIn: true,
-            isEnabled: true
+            isEnabled: true,
+            isOptIn: true
         )
 
         #expect(rule.isEnabled)
@@ -129,15 +129,5 @@ struct FormatRuleTests {
         let decoded = try JSONDecoder().decode(FormatRule.self, from: data)
 
         #expect(decoded == rule)
-    }
-}
-
-@Suite("FormatRuleCategory")
-struct FormatRuleCategoryTests {
-    @Test("Every category exposes a capitalized display name")
-    func displayNames() {
-        for category in FormatRuleCategory.allCases {
-            #expect(category.displayName == category.rawValue.capitalized)
-        }
     }
 }

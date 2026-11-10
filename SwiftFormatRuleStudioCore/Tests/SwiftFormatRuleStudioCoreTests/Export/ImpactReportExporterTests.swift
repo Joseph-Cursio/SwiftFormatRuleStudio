@@ -14,7 +14,7 @@ struct ImpactReportExporterTests {
         totalFindings: 5,
         ruleImpacts: [
             RuleImpact(ruleID: "indent", fileCount: 2, findingCount: 3),
-            RuleImpact(ruleID: "spaceAroundOperators", fileCount: 1, findingCount: 2)
+            RuleImpact(ruleID: "spaceAroundOperators", fileCount: 1, findingCount: 2),
         ]
     )
 

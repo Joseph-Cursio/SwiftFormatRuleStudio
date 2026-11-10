@@ -38,7 +38,7 @@ struct RuleCatalogFilteringTests {
                     ruleDescription: "Sort import statements.",
                     category: .organization,
                     isDeprecated: true
-                )
+                ),
             ],
             options: []
         )

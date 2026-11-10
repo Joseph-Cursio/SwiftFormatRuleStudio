@@ -5,7 +5,6 @@
 
 @testable import SwiftFormatRuleStudio
 import SwiftFormatRuleStudioCore
-import SwiftUI
 import Testing
 import ViewInspector
 
@@ -17,7 +16,7 @@ struct PreviewDiffViewTests {
         let lines = [
             PreviewDiffLine(id: 0, text: "let x=1", change: .removed),
             PreviewDiffLine(id: 1, text: "let x = 1", change: .added),
-            PreviewDiffLine(id: 2, text: "}", change: .unchanged)
+            PreviewDiffLine(id: 2, text: "}", change: .unchanged),
         ]
         let view = PreviewDiffView(lines: lines)
 

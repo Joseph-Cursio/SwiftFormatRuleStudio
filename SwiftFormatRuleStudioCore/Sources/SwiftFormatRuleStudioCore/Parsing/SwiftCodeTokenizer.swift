@@ -3,8 +3,6 @@
 //  SwiftFormatRuleStudio
 //
 
-import Foundation
-
 /// A lightweight, line-oriented Swift tokenizer for *display* syntax coloring —
 /// not a parser. It splits a line into spans tagged with a semantic kind so the
 /// UI can color keywords, strings, comments, numbers, and types. Good enough for
@@ -41,7 +39,7 @@ public enum SwiftCodeTokenizer {
         "repeat", "rethrows", "return", "self", "Self", "some", "static", "struct",
         "subscript", "super", "switch", "throw", "throws", "true", "try", "typealias",
         "var", "where", "while", "willSet", "didSet", "get", "set", "lazy", "weak",
-        "unowned", "final", "indirect", "convenience", "required", "override", "macro"
+        "unowned", "final", "indirect", "convenience", "required", "override", "macro",
     ]
 
     /// Tokenize a single line into display spans. Consecutive plain characters are
