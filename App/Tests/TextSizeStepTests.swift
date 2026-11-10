@@ -3,8 +3,8 @@
 //  SwiftFormatRuleStudioTests
 //
 
+import CoreFoundation
 @testable import SwiftFormatRuleStudio
-import SwiftUI
 import Testing
 
 /// The arithmetic that was inside three menu-command closures.

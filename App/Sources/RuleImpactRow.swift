@@ -5,7 +5,6 @@
 
 import SwiftFormatRuleStudioCore
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// One affected file under a rule, expandable to the rule's before/after diff for
 /// that file. The diff is loaded lazily (and cached by the caller) on first expand.

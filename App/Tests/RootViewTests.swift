@@ -4,8 +4,6 @@
 //
 
 @testable import SwiftFormatRuleStudio
-import SwiftFormatRuleStudioCore
-import SwiftUI
 import Testing
 import ViewInspector
 

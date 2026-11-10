@@ -5,7 +5,6 @@
 
 import SwiftFormatRuleStudioCore
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// One option, rendered with the right control for its inferred kind. Options
 /// you've explicitly set are marked (accent dot + name) and offer a reset;

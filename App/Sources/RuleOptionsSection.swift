@@ -14,6 +14,7 @@ struct RuleOptionsSection: View {
     let rule: FormatRule
     let options: [FormatOption]
     @Bindable var config: ConfigModel
+    // swiftlint:disable:next unused_declaration - read only through its $binding by the DisclosureGroup
     @State private var isExpanded: Bool
     @State private var showOnlySet = false
 
