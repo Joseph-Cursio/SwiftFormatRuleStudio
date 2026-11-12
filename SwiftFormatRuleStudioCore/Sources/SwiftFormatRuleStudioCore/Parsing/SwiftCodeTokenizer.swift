@@ -80,7 +80,10 @@ public enum SwiftCodeTokenizer {
             return (Token(text: String(chars[start...]), kind: .comment), chars.count)
         }
         if char == "\"" { return scanString(chars, from: start) }
-        if char.isNumber {
+        // A Swift number literal starts with an ASCII digit. `isNumber` alone also admits `½`, `²`
+        // and 788 more characters the run below rejects; its empty run returned `next == start`, and
+        // `tokens(inLine:)` never advanced (#26).
+        if char.isASCII, char.isNumber {
             return scanRun(chars, from: start, kind: .number) { $0.isHexDigit || "._xXbBoOeE".contains($0) }
         }
         if char.isLetter || char == "_" { return scanIdentifier(chars, from: start) }
